@@ -118,6 +118,55 @@ h1 {
         0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+/* Settings Panel */
+.settings-panel {
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.settings-label {
+    display: block;
+    margin-bottom: 0.8rem;
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+
+.task-count-selector {
+    display: flex;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    gap: 4px;
+}
+
+.task-count-selector input[type="radio"] {
+    display: none;
+}
+
+.task-count-selector label {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    color: var(--text-muted);
+}
+
+.task-count-selector input[type="radio"]:checked+label {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+}
+
+.task-count-selector label:hover:not(:active) {
+    background: rgba(255, 255, 255, 0.8);
+    color: var(--primary);
+}
+
 /* Upload Zone */
 .upload-zone {
     border: 2px dashed #cbd5e0;

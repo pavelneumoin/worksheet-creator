@@ -9,6 +9,10 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
     const formData = new FormData();
     formData.append('file', file);
 
+    // Get selected task count
+    const taskCount = document.querySelector('input[name="taskCount"]:checked').value;
+    formData.append('task_count', taskCount);
+
     const statusDiv = document.getElementById('status');
     statusDiv.innerHTML = '<p>Обработка... Пожалуйста, подождите.</p><div class="loader"></div>';
 

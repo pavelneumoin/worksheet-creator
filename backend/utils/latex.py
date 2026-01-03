@@ -38,7 +38,7 @@ def compile_latex(content, filename_base="worksheet"):
     # -output-directory specifies where to put the pdf
     try:
         subprocess.run(
-            ['pdflatex', '-interaction=nonstopmode', '-output-directory', OUTPUT_DIR, tex_path],
+            ['pdflatex', '-disable-installer', '-interaction=nonstopmode', '-output-directory', OUTPUT_DIR, tex_path],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE

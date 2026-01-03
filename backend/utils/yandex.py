@@ -71,13 +71,42 @@ def ocr_image(image_path):
     except Exception as e:
         return f"OCR Exception: {str(e)}"
 
-def generate_worksheet_latex(text, topic="General"):
+def generate_worksheet_latex(text, topic="General", task_count=3):
     """
     Uses YandexGPT to generate LaTeX content.
-    URL: https://llm.api.cloud.yandex.net/foundationModels/v1/completion
     """
     if not API_KEY and not IAM_TOKEN:
         return "Error: No Yandex Credentials provided."
+    
+    # --- Dynamic Layout Calculation ---
+    # A4 printable height approx 240mm (minus headers/margins)
+    # Header: ~40mm. Title: ~15mm. 
+    # Available for tasks: ~185mm.
+    # We estimate task text takes ~20mm. 
+    # But if there are many tasks, text must be shorter or grid smaller.
+    
+    available_height = 190 # mm
+    
+    # Calculate grid height per task
+    # Formula: (Available - (TaskCount * TextBuffer)) / TaskCount
+    # TextBuffer is space for the question text itself.
+    text_buffer = 15 # mm
+    
+    try:
+        count = int(task_count)
+    except:
+        count = 3
+        
+    if count < 1: count = 1
+    if count > 6: count = 6
+
+    # Calculate grid height
+    raw_grid_height = (available_height / count) - text_buffer
+    
+    # Safety bounds
+    if raw_grid_height < 10: raw_grid_height = 10
+    
+    grid_height_mm = int(raw_grid_height)
     
     headers = {
         "Authorization": get_auth_header(),
@@ -88,17 +117,42 @@ def generate_worksheet_latex(text, topic="General"):
         "modelUri": f"gpt://{FOLDER_ID}/yandexgpt",
         "completionOptions": {
             "stream": False,
-            "temperature": 0.5,
-            "maxTokens": "4000"
+            "temperature": 0.4, # Lower temperature for more strict extraction
+            "maxTokens": "8000" # Increased tokens for multi-page content
         },
         "messages": [
             {
                 "role": "system",
-                "text": "Ты - генератор рабочих листов для учителей. Твоя задача: взять входной текст (задачи или теорию) и оформить его в специальный формат LaTeX.\n\nУ тебя есть две команды:\n1. \\TaskBox{НОМЕР_ЗАДАЧИ}{ТЕКСТ_ЗАДАЧИ} - используй это для оформления каждого задания. Внутри текста задачи используй стандартный LaTeX ($...$) для формул. Переводи обычный текст в красивые формулы (например `sin^2 x`).\n2. \\WriteField{ВЫСОТА} - используй это после каждой задачи, чтобы оставить место для решения. Высоту указывай в мм (например, `40mm` для коротких, `80mm` для длинных).\n\nПравила:\n- НЕ пиши преамбулу (documentclass, usepackage).\n- НЕ пиши \\begin{document}.\n- Просто выводи список задач одну за другой.\n- Нумеруй задачи по порядку (1, 2, 3...)."
+                "text": f"""Ты - профессиональный редактор и математик. Твоя задача: восстановить математические задачи из "шумного" текста после OCR (распознавания) и оформить их в LaTeX.
+
+КОНТЕКСТ:
+Входной текст получен через Yandex Vision, который ПЛОХО распознает формулы. Он часто превращает их в кашу.
+Твоя главная цель — ДОГАДАТЬСЯ, какая там была формула, и написать её правильно в LaTeX ($...$).
+
+ТИПИЧНЫЕ ОШИБКИ OCR (исправляй их!):
+- "x2" или "x 2" -> скорее всего это $x^2$
+- "V a" или "\/ a" -> это корень $\\sqrt{{a}}$
+- "3/4" или "3 / 4" -> это дробь $\\frac{{3}}{{4}}$
+- "sin x" -> $\\sin x$
+- "Log 2" -> $\\log_2$
+- "a b" (слипшиеся переменные) -> $ab$
+- "pi" -> $\\pi$
+
+ПРАВИЛА ОФОРМЛЕНИЯ:
+1.  Ищи ВСЕ задачи во входном тексте.
+2.  Если видишь подобие формулы — оборачивай в $...$ и исправляй.
+3.  Выводи результат строго в формате:
+    \\TaskBox{{1}}{{Текст задачи...}}
+    \\WriteField{{{grid_height_mm}mm}}
+    \\TaskBox{{2}}{{...}}
+    \\WriteField{{{grid_height_mm}mm}}
+4.  Никаких лишних слов, преамбул и объяснений.
+5.  Высота поля \\WriteField — всегда {grid_height_mm}mm.
+"""
             },
             {
                 "role": "user",
-                "text": f"Вот материал из файла:\n{text}\n\nСформируй содержимое рабочего листа, используя \\TaskBox и \\WriteField."
+                "text": f"Вот грязный текст после OCR:\n\"\"\"\n{text}\n\"\"\"\n\nИзвлеки все задачи, исправь формулы и оформи в LaTeX."
             }
         ]
     }
