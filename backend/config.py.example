@@ -1,0 +1,6 @@
+# Yandex Cloud Configuration
+# Rename this file to config.py and fill in your credentials
+
+FOLDER_ID = 'your_folder_id_here'
+IAM_TOKEN = None  # Optional
+API_KEY = 'your_api_key_here'

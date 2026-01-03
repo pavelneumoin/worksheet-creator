@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Помощник Учителя</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Ionicons for icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+
+<body>
+    <div class="main-wrapper">
+        <header class="hero">
+            <div class="hero-content">
+                <div class="badge">Бета Версия</div>
+                <h1>AI Помощник Учителя</h1>
+                <p class="subtitle">Генерация рабочих листов за секунды. Загрузите фото задачи — получите готовый PDF с
+                    решением и оформлением.</p>
+
+                <div class="features">
+                    <div class="feature-item">
+                        <ion-icon name="scan-outline"></ion-icon>
+                        <span>OCR Распознавание</span>
+                    </div>
+                    <div class="feature-item">
+                        <ion-icon name="sparkles-outline"></ion-icon>
+                        <span>AI Генерация</span>
+                    </div>
+                    <div class="feature-item">
+                        <ion-icon name="document-text-outline"></ion-icon>
+                        <span>PDF Экспорт</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-container">
+            <div class="glass-panel">
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-content">
+                        <div class="icon-box">
+                            <ion-icon name="cloud-upload-outline"></ion-icon>
+                        </div>
+                        <h3>Загрузите файл</h3>
+                        <p>Перетащите изображение (PNG, JPG) или нажмите для выбора</p>
+                    </div>
+                    <input type="file" id="fileInput" hidden accept="image/*,.pdf">
+                </div>
+
+                <div id="status" class="status-container"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by Yandex Cloud & LaTeX</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

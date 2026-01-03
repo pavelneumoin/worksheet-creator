@@ -1,0 +1,84 @@
+\documentclass[a4paper,12pt]{article}
+
+% --- Русский и математика ---
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,mathtools}
+% \DeclareMathOperator{\tg}{tg} % Commented out to avoid conflict if already defined
+% \DeclareMathOperator{\ctg}{ctg}
+
+% --- Вёрстка под печать ---
+\usepackage[a4paper,margin=15mm]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usepackage{xcolor}
+\setlength{\parindent}{0pt}
+\raggedbottom
+
+% --- Серо-тональная палитра ---
+\definecolor{accgray}{HTML}{4B5563}   % рамки задач
+\definecolor{softgray}{HTML}{E5E7EB}  % контуры шапки/полей
+\definecolor{gridgray}{HTML}{D1D5DB}  % пунктирная клетка
+\definecolor{textgray}{HTML}{111827}  % текст
+\color{textgray}
+
+% --- Заголовок (по центру) ---
+\newcommand{\WorksheetTitle}[1]{%
+  \begin{center}
+    {\Large\bfseries #1}\par
+    \vspace{2mm}
+    {\color{softgray}\rule{0.6\linewidth}{0.6pt}}
+  \end{center}
+  \vspace{3mm}
+}
+
+% --- Шапка (только на первой странице): ФИО • Класс • Дата ---
+\newlength{\NameRuleW}  \setlength{\NameRuleW}{0.56\linewidth}
+\newlength{\ClassRuleW} \setlength{\ClassRuleW}{0.12\linewidth}
+\newlength{\DateRuleW}  \setlength{\DateRuleW}{0.15\linewidth}
+\newcommand{\FirstPageHeader}{%
+  \noindent
+  \begin{tikzpicture}[baseline=(B.base)]
+    \node[inner sep=2mm, draw=softgray, rounded corners=2pt, line width=0.5pt,
+          text width=\linewidth, anchor=west] (B)
+    {\textbf{ФИО:}\ \rule{\NameRuleW}{0.4pt}\hfill
+     \textbf{Класс:}\ \rule{\ClassRuleW}{0.4pt}\hfill
+     \textbf{Дата:}\ \rule{\DateRuleW}{0.4pt}};
+  \end{tikzpicture}\par\vspace{4mm}%
+}
+
+% --- Рамка задания (ширина = \linewidth) ---
+\newcommand{\TaskBox}[2]{% #1 номер, #2 текст условия
+  \noindent
+  \begin{tikzpicture}
+    \node[draw=accgray, line width=0.8pt, rounded corners=4pt,
+          inner sep=3mm, text width=\dimexpr\linewidth-6mm\relax,
+          anchor=north west] (B) at (0,0) {#2};
+    \node[anchor=south west, fill=white, draw=accgray,
+          rounded corners=3pt, inner xsep=6pt, inner ysep=1.5pt,
+          yshift=1pt, xshift=1.5pt] at (B.north west)
+          {\scriptsize \textbf{Задача №#1}};
+  \end{tikzpicture}\par\vspace{2mm}%
+}
+
+% --- Поле для письма с пунктирной клеткой (ширина = \linewidth) ---
+\newcommand{\WriteField}[1]{% #1 высота, например 42mm / 60mm / 90mm
+  \noindent
+  \begin{tikzpicture}[x=1pt,y=1pt]
+    \pgfmathsetlengthmacro{\W}{\linewidth}
+    \pgfmathsetlengthmacro{\H}{#1}
+    \draw[line width=0.5pt,rounded corners=2pt,color=softgray] (0,0) rectangle (\W,\H);
+    \draw[gridgray,densely dotted,step=5mm] (0,0) grid (\W,\H);
+  \end{tikzpicture}\par\vspace{5mm}%
+}
+
+% -------------------- Документ --------------------
+\begin{document}
+
+\WorksheetTitle{Рабочий Лист: VAR_TOPIC}
+\FirstPageHeader
+
+VAR_CONTENT
+
+\end{document}
