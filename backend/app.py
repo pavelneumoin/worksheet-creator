@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory, send_file
 import os
 import uuid
-from utils.yandex import ocr_image, generate_worksheet_latex
+# from utils.yandex import ocr_image, generate_worksheet_latex
 from utils.latex import compile_latex
 
 from flask_cors import CORS
@@ -32,13 +32,15 @@ def process_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
-        # 2. OCR (Yandex Vision)
-        text_content = ocr_image(filepath)
-
-
-        # 3. Generate LaTeX Content (Stub/Real)
+        # 2. Process with GigaChat (Multimodal)
+        from utils.gigachat_client import process_image_with_gigachat
         task_count = request.form.get('task_count', 3)
-        latex_content = generate_worksheet_latex(text_content, task_count=task_count)
+        
+        # This single call handles both OCR and LaTeX generation
+        latex_content = process_image_with_gigachat(filepath, task_count=task_count)
+        
+        # For legacy compatibility in response (optional)
+        text_content = "Processed directly by GigaChat Vision."
 
         # 4. Compile PDF
         pdf_filename, error = compile_latex(latex_content, filename_base=f"worksheet_{uuid.uuid4()}")
@@ -51,6 +53,30 @@ def process_file():
             }), 200
         else:
             return jsonify({'error': f"PDF Generation failed: {error}"}), 500
+
+@app.route('/api/generate_similar', methods=['POST'])
+def generate_similar():
+    from utils.gigachat_client import generate_similar_worksheet
+    
+    original_text = request.form.get('original_text')
+    task_count = request.form.get('task_count', 3)
+    
+    if not original_text:
+        return jsonify({'error': 'Original text is required'}), 400
+        
+    # Generate similar tasks
+    latex_content = generate_similar_worksheet(original_text, task_count=task_count)
+    
+    # Compile
+    pdf_filename, error = compile_latex(latex_content, filename_base=f"variant2_{uuid.uuid4()}")
+    
+    if pdf_filename:
+        return jsonify({
+            'message': 'Variant 2 generated successfully',
+            'pdf_url': f"/generated/{pdf_filename}"
+        }), 200
+    else:
+        return jsonify({'error': f"PDF Generation failed: {error}"}), 500
 
 @app.route('/generated/<path:filename>')
 def serve_generated(filename):

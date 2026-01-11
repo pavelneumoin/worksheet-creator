@@ -37,21 +37,31 @@ def compile_latex(content, filename_base="worksheet"):
     # -interaction=nonstopmode prevents hanging on errors
     # -output-directory specifies where to put the pdf
     try:
-        subprocess.run(
+        # Run pdflatex without check=True to handle potential non-fatal warnings/errors
+        result = subprocess.run(
             ['pdflatex', '-disable-installer', '-interaction=nonstopmode', '-output-directory', OUTPUT_DIR, tex_path],
-            check=True,
+            check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-    except subprocess.CalledProcessError as e:
-        return None, f"LaTeX Compilation Error: {e.stderr.decode('utf-8') if e.stderr else 'Unknown error'}"
+        
+        # Verify PDF creation regardless of return code
+        pdf_filename = f"{filename_base}.pdf"
+        pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
+        
+        if os.path.exists(pdf_path):
+             return pdf_filename, None
+             
+        # If PDF missing and we had an error code, report it
+        if result.returncode != 0:
+             return None, f"LaTeX Compilation Error: {result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Unknown error'}"
+             
     except FileNotFoundError:
         return None, "pdflatex command not found. Please ensure MiKTeX or TeX Live is installed and in PATH."
+    except Exception as e:
+         return None, f"Unexpected error during compilation: {str(e)}"
+         
+    return None, "PDF file was not created (Unknown reason)."
 
-    pdf_filename = f"{filename_base}.pdf"
-    pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
-
-    if os.path.exists(pdf_path):
-        return pdf_filename, None
-    else:
-        return None, "PDF file was not created."
+    # PDF check moved inside try/except block
+    return None, "PDF generation failed."
