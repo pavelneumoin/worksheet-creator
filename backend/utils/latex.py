@@ -125,7 +125,8 @@ def compile_latex(content, topic="Рабочий лист", filename_base="works
     else:
         # Try local first, fall back to cloud if pdflatex not found
         result = compile_latex_local(latex_source, filename_base)
-        if result[1] and "pdflatex not found" in result[1]:
+        if result[1] and ("pdflatex" in result[1].lower() and "not found" in result[1].lower()):
             # Auto-fallback to cloud
             return compile_latex_cloud(latex_source, filename_base)
         return result
+

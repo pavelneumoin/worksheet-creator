@@ -218,6 +218,15 @@ h1 {
     background: rgba(255, 255, 255, 0.8);
 }
 
+.model-selector input[type="radio"]:disabled+label {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.model-selector input[type="radio"]:disabled+label:hover {
+    background: transparent;
+}
+
 /* Upload Zone */
 .upload-zone {
     border: 2px dashed #cbd5e0;

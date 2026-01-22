@@ -35,13 +35,17 @@ def process_image_with_gigachat(image_path, task_count=3, model="GigaChat-Max"):
     Args:
         image_path (str): Path to the image file.
         task_count (int): Number of tasks to format (guides the layout).
-        model (str): GigaChat model to use (GigaChat-Max, GigaChat-Pro, GigaChat).
+        model (str): GigaChat model to use (only GigaChat-Max supports images).
     
     Returns:
         str: LaTeX code representing the worksheet content.
     """
     if not GIGACHAT_CREDENTIALS:
         return "Error: GIGACHAT_CREDENTIALS not found in config.py"
+    
+    # Only GigaChat-Max supports multimodal (image) input
+    if model != "GigaChat-Max":
+        return f"Error: Модель {model} не поддерживает распознавание изображений. Выберите GigaChat-Max для работы с картинками."
 
     # Layout calculation (reused from previous logic)
     available_height = 190 # mm
