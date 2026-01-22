@@ -13,6 +13,14 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
     const taskCount = document.querySelector('input[name="taskCount"]:checked').value;
     formData.append('task_count', taskCount);
 
+    // Get topic
+    const topic = document.getElementById('topicInput').value || 'Рабочий лист';
+    formData.append('topic', topic);
+
+    // Get selected model
+    const gigaModel = document.querySelector('input[name="gigaModel"]:checked').value;
+    formData.append('model', gigaModel);
+
     const statusDiv = document.getElementById('status');
     statusDiv.innerHTML = '<p>Обработка... Пожалуйста, подождите.</p><div class="loader"></div>';
 
@@ -47,6 +55,8 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
                     const formData2 = new FormData();
                     formData2.append('original_text', result.original_text);
                     formData2.append('task_count', taskCount);
+                    formData2.append('model', gigaModel);
+                    formData2.append('topic', topic);
 
                     const resp2 = await fetch('/api/generate_similar', {
                         method: 'POST',

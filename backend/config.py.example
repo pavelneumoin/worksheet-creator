@@ -1,5 +1,12 @@
 # GigaChat Configuration
-# Rename this file to config.py and fill in your credentials
-# Get your Authorization Key from https://developers.sber.ru/
+# For local development: fill in your credentials below
+# For production (Render): set GIGACHAT_CREDENTIALS as environment variable
 
-GIGACHAT_CREDENTIALS = 'YOUR_GIGACHAT_AUTHORIZATION_KEY'
+import os
+
+# Try to get from environment variable first (for Render/production)
+# Fall back to hardcoded value for local development
+GIGACHAT_CREDENTIALS = os.environ.get('GIGACHAT_CREDENTIALS', 'YOUR_GIGACHAT_AUTHORIZATION_KEY')
+
+# Optional: scope setting
+GIGACHAT_SCOPE = os.environ.get('GIGACHAT_SCOPE', 'GIGACHAT_API_PERS')

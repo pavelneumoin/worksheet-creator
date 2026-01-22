@@ -35,21 +35,21 @@ def process_file():
         # 2. Process with GigaChat (Multimodal)
         from utils.gigachat_client import process_image_with_gigachat
         task_count = request.form.get('task_count', 3)
+        topic = request.form.get('topic', 'Рабочий лист')
+        model = request.form.get('model', 'GigaChat-Max')
         
         # This single call handles both OCR and LaTeX generation
-        latex_content = process_image_with_gigachat(filepath, task_count=task_count)
-        
-        # For legacy compatibility in response (optional)
-        text_content = "Processed directly by GigaChat Vision."
+        latex_content = process_image_with_gigachat(filepath, task_count=task_count, model=model)
 
         # 4. Compile PDF
-        pdf_filename, error = compile_latex(latex_content, filename_base=f"worksheet_{uuid.uuid4()}")
+        pdf_filename, error = compile_latex(latex_content, topic=topic, filename_base=f"worksheet_{uuid.uuid4()}")
 
         if pdf_filename:
             return jsonify({
                 'message': 'Worksheet generated successfully',
-                'original_text': text_content,
-                'pdf_url': f"/generated/{pdf_filename}"
+                'original_text': latex_content,  # Передаём реальный LaTeX для генерации Варианта 2
+                'pdf_url': f"/generated/{pdf_filename}",
+                'model': model  # Передаём модель для Варианта 2
             }), 200
         else:
             return jsonify({'error': f"PDF Generation failed: {error}"}), 500
@@ -60,15 +60,17 @@ def generate_similar():
     
     original_text = request.form.get('original_text')
     task_count = request.form.get('task_count', 3)
+    model = request.form.get('model', 'GigaChat-Max')
+    topic = request.form.get('topic', 'Рабочий лист')
     
     if not original_text:
         return jsonify({'error': 'Original text is required'}), 400
         
     # Generate similar tasks
-    latex_content = generate_similar_worksheet(original_text, task_count=task_count)
+    latex_content = generate_similar_worksheet(original_text, task_count=task_count, model=model)
     
-    # Compile
-    pdf_filename, error = compile_latex(latex_content, filename_base=f"variant2_{uuid.uuid4()}")
+    # Compile with topic "Вариант 2"
+    pdf_filename, error = compile_latex(latex_content, topic=f"{topic} (Вариант 2)", filename_base=f"variant2_{uuid.uuid4()}")
     
     if pdf_filename:
         return jsonify({

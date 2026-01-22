@@ -7,7 +7,7 @@ OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '../static/generated')
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-def compile_latex(content, filename_base="worksheet"):
+def compile_latex(content, topic="Рабочий лист", filename_base="worksheet"):
     """
     Injects content into the LaTeX template and compiles it to PDF.
     Returns the path to the generated PDF.
@@ -23,8 +23,8 @@ def compile_latex(content, filename_base="worksheet"):
     # Simple string replacement for now. 
     # In a real app, might use Jinja2 for latex templates.
     latex_source = template.replace('VAR_CONTENT', content)
-    # Extract a topic from content line 1 if possible, or use generic
-    latex_source = latex_source.replace('VAR_TOPIC', "Автоматическая генерация")
+    # Use provided topic
+    latex_source = latex_source.replace('VAR_TOPIC', topic)
 
     # 3. Write .tex file
     tex_filename = f"{filename_base}.tex"

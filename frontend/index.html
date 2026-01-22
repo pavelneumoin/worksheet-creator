@@ -43,6 +43,11 @@
         <main class="app-container">
             <div class="glass-panel">
                 <div class="settings-panel">
+                    <label class="settings-label">Тема рабочего листа:</label>
+                    <input type="text" id="topicInput" class="topic-input" placeholder="Например: Квадратные уравнения">
+                </div>
+
+                <div class="settings-panel">
                     <label class="settings-label">Количество задач на листе:</label>
                     <div class="task-count-selector">
                         <input type="radio" name="taskCount" id="t1" value="1">
@@ -65,6 +70,34 @@
                     </div>
                 </div>
 
+                <div class="settings-panel">
+                    <label class="settings-label">Модель GigaChat:</label>
+                    <div class="model-selector">
+                        <input type="radio" name="gigaModel" id="mMax" value="GigaChat-Max" checked>
+                        <label for="mMax">
+                            <span class="model-name">Max</span>
+                            <span class="model-desc">Лучшее качество</span>
+                        </label>
+
+                        <input type="radio" name="gigaModel" id="mPro" value="GigaChat-Pro">
+                        <label for="mPro">
+                            <span class="model-name">Pro</span>
+                            <span class="model-desc">Баланс</span>
+                        </label>
+
+                        <input type="radio" name="gigaModel" id="mLite" value="GigaChat">
+                        <label for="mLite">
+                            <span class="model-name">Lite</span>
+                            <span class="model-desc">Быстро</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="tip-banner">
+                    <ion-icon name="information-circle-outline"></ion-icon>
+                    <span>Рекомендуем загружать не более 10 задач для лучшего качества</span>
+                </div>
+
                 <div class="upload-zone" id="uploadZone">
                     <div class="upload-content">
                         <div class="icon-box">
@@ -81,7 +114,7 @@
         </main>
 
         <footer>
-            <p>Powered by Yandex Cloud & LaTeX</p>
+            <p>Powered by GigaChat & LaTeX</p>
         </footer>
     </div>
     <script src="script.js"></script>

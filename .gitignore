@@ -13,3 +13,6 @@ backend/static/generated/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Backups
+*.zip

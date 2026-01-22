@@ -28,13 +28,14 @@ def clean_latex(text):
          text = text[:-3]
     return text.strip()
 
-def process_image_with_gigachat(image_path, task_count=3):
+def process_image_with_gigachat(image_path, task_count=3, model="GigaChat-Max"):
     """
     Sends an image to GigaChat to extract math tasks and format them in LaTeX.
     
     Args:
         image_path (str): Path to the image file.
         task_count (int): Number of tasks to format (guides the layout).
+        model (str): GigaChat model to use (GigaChat-Max, GigaChat-Pro, GigaChat).
     
     Returns:
         str: LaTeX code representing the worksheet content.
@@ -60,7 +61,7 @@ def process_image_with_gigachat(image_path, task_count=3):
 1. Распознать ВСЕ математические задачи с изображения.
 2. Оформить их в LaTeX строго по шаблону.
 3. Разбить задачи по страницам (не более {count} задач на одной странице).
-4. В конце добавить страницу с ответами.
+4. В конце добавить страницу с КРАТКИМИ ответами (только числа, без решений).
 
 ПАРАМЕТРЫ ЛИСТА:
 - Максимум задач на странице: {count}
@@ -80,19 +81,31 @@ def process_image_with_gigachat(image_path, task_count=3):
     Пример: если задач 5, а лимит 3 -> Страница 1 (Задачи 1,2,3) -> `\\newpage` -> Страница 2 (Задачи 4,5).
 3.  ОБЯЗАТЕЛЬНО вставляй `\\WriteField{{{grid_height_mm}mm}}` после КАЖДОЙ задачи. Это клетчатое поле, без него нельзя!
 
-ИНСТРУКЦИЯ ПО ОТВЕТАМ:
+ИНСТРУКЦИЯ ПО ОТВЕТАМ (КРИТИЧЕСКИ ВАЖНО):
 После самой последней задачи вставь `\\newpage` и напиши:
-\\section*{{Ответы и Решения}}
-\\textbf{{№1.}} Краткое решение... Ответ: $...$ \\\\
-\\textbf{{№2.}} ...
+\\section*{{Ответы}}
+\\begin{{tabular}}{{|c|c|}}
+\\hline
+№ & Ответ \\\\
+\\hline
+1 & $...$ \\\\
+2 & $...$ \\\\
+... & ... \\\\
+\\hline
+\\end{{tabular}}
+
+ФОРМАТ ОТВЕТОВ:
+- ТОЛЬКО числовой ответ в формате LaTeX (например: $x=2$, $15$, $\\frac{{1}}{{2}}$)
+- БЕЗ пояснений, БЕЗ решений, БЕЗ комментариев
+- Только итоговое значение
 
 ИТОГОВЫЙ ВЫВОД:
 Только валидный LaTeX код тела документа (Tasks + PageBreaks + Answers). Без преамбулы `\\documentclass`.
 """
 
     try:
-        # Use GigaChat-Max for best multimodal results
-        with GigaChat(credentials=GIGACHAT_CREDENTIALS, scope=GIGACHAT_SCOPE, model="GigaChat-Max", verify_ssl_certs=False) as giga:
+        # Use selected GigaChat model
+        with GigaChat(credentials=GIGACHAT_CREDENTIALS, scope=GIGACHAT_SCOPE, model=model, verify_ssl_certs=False, timeout=120) as giga:
             # 1. Upload the image file
             # Note: GigaChat needs the file uploaded to process it in chat
             uploaded_file = giga.upload_file(open(image_path, "rb"))
@@ -114,7 +127,7 @@ def process_image_with_gigachat(image_path, task_count=3):
     except Exception as e:
         return f"GigaChat Error: {str(e)}"
 
-def generate_similar_worksheet(original_text, task_count=3):
+def generate_similar_worksheet(original_text, task_count=3, model="GigaChat-Max"):
     """
     Generates a new set of similar math tasks based on the original ones.
     """
@@ -135,49 +148,59 @@ def generate_similar_worksheet(original_text, task_count=3):
     grid_height_mm = int(raw_grid_height)
 
     prompt_text = f"""Ты - профессиональный методист и верстальщик LaTeX.
-Твоя задача:
-1. Создать НОВЫЙ вариант контрольной работы на основе исходного.
-2. Оформить его строго по шаблону.
-3. Разбить задачи по страницам (не более {count} задач на одной странице).
-4. В конце добавить страницу с ответами.
+Твоя задача: создать ВАРИАНТ 2 контрольной работы с ДРУГИМИ ЧИСЛАМИ.
 
-ИСХОДНЫЙ ВАРИАНТ:
+ИСХОДНЫЙ ВАРИАНТ (Вариант 1):
 \"\"\"
 {original_text}
 \"\"\"
 
-ИНСТРУКЦИЯ ПО ГЕНЕРАЦИИ:
-1.  **Создание задач**: Для каждой исходной задачи создай АНАЛОГИЧНУЮ (зеркальную), но с другими числами. Сохраняй типы уравнений, сложность и темы. Используй "удобные" для вычислений числа.
-2.  **Структура**: Количество задач должно совпадать с исходным.
+КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА ГЕНЕРАЦИИ:
+1. Для КАЖДОЙ задачи создай АНАЛОГИЧНУЮ, но с ДРУГИМИ числами
+2. СОХРАНИ: тип задачи, структуру, сложность, количество действий
+3. ИЗМЕНИ: все числовые значения (коэффициенты, константы, параметры)
+4. Используй "удобные" числа для ручных вычислений (целые, простые дроби)
+5. Количество задач должно ТОЧНО совпадать с исходным вариантом
+
+ПРИМЕР ПРЕОБРАЗОВАНИЯ:
+Исходная: "Решите уравнение $x^2 - 5x + 6 = 0$"
+Новая:    "Решите уравнение $x^2 - 7x + 12 = 0$"
 
 ПАРАМЕТРЫ ЛИСТА:
 - Максимум задач на странице: {count}
 - Высота поля для решения: {grid_height_mm}mm
 
 ШАБЛОН ОФОРМЛЕНИЯ (СТРОГО):
-Используй команду с ДВУМЯ аргументами:
 \\TaskBox{{Номер}}{{Текст новой задачи}}
-Пример: \\TaskBox{{1}}{{Найдите корень...}}
 \\WriteField{{{grid_height_mm}mm}}
 
-ПРАВИЛА ВЕРСТКИ (ВАЖНО):
-1.  После КАЖДОЙ задачи обязательно должно идти поле `\\WriteField{{{grid_height_mm}mm}}`. Не пропускай его!
-2.  После каждой {count}-й задачи вставляй `\\newpage`.
-3.  Если задач больше чем {count}, они должны переноситься на следующий лист.
+ПРАВИЛА ВЕРСТКИ:
+1. После КАЖДОЙ задачи обязательно вставляй `\\WriteField{{{grid_height_mm}mm}}`
+2. После каждой {count}-й задачи вставляй `\\newpage`
 
-ИНСТРУКЦИЯ ПО ОТВЕТАМ:
-В самом конце документа вставь:
-`\\newpage`
-`\\section*{{Ответы и Решения (Вариант 2)}}`
-Для каждой новой задачи напиши решение и ответ.
+ОТВЕТЫ (в конце документа):
+\\newpage
+\\section*{{Ответы (Вариант 2)}}
+\\begin{{tabular}}{{|c|c|}}
+\\hline
+№ & Ответ \\\\
+\\hline
+1 & $...$ \\\\
+2 & $...$ \\\\
+\\hline
+\\end{{tabular}}
+
+ФОРМАТ ОТВЕТОВ:
+- ТОЛЬКО числовой ответ (например: $x=3$, $24$, $\\frac{{2}}{{3}}$)
+- БЕЗ решений, БЕЗ пояснений, БЕЗ комментариев
 
 ИТОГОВЫЙ ВЫВОД:
-Только LaTeX код (Задачи + Разрывы страниц + Ответы).
+Только LaTeX код (Задачи + WriteField + PageBreaks + Таблица ответов).
 """
 
     try:
-        # Use GigaChat-Max for reasoning
-        with GigaChat(credentials=GIGACHAT_CREDENTIALS, scope=GIGACHAT_SCOPE, model="GigaChat-Max", verify_ssl_certs=False) as giga:
+        # Use selected GigaChat model
+        with GigaChat(credentials=GIGACHAT_CREDENTIALS, scope=GIGACHAT_SCOPE, model=model, verify_ssl_certs=False, timeout=120) as giga:
             response = giga.chat(prompt_text)
             raw_content = response.choices[0].message.content
             return clean_latex(raw_content)
