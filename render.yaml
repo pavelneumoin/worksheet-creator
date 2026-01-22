@@ -8,4 +8,6 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: GIGACHAT_CREDENTIALS
-        sync: false  # Нужно ввести вручную в Render Dashboard
+        sync: false  # Введите вручную в Render Dashboard
+      - key: USE_CLOUD_LATEX
+        value: "true"  # Использовать облачный LaTeX API
