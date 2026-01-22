@@ -1,12 +1,12 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.12.2)  3 JAN 2026 23:14
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.12.27)  23 JAN 2026 00:12
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**c:/site_2/backend/templates/default_worksheet.tex
-(c:/site_2/backend/templates/default_worksheet.tex
-LaTeX2e <2025-06-01> patch level 1
-L3 programming layer <2025-09-02>
+**e:/Worksheet_Creator/backend/templates/default_worksheet.tex
+(e:/Worksheet_Creator/backend/templates/default_worksheet.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
 (C:\Program Files\MiKTeX\tex/latex/base\article.cls
 Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
 (C:\Program Files\MiKTeX\tex/latex/base\size12.clo
@@ -28,7 +28,7 @@ Package: inputenc 2024/02/08 v1.3d Input encoding file
 \inpenc@prehook=\toks17
 \inpenc@posthook=\toks18
 ) (C:\Program Files\MiKTeX\tex/latex/base\fontenc.sty
-Package: fontenc 2024/12/21 v2.1c Standard LaTeX package
+Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
  (C:\Program Files\MiKTeX\tex/latex/cyrillic\t2aenc.def
 File: t2aenc.def 2023/11/07 v1.0k Cyrillic encoding definition file
 Now handling font encoding T2A ...
@@ -238,37 +238,39 @@ LaTeX Font Info:    Trying to load font information for T2A+cmr on input line 11
  (C:\Program Files\MiKTeX\tex/latex/cyrillic\t2acmr.fd
 File: t2acmr.fd 2001/08/11 v1.0a Computer Modern Cyrillic font definitions
 )) (C:\Program Files\MiKTeX\tex/generic/babel\babel.sty
-Package: babel 2025/08/03 v25.12 The multilingual framework for LuaLaTeX, pdfLaTeX and XeLaTeX
+Package: babel 2025/12/11 v25.17 The multilingual framework for LuaLaTeX, pdfLaTeX and XeLaTeX
 \babel@savecnt=\count283
-LaTeX Encoding Info:    Redeclaring text command \ij (encoding OT1) on input line 2045.
-LaTeX Encoding Info:    Redeclaring text command \IJ (encoding OT1) on input line 2047.
-LaTeX Encoding Info:    Redeclaring text command \ij (encoding T1) on input line 2049.
-LaTeX Encoding Info:    Redeclaring text command \IJ (encoding T1) on input line 2050.
-LaTeX Encoding Info:    Ignoring declaration for text command \ij (encoding ?) on input line 2051.
-LaTeX Encoding Info:    Ignoring declaration for text command \IJ (encoding ?) on input line 2053.
-LaTeX Encoding Info:    Ignoring declaration for text command \SS (encoding ?) on input line 2078.
+LaTeX Encoding Info:    Redeclaring text command \ij (encoding OT1) on input line 2068.
+LaTeX Encoding Info:    Redeclaring text command \IJ (encoding OT1) on input line 2070.
+LaTeX Encoding Info:    Redeclaring text command \ij (encoding T1) on input line 2072.
+LaTeX Encoding Info:    Redeclaring text command \IJ (encoding T1) on input line 2073.
+LaTeX Encoding Info:    Ignoring declaration for text command \ij (encoding ?) on input line 2074.
+LaTeX Encoding Info:    Ignoring declaration for text command \IJ (encoding ?) on input line 2076.
+LaTeX Encoding Info:    Ignoring declaration for text command \SS (encoding ?) on input line 2101.
 \U@D=\dimen149
 \l@unhyphenated=\language79
  (C:\Program Files\MiKTeX\tex/generic/babel\txtbabel.def)
 \bbl@readstream=\read2
 \bbl@dirlevel=\count284
+Package babel Info: Configuration files are deprecated, as
+(babel)             they can break document portability.
+(babel)             Reported on input line 4196.
 
 *************************************
 * Local config file bblopts.cfg used
 *
 (C:\Program Files\MiKTeX\tex/latex/arabi\bblopts.cfg
 File: bblopts.cfg 2005/09/08 v0.1 add Arabic and Farsi to "declared" options of babel
-) (C:\Program Files\MiKTeX\tex/latex/babel-russian\russianb.ldf
+) (C:\Program Files\MiKTeX\tex/generic/babel/locale/ru\babel-russian.tex)
+Package babel Info: Importing font and identification data for russian
+(babel)             from babel-ru.ini. Reported on input line 4320.
+ (C:\Program Files\MiKTeX\tex/latex/babel-russian\russianb.ldf
 File: russianb.ldf 2021/01/10 1.3m Russian support for the Babel system
 Language: russian 2020/09/09 1.3k Russian support for the Babel system
- (C:\Program Files\MiKTeX\tex/generic/babel/locale/ru\babel-russian.tex
-Package babel Info: Importing font and identification data for russian
-(babel)             from babel-ru.ini. Reported on input line 12.
-)
 Package babel Info: Making " an active character on input line 124.
 Package babel Info: Default for \cyrdash is provided on input line 163.
 )) (C:\Program Files\MiKTeX\tex/latex/amsmath\amsmath.sty
-Package: amsmath 2025/06/16 v2.17y AMS math features
+Package: amsmath 2025/07/09 v2.17z AMS math features
 \@mathmargin=\skip51
 
 For additional information on amsmath, use the `?' option.
@@ -329,8 +331,8 @@ LaTeX Info: Redefining \Relbar on input line 970.
 \multlinegap=\skip52
 \multlinetaggap=\skip53
 \mathdisplay@stack=\toks23
-LaTeX Info: Redefining \[ on input line 2949.
-LaTeX Info: Redefining \] on input line 2950.
+LaTeX Info: Redefining \[ on input line 2950.
+LaTeX Info: Redefining \] on input line 2951.
 ) (C:\Program Files\MiKTeX\tex/latex/amsfonts\amssymb.sty
 Package: amssymb 2013/01/14 v3.01 AMS font symbols
  (C:\Program Files\MiKTeX\tex/latex/amsfonts\amsfonts.sty
@@ -411,7 +413,7 @@ File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
 )
 Package graphics Info: Driver file: pdftex.def on input line 106.
  (C:\Program Files\MiKTeX\tex/latex/graphics-def\pdftex.def
-File: pdftex.def 2024/04/13 v1.2c Graphics/color driver for pdftex
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
 ))
 \Gin@req@height=\dimen179
 \Gin@req@width=\dimen180
@@ -605,30 +607,31 @@ File: tikzlibrarycalc.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 \ClassRuleW=\skip59
 \DateRuleW=\skip60
  (C:\Program Files\MiKTeX\tex/latex/l3backend\l3backend-pdftex.def
-File: l3backend-pdftex.def 2025-06-09 L3 backend support: PDF output (pdfTeX)
+File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count325
-) (default_worksheet.aux)
+) (default_worksheet.aux
+Package babel Info: 'russian' activates 'russian' shorthands.
+(babel)             Reported on input line 5.
+)
 \openout1 = `default_worksheet.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-LaTeX Font Info:    Checking defaults for T2A/cmr/m/n on input line 77.
-LaTeX Font Info:    ... okay on input line 77.
-Package babel Info: 'russian' activates 'russian' shorthands.
-(babel)             Reported on input line 77.
-LaTeX Info: Redefining \th on input line 77.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 78.
+LaTeX Font Info:    ... okay on input line 78.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 78.
+LaTeX Font Info:    ... okay on input line 78.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 78.
+LaTeX Font Info:    ... okay on input line 78.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 78.
+LaTeX Font Info:    ... okay on input line 78.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 78.
+LaTeX Font Info:    ... okay on input line 78.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 78.
+LaTeX Font Info:    ... okay on input line 78.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 78.
+LaTeX Font Info:    ... okay on input line 78.
+LaTeX Font Info:    Checking defaults for T2A/cmr/m/n on input line 78.
+LaTeX Font Info:    ... okay on input line 78.
+LaTeX Info: Redefining \th on input line 78.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -683,95 +686,30 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 48
  (C:\Program Files\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-c:/site_2/backend/templates/default_worksheet.tex:79: Missing $ inserted.
-<inserted text> 
-                $
-l.79 ...tTitle{Рабочий Лист: VAR_TOPIC}
-                                                  
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-LaTeX Font Info:    Trying to load font information for U+msa on input line 79.
-(C:\Program Files\MiKTeX\tex/latex/amsfonts\umsa.fd
-File: umsa.fd 2013/01/14 v3.01 AMS symbols A
-)
-LaTeX Font Info:    Trying to load font information for U+msb on input line 79.
- (C:\Program Files\MiKTeX\tex/latex/amsfonts\umsb.fd
-File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-)
-c:/site_2/backend/templates/default_worksheet.tex:79: Extra }, or forgotten $.
-\WorksheetTitle ... {center} {\Large \bfseries #1}
-                                                  \par \vspace {2mm} {\color...
-l.79 ...tTitle{Рабочий Лист: VAR_TOPIC}
-                                                  
-I've deleted a group-closing symbol because it seems to be
-spurious, as in `$x}$'. But perhaps the } is legitimate and
-you forgot something else, as in `\hbox{$x}'. In such cases
-the way to recover is to insert both the forgotten and the
-deleted material, e.g., by typing `I$}'.
-
-c:/site_2/backend/templates/default_worksheet.tex:79: Missing $ inserted.
-<inserted text> 
-                $
-l.79 ...tTitle{Рабочий Лист: VAR_TOPIC}
-                                                  
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-c:/site_2/backend/templates/default_worksheet.tex:79: Missing } inserted.
-<inserted text> 
-                }
-l.79 ...tTitle{Рабочий Лист: VAR_TOPIC}
-                                                  
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-Overfull \hbox (11.88107pt too wide) in paragraph at lines 80--80
+Overfull \hbox (11.88107pt too wide) in paragraph at lines 81--81
 [] 
  []
 
-c:/site_2/backend/templates/default_worksheet.tex:82: Missing $ inserted.
-<inserted text> 
-                $
-l.82 VAR_
-         CONTENT
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-c:/site_2/backend/templates/default_worksheet.tex:83: Missing $ inserted.
-<inserted text> 
-                $
-l.83 
-     
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-
 [1
 
-{C:/Users/NeumoinPD/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}] (default_worksheet.aux)
+{C:/Users/user/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}] (default_worksheet.aux)
  ***********
-LaTeX2e <2025-06-01> patch level 1
-L3 programming layer <2025-09-02>
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 16334 strings out of 468130
- 316079 string characters out of 5440688
- 699312 words of memory out of 5000000
- 44678 multiletter control sequences out of 15000+600000
- 636670 words of font info for 70 fonts, out of 8000000 for 9000
+ 16296 strings out of 467871
+ 315705 string characters out of 5428445
+ 703219 words of memory out of 5000000
+ 44919 multiletter control sequences out of 15000+600000
+ 631265 words of font info for 45 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 102i,7n,107p,447b,693s stack positions out of 10000i,1000n,20000p,200000b,200000s
- <C:\Users\NeumoinPD\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\larm1200.pk> <C:\Users\NeumoinPD\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\labx1200.pk> <C:\Users\NeumoinPD\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\labx1728.pk><C:/Program Files/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Program Files/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb>
-Output written on default_worksheet.pdf (1 page, 33562 bytes).
+ 102i,7n,107p,458b,693s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ <C:\Users\user\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\labx1200.pk> <C:\Users\user\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\larm1200.pk> <C:\Users\user\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\labx1728.pk>
+Output written on default_worksheet.pdf (1 page, 20035 bytes).
 PDF statistics:
- 59 PDF objects out of 1000 (max. 8388607)
+ 66 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  13 words of extra memory for PDF output out of 10000 (max. 10000000)
 
