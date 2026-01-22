@@ -1,15 +1,8 @@
 services:
   - type: web
     name: worksheet-creator
-    env: python
-    buildCommand: |
-      apt-get update && apt-get install -y texlive-latex-base texlive-fonts-recommended texlive-latex-extra texlive-lang-cyrillic cm-super
-      pip install -r requirements.txt
-    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
       - key: GIGACHAT_CREDENTIALS
         sync: false  # Введите вручную в Render Dashboard
-      - key: USE_CLOUD_LATEX
-        value: "false"  # Теперь используем локальный pdflatex
