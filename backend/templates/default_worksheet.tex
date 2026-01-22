@@ -23,12 +23,13 @@
 \definecolor{textgray}{HTML}{111827}  % текст
 \color{textgray}
 
-% --- Заголовок (по центру) ---
+% --- Заголовок (по центру) с ФИО учителя ---
 \newcommand{\WorksheetTitle}[1]{%
   \begin{center}
     {\Large\bfseries #1}\par
     \vspace{2mm}
     {\color{softgray}\rule{0.6\linewidth}{0.6pt}}
+    VAR_TEACHER_LINE
   \end{center}
   \vspace{3mm}
 }
@@ -82,3 +83,4 @@
 VAR_CONTENT
 
 \end{document}
+

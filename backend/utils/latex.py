@@ -103,7 +103,7 @@ def compile_latex_cloud(latex_source, filename_base):
         return None, f"Cloud compilation error: {str(e)}"
 
 
-def compile_latex(content, topic="Рабочий лист", filename_base="worksheet"):
+def compile_latex(content, topic="Рабочий лист", filename_base="worksheet", teacher_name=""):
     """
     Injects content into the LaTeX template and compiles it to PDF.
     Uses local pdflatex or cloud API based on USE_CLOUD_LATEX env var.
@@ -118,6 +118,13 @@ def compile_latex(content, topic="Рабочий лист", filename_base="works
     # 2. Inject Content
     latex_source = template.replace('VAR_CONTENT', content)
     latex_source = latex_source.replace('VAR_TOPIC', topic)
+    
+    # Generate teacher line only if teacher name is provided
+    if teacher_name and teacher_name.strip():
+        teacher_line = f"\\par\\vspace{{1mm}}{{\\small\\color{{textgray!70}} Учитель: {teacher_name}}}"
+    else:
+        teacher_line = ""
+    latex_source = latex_source.replace('VAR_TEACHER_LINE', teacher_line)
 
     # 3. Compile using appropriate method
     if USE_CLOUD_LATEX:
