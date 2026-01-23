@@ -664,6 +664,14 @@ footer {
     padding-top: 3rem;
     color: var(--text-muted);
     font-size: 0.875rem;
+    text-align: center;
+}
+
+footer .credits {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    line-height: 1.6;
+    margin-top: 0.5rem;
 }
 
 @media (max-width: 640px) {
