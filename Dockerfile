@@ -31,5 +31,5 @@ EXPOSE 10000
 ENV USE_CLOUD_LATEX=false
 ENV PYTHONUNBUFFERED=1
 
-# Run the application
-CMD ["gunicorn", "--chdir", "backend", "app:app", "--bind", "0.0.0.0:10000"]
+# Run the application with 120s timeout for LaTeX compilation
+CMD ["gunicorn", "--chdir", "backend", "app:app", "--bind", "0.0.0.0:10000", "--timeout", "120"]

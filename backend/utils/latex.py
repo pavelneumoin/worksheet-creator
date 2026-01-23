@@ -21,10 +21,11 @@ def compile_latex_local(latex_source, filename_base):
 
     try:
         result = subprocess.run(
-            ['pdflatex', '-disable-installer', '-interaction=nonstopmode', '-output-directory', OUTPUT_DIR, tex_path],
+            ['pdflatex', '-interaction=nonstopmode', '-output-directory', OUTPUT_DIR, tex_path],
             check=False,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
+            timeout=60  # 60 second timeout to prevent hanging
         )
         
         pdf_filename = f"{filename_base}.pdf"
@@ -36,6 +37,8 @@ def compile_latex_local(latex_source, filename_base):
         if result.returncode != 0:
             return None, f"LaTeX Compilation Error: {result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Unknown error'}"
              
+    except subprocess.TimeoutExpired:
+        return None, "LaTeX compilation timeout (60s). Document may be too complex."
     except FileNotFoundError:
         return None, "pdflatex not found. Set USE_CLOUD_LATEX=true for cloud compilation."
     except Exception as e:
