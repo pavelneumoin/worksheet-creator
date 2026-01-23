@@ -5,7 +5,7 @@ from gigachat.models import Chat, Messages, MessagesRole
 
 # Load credentials: environment variables FIRST (for Render), then config.py (for local dev)
 GIGACHAT_CREDENTIALS = os.environ.get('GIGACHAT_CREDENTIALS')
-GIGACHAT_SCOPE = os.environ.get('GIGACHAT_SCOPE', 'GIGACHAT_API_CORP')
+GIGACHAT_SCOPE = os.environ.get('GIGACHAT_SCOPE', 'GIGACHAT_API_PERS')
 
 # Fallback to config.py for local development
 if not GIGACHAT_CREDENTIALS:
