@@ -3,16 +3,20 @@ import base64
 from gigachat import GigaChat
 from gigachat.models import Chat, Messages, MessagesRole
 
-# Import credentials (assuming they will be in config.py)
-try:
-    from config import GIGACHAT_CREDENTIALS
+# Load credentials: environment variables FIRST (for Render), then config.py (for local dev)
+GIGACHAT_CREDENTIALS = os.environ.get('GIGACHAT_CREDENTIALS')
+GIGACHAT_SCOPE = os.environ.get('GIGACHAT_SCOPE', 'GIGACHAT_API_CORP')
+
+# Fallback to config.py for local development
+if not GIGACHAT_CREDENTIALS:
     try:
-        from config import GIGACHAT_SCOPE
+        from config import GIGACHAT_CREDENTIALS
+        try:
+            from config import GIGACHAT_SCOPE
+        except ImportError:
+            GIGACHAT_SCOPE = "GIGACHAT_API_CORP"
     except ImportError:
-        GIGACHAT_SCOPE = "GIGACHAT_API_PERS" # Default
-except ImportError:
-    GIGACHAT_CREDENTIALS = None
-    GIGACHAT_SCOPE = None
+        GIGACHAT_CREDENTIALS = None
 
 def clean_latex(text):
     """
