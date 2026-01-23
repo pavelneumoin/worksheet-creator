@@ -8,5 +8,7 @@ import os
 # Fall back to hardcoded value for local development
 GIGACHAT_CREDENTIALS = os.environ.get('GIGACHAT_CREDENTIALS', 'YOUR_GIGACHAT_AUTHORIZATION_KEY')
 
-# Optional: scope setting
-GIGACHAT_SCOPE = os.environ.get('GIGACHAT_SCOPE', 'GIGACHAT_API_PERS')
+# Scope setting:
+# - GIGACHAT_API_PERS = персональный ключ (для личного использования)
+# - GIGACHAT_API_CORP = корпоративный ключ (для проектов)
+GIGACHAT_SCOPE = os.environ.get('GIGACHAT_SCOPE', 'GIGACHAT_API_CORP')
