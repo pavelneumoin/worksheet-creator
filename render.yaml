@@ -6,3 +6,5 @@ services:
     envVars:
       - key: GIGACHAT_CREDENTIALS
         sync: false  # Введите вручную в Render Dashboard
+      - key: USE_CLOUD_LATEX
+        value: "false"

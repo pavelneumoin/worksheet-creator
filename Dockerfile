@@ -7,9 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-fonts-recommended \
     texlive-latex-extra \
     texlive-lang-cyrillic \
+    texlive-xetex \
     cm-super \
+    lmodern \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && which pdflatex && pdflatex --version
 
 # Set working directory
 WORKDIR /app
