@@ -76,6 +76,17 @@
                 </div>
 
                 <div class="settings-panel">
+                    <label class="settings-label">Стиль (Колонки):</label>
+                    <div class="task-count-selector">
+                        <input type="radio" name="layout" id="lay1" value="1col" checked>
+                        <label for="lay1">1 колонка</label>
+
+                        <input type="radio" name="layout" id="lay2" value="2col">
+                        <label for="lay2">2 колонки</label>
+                    </div>
+                </div>
+
+                <div class="settings-panel">
                     <label class="settings-label">Модель GigaChat:</label>
                     <div class="model-selector">
                         <input type="radio" name="gigaModel" id="mMax" value="GigaChat-Max" checked>
@@ -108,15 +119,25 @@
                         <div class="icon-box">
                             <ion-icon name="cloud-upload-outline"></ion-icon>
                         </div>
-                        <h3>Загрузите файл</h3>
-                        <p>Перетащите изображение (PNG, JPG) или нажмите для выбора</p>
+                        <h3>Загрузите файлы</h3>
+                        <p>Выделите несколько изображений (PNG, JPG) или нажмите для выбора</p>
                     </div>
-                    <input type="file" id="fileInput" hidden accept="image/*,.pdf">
+                    <input type="file" id="fileInput" hidden accept="image/*,.pdf" multiple>
                 </div>
 
                 <div id="status" class="status-container"></div>
             </div>
         </main>
+
+        <section class="glass-panel" style="max-width: 800px; margin-top: 2rem;">
+            <h2
+                style="font-size: 1.5rem; margin-top: 0; margin-bottom: 1.5rem; text-align: left; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem;">
+                <ion-icon name="time-outline" style="vertical-align: middle;"></ion-icon> История генераций
+            </h2>
+            <div id="historyContainer">
+                <p>Загрузка архива...</p>
+            </div>
+        </section>
 
         <footer>
             <p>Powered by GigaChat & LaTeX</p>

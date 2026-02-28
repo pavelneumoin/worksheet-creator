@@ -1,18 +1,37 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
 # Python
 __pycache__/
 *.py[cod]
-venv/
-env/
+*$py.class
+*.so
 
-# Data & Secrets
-backend/config.py
-backend/uploads/*
-backend/static/generated/*
-!backend/static/generated/.gitkeep
+# SQLite
+*.db
+*.sqlite3
+worksheets.db
 
-# OS
+# Flask additions
+instance/
+.webassets-cache
+
+# Local compilation
+app/backend/static/generated/
+app/backend/uploads/
+bot/tmp_*.jpg
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-
-# Backups
-*.zip

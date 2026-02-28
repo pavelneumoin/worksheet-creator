@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+env/
+
+# Data & Secrets
+backend/config.py
+backend/uploads/*
+backend/static/generated/*
+!backend/static/generated/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backups
+*.zip

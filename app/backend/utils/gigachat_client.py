@@ -32,18 +32,20 @@ def clean_latex(text):
          text = text[:-3]
     return text.strip()
 
-def process_image_with_gigachat(image_path, task_count=3, model="GigaChat-Max"):
+def process_image_with_gigachat(image_paths, task_count=3, model="GigaChat-Max"):
     """
-    Sends an image to GigaChat to extract math tasks and format them in LaTeX.
+    Sends images to GigaChat to extract math tasks and format them in LaTeX.
     
     Args:
-        image_path (str): Path to the image file.
+        image_paths (str|list): Path or list of paths to the image files.
         task_count (int): Number of tasks to format (guides the layout).
         model (str): GigaChat model to use (only GigaChat-Max supports images).
     
     Returns:
         str: LaTeX code representing the worksheet content.
     """
+    if isinstance(image_paths, str):
+        image_paths = [image_paths]
     if not GIGACHAT_CREDENTIALS:
         return "Error: GIGACHAT_CREDENTIALS not found in config.py"
     
@@ -114,9 +116,13 @@ def process_image_with_gigachat(image_path, task_count=3, model="GigaChat-Max"):
     try:
         # Use selected GigaChat model
         with GigaChat(credentials=GIGACHAT_CREDENTIALS, scope=GIGACHAT_SCOPE, model=model, verify_ssl_certs=False, timeout=120) as giga:
-            # 1. Upload the image file
+            # 1. Upload the image files
             # Note: GigaChat needs the file uploaded to process it in chat
-            uploaded_file = giga.upload_file(open(image_path, "rb"))
+            attachment_ids = []
+            for path in image_paths:
+                with open(path, "rb") as f:
+                    uploaded_file = giga.upload_file(f)
+                    attachment_ids.append(uploaded_file.id_)
             
             # 2. Send the chat request with the attachment
             response = giga.chat(Chat(
@@ -124,7 +130,7 @@ def process_image_with_gigachat(image_path, task_count=3, model="GigaChat-Max"):
                     Messages(
                         role=MessagesRole.USER,
                         content=prompt_text,
-                        attachments=[uploaded_file.id_] 
+                        attachments=attachment_ids 
                     )
                 ]
             ))
@@ -135,7 +141,7 @@ def process_image_with_gigachat(image_path, task_count=3, model="GigaChat-Max"):
     except Exception as e:
         return f"GigaChat Error: {str(e)}"
 
-def generate_similar_worksheet(original_text, task_count=3, model="GigaChat-Max"):
+def generate_similar_worksheet(original_text, task_count=3, model="GigaChat-Max", difficulty="same"):
     """
     Generates a new set of similar math tasks based on the original ones.
     """
@@ -155,6 +161,14 @@ def generate_similar_worksheet(original_text, task_count=3, model="GigaChat-Max"
     if raw_grid_height < 10: raw_grid_height = 10
     grid_height_mm = int(raw_grid_height)
 
+    diff_prompt = ""
+    if difficulty == "easier":
+        diff_prompt = "\n- УРОВЕНЬ: Сделай задачи ЗАМЕТНО ПРОЩЕ (используй меньшие числа, убери сложные конструкции, сократи количество шагов)."
+    elif difficulty == "harder":
+        diff_prompt = "\n- УРОВЕНЬ: Сделай задачи СЛОЖНЕЕ (увеличь числа, добавь вычисления, усложни структуру уравнений/выражений)."
+    else:
+        diff_prompt = "\n- УРОВЕНЬ: СОХРАНИ текущую сложность."
+
     prompt_text = f"""Ты - профессиональный методист и верстальщик LaTeX.
 Твоя задача: создать ВАРИАНТ 2 контрольной работы с ДРУГИМИ ЧИСЛАМИ.
 
@@ -163,9 +177,9 @@ def generate_similar_worksheet(original_text, task_count=3, model="GigaChat-Max"
 {original_text}
 \"\"\"
 
-КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА ГЕНЕРАЦИИ:
+КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА ГЕНЕРАЦИИ:{diff_prompt}
 1. Для КАЖДОЙ задачи создай АНАЛОГИЧНУЮ, но с ДРУГИМИ числами
-2. СОХРАНИ: тип задачи, структуру, сложность, количество действий
+2. СОХРАНИ: тип задачи, базовую структуру
 3. ИЗМЕНИ: все числовые значения (коэффициенты, константы, параметры)
 4. Используй "удобные" числа для ручных вычислений (целые, простые дроби)
 5. Количество задач должно ТОЧНО совпадать с исходным вариантом

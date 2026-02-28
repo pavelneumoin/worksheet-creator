@@ -1,6 +1,7 @@
-flask
-flask-cors
-requests
-gigachat
-gunicorn
-werkzeug
+Flask==3.0.3
+Werkzeug==3.0.2
+requests==2.31.0
+gigachat==0.1.26
+python-dotenv==1.0.1
+Flask-Cors==4.0.1
+pyTelegramBotAPI==4.16.1

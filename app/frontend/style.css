@@ -729,3 +729,99 @@ footer .credits {
     font-size: 1.25rem;
     flex-shrink: 0;
 }
+
+/* Inline LaTeX Editor */
+.editor-container {
+    margin-top: 1.5rem;
+    text-align: left;
+    background: #1e1e2e;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #3d3d4d;
+    animation: fadeIn 0.4s ease;
+}
+
+.editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #2d2d3d;
+    border-bottom: 1px solid #3d3d4d;
+    color: #a0a0b0;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.editor-header ion-icon {
+    font-size: 1.1rem;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.latex-textarea {
+    width: 100%;
+    height: 300px;
+    background: transparent;
+    border: none;
+    color: #e0e0e0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    padding: 16px;
+    resize: vertical;
+    outline: none;
+}
+
+.latex-textarea:focus {
+    box-shadow: inset 0 0 0 1px #4f46e5;
+}
+
+/* History Section */
+.history-item {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.history-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+    border-color: var(--primary);
+}
+
+.history-info {
+    flex: 1;
+}
+
+.history-info h4 {
+    margin: 0 0 6px 0;
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.history-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.history-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.history-actions .action-btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+}

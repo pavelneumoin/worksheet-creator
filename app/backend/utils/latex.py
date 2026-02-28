@@ -125,17 +125,18 @@ def compile_latex_cloud(latex_source, filename_base):
         return None, f"Cloud compilation error: {str(e)}"
 
 
-def compile_latex(content, topic="Рабочий лист", filename_base="worksheet", teacher_name=""):
-    """
-    Injects content into the LaTeX template and compiles it to PDF.
-    Uses local pdflatex or cloud API based on USE_CLOUD_LATEX env var.
-    """
+def _compile_single_doc(content, topic, filename_base, teacher_name, layout="1col"):
     # 1. Read Template
     try:
         with open(TEMPLATE_PATH, 'r', encoding='utf-8') as f:
             template = f.read()
     except FileNotFoundError:
         return None, "Template file not found."
+
+    # Wrap in multicols if requested
+    if layout == "2col":
+        # Ensure we don't break multicols with newpages if possible, but LaTeX multicols can handle it somewhat
+        content = f"\\begin{{multicols}}{{2}}\n{content}\n\\end{{multicols}}"
 
     # 2. Inject Content
     latex_source = template.replace('PLACEHOLDER:CONTENT', content)
@@ -159,3 +160,38 @@ def compile_latex(content, topic="Рабочий лист", filename_base="works
             return compile_latex_cloud(latex_source, filename_base)
         return result
 
+def extract_keys(content):
+    """
+    Разделяет сгенерированный LaTeX код на 'Задачи' и 'Ответы',
+    ища строку \\section*{Ответы...
+    """
+    parts = content.split(r'\section*{Ответы')
+    if len(parts) > 1:
+        tasks = parts[0].strip()
+        if tasks.endswith(r'\newpage'):
+            tasks = tasks[:-8].strip()
+        keys = r'\section*{Ответы' + parts[1]
+        return tasks, keys
+    return content, ""
+
+def compile_latex(content, topic="Рабочий лист", filename_base="worksheet", teacher_name=""):
+    """
+    Разделяет контент на листы с задачами и ключами, 
+    и компилирует два отдельных PDF файла.
+    Возвращает: (worksheet_pdf, keys_pdf, error)
+    """
+    tasks_content, keys_content = extract_keys(content)
+    
+    # Compile main worksheet
+    main_pdf, error = _compile_single_doc(tasks_content, topic, filename_base, teacher_name)
+    if error:
+        return None, None, error
+        
+    keys_pdf = None
+    if keys_content:
+        # Компилируем ответы в отдельный PDF
+        keys_topic = f"{topic} (Ответы)"
+        keys_filename = f"{filename_base}_keys"
+        keys_pdf, _ = _compile_single_doc(keys_content, keys_topic, keys_filename, teacher_name)
+        
+    return main_pdf, keys_pdf, None
