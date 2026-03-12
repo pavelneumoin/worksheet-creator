@@ -138,9 +138,12 @@ def debug_env():
         cfg_cred = 'none'
     from utils.gigachat_client import GIGACHAT_CREDENTIALS as mod_cred
     return jsonify({
-        'env_cred': env_cred[:10] + '...',
-        'cfg_cred': cfg_cred[:10] + '...',
-        'mod_cred': str(mod_cred)[:10] + '...'
+        'env_cred_len': len(env_cred),
+        'env_cred_first10': env_cred[:10],
+        'env_cred_last10': env_cred[-10:],
+        'mod_cred_len': len(str(mod_cred)),
+        'mod_cred_first10': str(mod_cred)[:10],
+        'mod_cred_last10': str(mod_cred)[-10:]
     })
 
 @app.route('/api/generated/<path:filename>')
