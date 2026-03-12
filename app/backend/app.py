@@ -133,4 +133,4 @@ def serve_generated(filename):
     return send_from_directory('static/generated', filename)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=3000)
+    app.run(debug=True, port=3005)
