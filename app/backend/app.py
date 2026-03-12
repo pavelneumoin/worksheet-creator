@@ -128,6 +128,21 @@ def history():
     except Exception as e:
         return jsonify({'error': f"Failed to fetch history: {e}"}), 500
 
+@app.route('/api/debug-env')
+def debug_env():
+    import os
+    env_cred = os.environ.get('GIGACHAT_CREDENTIALS', 'none')
+    try:
+        from config import GIGACHAT_CREDENTIALS as cfg_cred
+    except:
+        cfg_cred = 'none'
+    from utils.gigachat_client import GIGACHAT_CREDENTIALS as mod_cred
+    return jsonify({
+        'env_cred': env_cred[:10] + '...',
+        'cfg_cred': cfg_cred[:10] + '...',
+        'mod_cred': str(mod_cred)[:10] + '...'
+    })
+
 @app.route('/api/generated/<path:filename>')
 def serve_generated(filename):
     return send_from_directory('static/generated', filename)
