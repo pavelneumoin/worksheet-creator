@@ -77,8 +77,8 @@ def compile_code():
     pdf_filename, keys_filename, error = compile_latex(latex_content, topic=topic_str, filename_base=base_name, teacher_name=teacher_name, layout=layout)
 
     if pdf_filename:
-        pdf_url = f"/api/generated/{pdf_filename}"
-        keys_url = f"/api/generated/{keys_filename}" if keys_filename else None
+        pdf_url = f"/worksheet-api/generated/{pdf_filename}"
+        keys_url = f"/worksheet-api/generated/{keys_filename}" if keys_filename else None
         
         # Save to history
         try:

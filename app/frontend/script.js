@@ -31,7 +31,7 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
     statusDiv.innerHTML = '<p>Обработка... Пожалуйста, подождите.</p><div class="loader"></div>';
 
     try {
-        const response = await fetch('/api/process', {
+        const response = await fetch('/worksheet-api/process', {
             method: 'POST',
             body: formData
         });
@@ -79,7 +79,7 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
                 statusCompile.innerHTML = '<div class="loader small"></div>';
 
                 try {
-                    const compileResp = await fetch('/api/compile', {
+                    const compileResp = await fetch('/worksheet-api/compile', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -159,7 +159,7 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
                     formData2.append('topic', topic);
                     formData2.append('teacher_name', teacherName);
 
-                    const resp2 = await fetch('/api/generate_similar', {
+                    const resp2 = await fetch('/worksheet-api/generate_similar', {
                         method: 'POST',
                         body: formData2
                     });
@@ -171,7 +171,7 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
 
                         // Now we need to compile Variant 2
                         const layout2 = document.querySelector('input[name="layout"]:checked').value;
-                        const compileResp2 = await fetch('/api/compile', {
+                        const compileResp2 = await fetch('/worksheet-api/compile', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -329,7 +329,7 @@ document.addEventListener('keydown', (e) => {
 async function loadHistory() {
     const historyContainer = document.getElementById('historyContainer');
     try {
-        const response = await fetch('/api/history?limit=10');
+        const response = await fetch('/worksheet-api/history?limit=10');
         const data = await response.json();
 
         if (data.history && data.history.length > 0) {
