@@ -128,7 +128,7 @@ def history():
     except Exception as e:
         return jsonify({'error': f"Failed to fetch history: {e}"}), 500
 
-@app.route('/generated/<path:filename>')
+@app.route('/api/generated/<path:filename>')
 def serve_generated(filename):
     return send_from_directory('static/generated', filename)
 

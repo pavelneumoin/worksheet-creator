@@ -174,7 +174,7 @@ def extract_keys(content):
         return tasks, keys
     return content, ""
 
-def compile_latex(content, topic="Рабочий лист", filename_base="worksheet", teacher_name=""):
+def compile_latex(content, topic="Рабочий лист", filename_base="worksheet", teacher_name="", layout="1col"):
     """
     Разделяет контент на листы с задачами и ключами, 
     и компилирует два отдельных PDF файла.
@@ -183,7 +183,7 @@ def compile_latex(content, topic="Рабочий лист", filename_base="works
     tasks_content, keys_content = extract_keys(content)
     
     # Compile main worksheet
-    main_pdf, error = _compile_single_doc(tasks_content, topic, filename_base, teacher_name)
+    main_pdf, error = _compile_single_doc(tasks_content, topic, filename_base, teacher_name, layout=layout)
     if error:
         return None, None, error
         
