@@ -170,3 +170,76 @@ def generate_worksheet_latex(text, topic="General", task_count=3):
             return f"Error from YandexGPT: {response.text}"
     except Exception as e:
         return f"Exception: {str(e)}"
+
+def generate_similar_worksheet(original_text, task_count=3, difficulty="same"):
+    """
+    Uses YandexGPT to generate a similar worksheet (Variant 2).
+    """
+    if not API_KEY and not IAM_TOKEN:
+        return "Error: No Yandex Credentials provided."
+        
+    headers = {
+        "Authorization": get_auth_header(),
+        "x-folder-id": FOLDER_ID
+    }
+    
+    available_height = 190
+    text_buffer = 15
+    try: count = int(task_count)
+    except: count = 3
+    if count < 1: count = 1
+    if count > 6: count = 6
+    grid_height_mm = max(10, int((available_height / count) - text_buffer))
+    
+    diff_prompt = ""
+    if difficulty == "harder":
+        diff_prompt = "Сделай новые задачи НЕМНОГО СЛОЖНЕЕ (добавь дополнительные действия или усложни вычисления)."
+    elif difficulty == "easier":
+        diff_prompt = "Сделай новые задачи НЕМНОГО ПРОЩЕ."
+    else:
+        diff_prompt = "Сделай новые задачи ТАКОГО ЖЕ уровня сложности (измени только числа и незначительные детали)."
+
+    prompt = {
+        "modelUri": f"gpt://{FOLDER_ID}/yandexgpt",
+        "completionOptions": {
+            "stream": False,
+            "temperature": 0.6,
+            "maxTokens": "8000"
+        },
+        "messages": [
+            {
+                "role": "system",
+                "text": f"""Ты - профессиональный преподаватель математики. Твоя задача: создать ВАРИАНТ 2 для предоставленного списка задач.
+
+ПРАВИЛА:
+1. Создай {count} аналогичных задач.
+2. {diff_prompt}
+3. Обязательно используй LaTeX ($...$) для всех формул.
+4. Выводи результат строго в формате:
+\\TaskBox{{1}}{{Текст аналогичной задачи...}}
+\\WriteField{{{grid_height_mm}mm}}
+\\TaskBox{{2}}{{...}}
+\\WriteField{{{grid_height_mm}mm}}
+5. Никаких лишних слов, решений и ответов. Только сам сгенерированный рабочий лист.
+"""
+            },
+            {
+                "role": "user",
+                "text": f"Вот оригинальные задачи (Вариант 1):\n\n{original_text}\n\nПожалуйста, сгенерируй {count} новых задач для Варианта 2 в требуемом формате LaTeX."
+            }
+        ]
+    }
+
+    try:
+        response = requests.post(
+            "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
+            headers=headers,
+            json=prompt
+        )
+        if response.status_code == 200:
+            result = response.json()
+            return result['result']['alternatives'][0]['message']['text']
+        else:
+            return f"Error from YandexGPT: {response.text}"
+    except Exception as e:
+        return f"Exception: {str(e)}"

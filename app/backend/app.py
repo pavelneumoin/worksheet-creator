@@ -39,15 +39,25 @@ def process_file():
     if not filepaths:
         return jsonify({'error': 'Failed to save files'}), 500
 
-    # 2. Process with GigaChat (Multimodal)
-    from utils.gigachat_client import process_image_with_gigachat
+    # 2. Process with Yandex
+    from utils.yandex import ocr_image, generate_worksheet_latex
     task_count = request.form.get('task_count', 3)
     topic = request.form.get('topic', 'Рабочий лист')
-    model = request.form.get('model', 'GigaChat-Max')
+    model = "YandexGPT" # Placeholder for consistency
     teacher_name = request.form.get('teacher_name', '')
     
-    # This single call handles both OCR and LaTeX generation
-    latex_content = process_image_with_gigachat(filepaths, task_count=task_count, model=model)
+    # Process each image with OCR
+    full_text = ""
+    for filepath in filepaths:
+        text = ocr_image(filepath)
+        if text.startswith("Error"):
+            return jsonify({'error': text}), 500
+        full_text += text + "\n"
+
+    # Generate LaTeX
+    latex_content = generate_worksheet_latex(full_text, topic=topic, task_count=task_count)
+    if latex_content.startswith("Error"):
+        return jsonify({'error': latex_content}), 500
 
     # 4. Return LaTeX code (Do not compile yet)
     return jsonify({
@@ -99,11 +109,11 @@ def compile_code():
 
 @app.route('/api/generate_similar', methods=['POST'])
 def generate_similar():
-    from utils.gigachat_client import generate_similar_worksheet
+    from utils.yandex import generate_similar_worksheet
     
     original_text = request.form.get('original_text')
     task_count = request.form.get('task_count', 3)
-    model = request.form.get('model', 'GigaChat-Max')
+    model = request.form.get('model', 'YandexGPT')
     topic = request.form.get('topic', 'Рабочий лист')
     teacher_name = request.form.get('teacher_name', '')
     difficulty = request.form.get('difficulty', 'same')
@@ -111,9 +121,11 @@ def generate_similar():
     if not original_text:
         return jsonify({'error': 'Original text is required'}), 400
         
-    # Generate similar tasks
-    latex_content = generate_similar_worksheet(original_text, task_count=task_count, model=model, difficulty=difficulty)
+    latex_content = generate_similar_worksheet(original_text, task_count=task_count, difficulty=difficulty)
     
+    if latex_content.startswith("Error"):
+        return jsonify({'error': latex_content}), 500
+        
     return jsonify({
         'message': 'Variant 2 text generated successfully',
         'latex_code': latex_content
