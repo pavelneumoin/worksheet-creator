@@ -1,10 +1,10 @@
-"""Local-only demo launcher for the current Worksheet Creator backend.
+"""Local-only demo launcher for the current ListOK backend.
 
 Run from a repository that contains app/backend/app.py:
     python run_local.py
 
-The launcher adapts the existing frontend API prefix without editing backend
-source files. It is a local development adapter, not production hardening.
+The launcher retains the old frontend API prefix as a compatibility alias.
+It is a local development launcher, not a production deployment.
 """
 from __future__ import annotations
 
@@ -44,6 +44,8 @@ class LocalApiAdapter:
 
 def load_application(repo_root: Path):
     repo_root = repo_root.resolve()
+    from dotenv import load_dotenv
+    load_dotenv(repo_root / ".env", override=False)
     backend_dir = repo_root / "app" / "backend"
     entrypoint = backend_dir / "app.py"
     if not entrypoint.is_file():
@@ -65,7 +67,7 @@ def load_application(repo_root: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Worksheet Creator on localhost.")
+    parser = argparse.ArgumentParser(description="Run ListOK on localhost.")
     parser.add_argument(
         "--repo-root",
         type=Path,
@@ -85,4 +87,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

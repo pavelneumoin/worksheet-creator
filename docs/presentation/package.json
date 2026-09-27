@@ -1,0 +1,9 @@
+{
+  "name": "listok-hackathon-presentation",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "pdf": "marp presentation.md --theme-set theme.css --html --allow-local-files --pdf --pdf-notes --pdf-outlines -o presentation.pdf"
+  },
+  "devDependencies": { "@marp-team/marp-cli": "4.5.1" }
+}

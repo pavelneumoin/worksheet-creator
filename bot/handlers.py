@@ -20,7 +20,7 @@ def register_handlers(bot):
         markup.add(btn_help)
         
         bot.reply_to(message, 
-            "Привет! 👋 Я бот *Worksheet Creator*.\n\n"
+            "Привет! 👋 Я бот *ЛистОК*.\n\n"
             "Я умею превращать фотографии с математическими заданиями в красивые рабочие листы в формате PDF (вместе с ответами!).\n\n"
             "Просто отправьте мне фото заданий, и я сделаю всю магию ✨",
             parse_mode="Markdown",
@@ -44,7 +44,7 @@ def register_handlers(bot):
 
     @bot.message_handler(content_types=['photo'])
     def handle_photo(message: Message):
-        bot.send_message(message.chat.id, "🤖 Принял фото. Отправляю на распознавание серверу Worksheet Creator...")
+        bot.send_message(message.chat.id, "🤖 Принял фото. Отправляю на распознавание серверу ЛистОК...")
         
         try:
             # Get the highest resolution photo

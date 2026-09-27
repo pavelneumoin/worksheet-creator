@@ -1,87 +1,81 @@
-\documentclass[a4paper,12pt]{article}
-
-% --- Русский и математика ---
-\usepackage[utf8]{inputenc}
-\usepackage[T2A]{fontenc}
+\documentclass[a4paper,11pt]{article}
+% XeLaTeX gives clean Cyrillic text; pdfLaTeX remains supported.
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T2A]{fontenc}
+\else
+  \usepackage{fontspec}
+  \IfFontExistsTF{Arial}{\setmainfont{Arial}}{%
+    \IfFontExistsTF{DejaVu Sans}{\setmainfont{DejaVu Sans}}{\setmainfont{Liberation Sans}}}
+\fi
 \usepackage[russian]{babel}
-\usepackage{amsmath,amssymb,mathtools}
+\usepackage{amsmath,amssymb}
 \usepackage{multicol}
-% \DeclareMathOperator{\tg}{tg} % Commented out to avoid conflict if already defined
-% \DeclareMathOperator{\ctg}{ctg}
-
-% --- Вёрстка под печать ---
-\usepackage[a4paper,margin=15mm]{geometry}
+\usepackage[a4paper,margin=16mm,footskip=8mm]{geometry}
 \usepackage{tikz}
-\usetikzlibrary{calc}
 \usepackage{xcolor}
 \setlength{\parindent}{0pt}
+\setlength{\columnsep}{8mm}
+\setlength{\emergencystretch}{2em}
 \raggedbottom
 
-% --- Серо-тональная палитра ---
-\definecolor{accgray}{HTML}{4B5563}   % рамки задач
-\definecolor{softgray}{HTML}{E5E7EB}  % контуры шапки/полей
-\definecolor{gridgray}{HTML}{9CA3AF}  % пунктирная клетка (темнее для видимости)
-\definecolor{textgray}{HTML}{111827}  % текст
+% Restrained grayscale remains legible on a classroom printer.
+\definecolor{accgray}{HTML}{4B5563}
+\definecolor{softgray}{HTML}{D1D5DB}
+\definecolor{gridgray}{HTML}{B7BEC8}
+\definecolor{textgray}{HTML}{111827}
 \color{textgray}
 
-% --- Заголовок (по центру) с ФИО учителя ---
 \newcommand{\WorksheetTitle}[1]{%
-  \begin{center}
-    {\Large\bfseries #1}\par
-    \vspace{2mm}
-    {\color{softgray}\rule{0.6\linewidth}{0.6pt}}
-    PLACEHOLDER:TEACHER
-  \end{center}
-  \vspace{3mm}
+  {\small\color{accgray} ЛИСТОК\hfill РАБОЧИЙ ЛИСТ}\par
+  \vspace{4mm}
+  {\fontsize{19}{23}\selectfont\bfseries #1}\par
+  PLACEHOLDER:TEACHER
+  \vspace{4mm}
+  {\color{accgray}\hrule height 0.7pt}
+  \vspace{5mm}
 }
 
-% --- Шапка (только на первой странице): ФИО • Класс • Дата ---
-\newlength{\NameRuleW}  \setlength{\NameRuleW}{0.56\linewidth}
-\newlength{\ClassRuleW} \setlength{\ClassRuleW}{0.12\linewidth}
-\newlength{\DateRuleW}  \setlength{\DateRuleW}{0.15\linewidth}
 \newcommand{\FirstPageHeader}{%
   \noindent
-  \begin{tikzpicture}[baseline=(B.base)]
-    \node[inner sep=2mm, draw=softgray, rounded corners=2pt, line width=0.5pt,
-          text width=\linewidth, anchor=west] (B)
-    {\textbf{ФИО:}\ \rule{\NameRuleW}{0.4pt}\hfill
-     \textbf{Класс:}\ \rule{\ClassRuleW}{0.4pt}\hfill
-     \textbf{Дата:}\ \rule{\DateRuleW}{0.4pt}};
-  \end{tikzpicture}\par\vspace{4mm}%
+  \begin{minipage}[t]{0.54\linewidth}
+    \textbf{ФИО:}\ \hrulefill
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.18\linewidth}
+    \textbf{Класс:}\ \hrulefill
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.23\linewidth}
+    \textbf{Дата:}\ \hrulefill
+  \end{minipage}\par
+  \vspace{8mm}
 }
 
-% --- Рамка задания (ширина = \linewidth) ---
-\newcommand{\TaskBox}[2]{% #1 номер, #2 текст условия
+\newcommand{\TaskBox}[2]{%
   \noindent
   \begin{tikzpicture}
-    \node[draw=accgray, line width=0.8pt, rounded corners=4pt,
-          inner sep=3mm, text width=\dimexpr\linewidth-6mm\relax,
+    \node[draw=accgray, line width=0.7pt, rounded corners=3pt,
+          inner sep=3mm, text width=\dimexpr\linewidth-6mm-1pt\relax,
           anchor=north west] (B) at (0,0) {#2};
     \node[anchor=south west, fill=white, draw=accgray,
-          rounded corners=3pt, inner xsep=6pt, inner ysep=1.5pt,
-          yshift=1pt, xshift=1.5pt] at (B.north west)
-          {\scriptsize \textbf{Задача №#1}};
-  \end{tikzpicture}\par\vspace{2mm}%
+          rounded corners=2pt, inner xsep=6pt, inner ysep=1.5pt,
+          yshift=1pt, xshift=2pt] at (B.north west)
+          {\scriptsize\textbf{ЗАДАНИЕ #1}};
+  \end{tikzpicture}\par\nobreak\vspace{2mm}\nobreak
 }
 
-% --- Поле для письма с пунктирной клеткой (ширина = \linewidth) ---
-\newcommand{\WriteField}[1]{% #1 высота, например 42mm / 60mm / 90mm
+\newcommand{\WriteField}[1]{%
   \noindent
   \begin{tikzpicture}[x=1pt,y=1pt]
-    \pgfmathsetlengthmacro{\W}{\linewidth}
+    \pgfmathsetlengthmacro{\W}{\linewidth-0.6pt}
     \pgfmathsetlengthmacro{\H}{#1}
     \draw[line width=0.5pt,rounded corners=2pt,color=softgray] (0,0) rectangle (\W,\H);
     \draw[gridgray,densely dotted,step=5mm] (0,0) grid (\W,\H);
-  \end{tikzpicture}\par\vspace{5mm}%
+  \end{tikzpicture}\par\vspace{6mm}
 }
 
-% -------------------- Документ --------------------
 \begin{document}
-
-\WorksheetTitle{Рабочий Лист: PLACEHOLDER:TOPIC}
+\WorksheetTitle{PLACEHOLDER:TOPIC}
 \FirstPageHeader
-
 PLACEHOLDER:CONTENT
-
 \end{document}
-

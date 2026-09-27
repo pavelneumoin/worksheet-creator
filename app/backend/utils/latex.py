@@ -1,197 +1,231 @@
+"""Local demo compilation; these TeX restrictions are not a production sandbox."""
 import os
-import requests
-import subprocess
+from pathlib import Path
+import re
 import shutil
+import subprocess
+import tempfile
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), '../templates/default_worksheet.tex')
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '../static/generated')
-
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+USE_CLOUD_LATEX = False  # No document uploads, including when local TeX is absent.
+MAX_CONTENT_BYTES = 64 * 1024
 
-# Check if we're in production (Render) or local development
-USE_CLOUD_LATEX = os.environ.get('USE_CLOUD_LATEX', 'false').lower() == 'true'
+_SAFE_COMMANDS = set(r'''
+TaskBox WriteField newpage clearpage pagebreak section subsection paragraph
+begin end text textbf textit textnormal textrm textsf texttt emph underline
+mathrm mathbf mathit mathsf mathtt mathcal mathbb operatorname
+frac dfrac tfrac sqrt binom dbinom tbinom left right middle overline bar vec
+overrightarrow overleftrightarrow hat widehat tilde widetilde dot ddot
+cdot times div pm mp centerdot ast star circ bullet
+le leq ge geq ne neq approx sim simeq equiv propto ll gg
+in notin ni subset subseteq supset supseteq cup cap emptyset varnothing
+forall exists nexists neg land lor implies iff to rightarrow leftarrow
+leftrightarrow Rightarrow Leftarrow Leftrightarrow mapsto longrightarrow
+infty partial nabla sum prod int iint iiint oint lim limits nolimits
+sin cos tan cot tg ctg arcsin arccos arctan sinh cosh tanh log ln exp min max
+det gcd mod bmod pmod lvert rvert lVert rVert vert Vert
+alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta iota
+kappa lambda mu nu xi pi varpi rho varrho sigma varsigma tau upsilon phi
+varphi chi psi omega Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega
+quad qquad hspace vspace hfill smallskip medskip bigskip newline linebreak prime
+hline cline multicolumn item noindent centering raggedright
+displaystyle textstyle scriptstyle scriptscriptstyle
+small normalsize large Large footnotesize scriptsize tiny
+ldots cdots vdots ddots dots underbrace overbrace underset overset
+textbackslash textasciitilde textasciicircum textdegree degree
+color textcolor boxed fbox phantom hphantom vphantom rule
+'''.split())
+_SAFE_ENVIRONMENTS = {
+    'tabular', 'tabular*', 'array', 'aligned', 'alignedat', 'align', 'align*',
+    'gather', 'gather*', 'gathered', 'equation', 'equation*', 'split',
+    'cases', 'matrix', 'pmatrix', 'bmatrix', 'Bmatrix', 'vmatrix', 'Vmatrix',
+    'enumerate', 'itemize', 'description', 'center', 'flushleft',
+}
+_ESCAPES = {'\\': r'\textbackslash{}', '&': r'\&', '%': r'\%', '$': r'\$',
+            '#': r'\#', '_': r'\_', '{': r'\{', '}': r'\}',
+            '~': r'\textasciitilde{}', '^': r'\textasciicircum{}'}
+
+
+def get_latex_compiler():
+    """Find XeLaTeX/pdfLaTeX, including a default Windows MiKTeX install."""
+    configured = os.environ.get('LATEX_COMPILER', '').strip().strip('"')
+    if configured:
+        candidate = shutil.which(configured)
+        if not candidate and Path(configured).is_file():
+            candidate = str(Path(configured).resolve())
+        return candidate
+    for engine in ('xelatex', 'pdflatex'):
+        candidate = shutil.which(engine)
+        if candidate:
+            return candidate
+    if os.name == 'nt':
+        roots = [Path(os.environ.get('LOCALAPPDATA', '')) / 'Programs/MiKTeX/miktex/bin/x64',
+                 Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'MiKTeX/miktex/bin/x64']
+        for root in roots:
+            for engine in ('xelatex.exe', 'pdflatex.exe'):
+                candidate = root / engine
+                if candidate.is_file():
+                    return str(candidate.resolve())
+    return None
+
+
+def _timeout_seconds():
+    try:
+        return max(5, min(int(os.environ.get('LATEX_TIMEOUT_SECONDS', '60')), 120))
+    except ValueError:
+        return 60
+
+
+def _safe_filename(filename_base):
+    return isinstance(filename_base, str) and bool(re.fullmatch(r'[A-Za-z0-9_-]{1,100}', filename_base))
+
+
+def _escape_header(value):
+    return ''.join(_ESCAPES.get(char, char) for char in ' '.join(value.split()))
+
+
+def _validate_content(content):
+    if not isinstance(content, str) or not content.strip():
+        return 'Добавьте задания в редактор LaTeX.'
+    if len(content.encode('utf-8')) > MAX_CONTENT_BYTES:
+        return 'Слишком большой документ: максимум 64 КБ LaTeX.'
+    if '^^' in content or '\x00' in content:
+        return 'Недопустимая управляющая последовательность LaTeX.'
+    # Definitions, IO, packages, engine primitives are not editable worksheet content.
+    for command in re.findall(r'\\([A-Za-z@]+)', content):
+        if command not in _SAFE_COMMANDS:
+            return f'Команда \\{command} не поддерживается в локальном редакторе. Используйте команды задач и формул.'
+    for environment in re.findall(r'\\(?:begin|end)\s*\{([^{}]+)\}', content):
+        if environment not in _SAFE_ENVIRONMENTS:
+            return f'Окружение {environment} не поддерживается в локальном редакторе.'
+    for height in re.findall(r'\\WriteField\s*\{([^{}]+)\}', content):
+        match = re.fullmatch(r'\s*(\d+(?:\.\d+)?)\s*mm\s*', height)
+        if not match or not 5 <= float(match.group(1)) <= 150:
+            return 'Высота WriteField должна быть от 5mm до 150mm.'
+    return None
+
+
+def _remove_output(filename_base):
+    if _safe_filename(filename_base):
+        for extension in ('.pdf', '.tex', '.log'):
+            Path(OUTPUT_DIR, filename_base + extension).unlink(missing_ok=True)
+
+
+def _diagnostic(output):
+    lines = output.splitlines()
+    for index, line in enumerate(lines):
+        if line.startswith('!') or re.search(r'\.tex:\d+:', line):
+            return '\n'.join(lines[index:index + 6])[:900]
+    return '\n'.join(lines[-10:])[-900:] or 'Компилятор не сообщил подробностей.'
+
 
 def compile_latex_local(latex_source, filename_base):
-    """Compile LaTeX using local pdflatex (for development)."""
-    tex_filename = f"{filename_base}.tex"
-    tex_path = os.path.join(OUTPUT_DIR, tex_filename)
-    
-    with open(tex_path, 'w', encoding='utf-8') as f:
-        f.write(latex_source)
-
+    """Compile trusted template + validated body in a fresh local directory."""
+    if not _safe_filename(filename_base):
+        return None, 'Недопустимое имя выходного файла.'
+    compiler = get_latex_compiler()
+    if not compiler:
+        return None, 'Локальный LaTeX не найден. Установите MiKTeX/TeX Live или задайте LATEX_COMPILER. Данные никуда не отправлены.'
+    _remove_output(filename_base)
+    output_dir = Path(OUTPUT_DIR)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timeout = _timeout_seconds()
     try:
-        result = subprocess.run(
-            ['pdflatex', '-interaction=nonstopmode', '-output-directory', OUTPUT_DIR, tex_path],
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=60  # 60 second timeout to prevent hanging
-        )
-        
-        pdf_filename = f"{filename_base}.pdf"
-        pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
-        
-        if os.path.exists(pdf_path):
+        with tempfile.TemporaryDirectory(prefix='listok-tex-') as temp_dir:
+            temp_path = Path(temp_dir)
+            (temp_path / 'document.tex').write_text(latex_source, encoding='utf-8')
+            command = [compiler, '-interaction=nonstopmode', '-halt-on-error',
+                       '-no-shell-escape', '-file-line-error']
+            if 'miktex' in compiler.lower():
+                command.append('--disable-installer')
+            command.append('document.tex')
+            environment = os.environ.copy()
+            environment.update({'openin_any': 'p', 'openout_any': 'p', 'shell_escape': 'f'})
+            environment['PATH'] = str(Path(compiler).parent) + os.pathsep + environment.get('PATH', '')
+            options = {'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}
+            result = subprocess.run(command, cwd=temp_dir, env=environment,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                    timeout=timeout, check=False, **options)
+            output = result.stdout.decode('utf-8', errors='replace')
+            (output_dir / f'{filename_base}.tex').write_text(latex_source, encoding='utf-8')
+            (output_dir / f'{filename_base}.log').write_text(output, encoding='utf-8')
+            if re.search(r'Missing character\s*:', output, re.IGNORECASE):
+                return None, ('Компилятор не смог отобразить символы: PDF не выдан, чтобы не потерять '
+                              'единицы измерения или условия. Кириллические единицы внутри формул '
+                              'оформляйте через \\text{...}; проверьте остальные символы и шрифт.')
+            if result.returncode != 0:
+                return None, 'Не удалось собрать PDF. ' + _diagnostic(output)
+            pdf_path = temp_path / 'document.pdf'
+            if not pdf_path.is_file() or pdf_path.stat().st_size < 100:
+                return None, 'Компилятор завершился без PDF.'
+            with pdf_path.open('rb') as file:
+                if file.read(5) != b'%PDF-':
+                    return None, 'Компилятор не создал корректный PDF.'
+            pdf_filename = f'{filename_base}.pdf'
+            shutil.copyfile(pdf_path, output_dir / pdf_filename)
             return pdf_filename, None
-             
-        if result.returncode != 0:
-            return None, f"LaTeX Compilation Error: {result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Unknown error'}"
-             
     except subprocess.TimeoutExpired:
-        return None, "LaTeX compilation timeout (60s). Document may be too complex."
-    except FileNotFoundError:
-        return None, "pdflatex not found. Set USE_CLOUD_LATEX=true for cloud compilation."
-    except Exception as e:
-        return None, f"Unexpected error: {str(e)}"
-         
-    return None, "PDF was not created."
+        return None, f'Сборка PDF превысила {timeout} секунд. Упростите документ и повторите.'
+    except OSError as error:
+        return None, f'Не удалось запустить локальную сборку PDF: {error}'
 
 
 def compile_latex_cloud(latex_source, filename_base):
-    """Compile LaTeX using cloud API (for production without TeX installed)."""
-    
-    # Save .tex file first
-    tex_filename = f"{filename_base}.tex"
-    tex_path = os.path.join(OUTPUT_DIR, tex_filename)
-    
-    with open(tex_path, 'w', encoding='utf-8') as f:
-        f.write(latex_source)
-    
+    """Compatibility entrypoint; cloud submission is intentionally disabled."""
+    return None, 'Облачная сборка отключена. Используйте локальный LaTeX; материалы не отправлены сторонним сервисам.'
+
+
+def _compile_single_doc(content, topic, filename_base, teacher_name, layout='1col'):
     try:
-        # Option 1: Use texlive.net (official TeX Live online compiler)
-        response = requests.post(
-            'https://texlive.net/cgi-bin/latexcgi',
-            data={
-                'filecontents[]': latex_source,
-                'filename[]': 'document.tex',
-                'engine': 'pdflatex',
-                'return': 'pdf'
-            },
-            timeout=120
-        )
-        
-        if response.status_code == 200 and (
-            response.headers.get('content-type', '').startswith('application/pdf') or
-            len(response.content) > 1000 and response.content[:4] == b'%PDF'
-        ):
-            pdf_filename = f"{filename_base}.pdf"
-            pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
-            
-            with open(pdf_path, 'wb') as f:
-                f.write(response.content)
-            
-            return pdf_filename, None
-        
-        # Option 2: Try latex.ytotech.com with correct format
-        response2 = requests.post(
-            'https://latex.ytotech.com/builds/sync',
-            json={
-                'compiler': 'pdflatex',
-                'resources': [
-                    {
-                        'main': True,
-                        'path': 'main.tex',
-                        'content': latex_source
-                    }
-                ]
-            },
-            headers={'Content-Type': 'application/json'},
-            timeout=120
-        )
-        
-        if response2.status_code == 200 and len(response2.content) > 100:
-            pdf_filename = f"{filename_base}.pdf"
-            pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
-            
-            with open(pdf_path, 'wb') as f:
-                f.write(response2.content)
-            
-            return pdf_filename, None
-        
-        # Option 3: Try latexonline.cc with GET method (URL-based)
-        import urllib.parse
-        import base64
-        
-        # For short documents, we can use URL encoding
-        encoded_source = base64.b64encode(latex_source.encode('utf-8')).decode('utf-8')
-        
-        # If all APIs fail, return meaningful error
-        error_details = f"API 1: {response.status_code}, API 2: {response2.status_code}"
-        return None, f"Cloud LaTeX compilation failed. {error_details}. Consider installing pdflatex on the server."
-                
-    except requests.Timeout:
-        return None, "Cloud LaTeX API timeout. Try again."
-    except Exception as e:
-        return None, f"Cloud compilation error: {str(e)}"
+        template = Path(TEMPLATE_PATH).read_text(encoding='utf-8')
+    except OSError:
+        return None, 'Не найден шаблон рабочего листа.'
+    if layout == '2col':
+        content = '\\begin{multicols}{2}\n' + content + '\n\\end{multicols}'
+    teacher_line = ''
+    if teacher_name.strip():
+        teacher_line = r'\par\vspace{1mm}{\small\color{textgray} Учитель: ' + _escape_header(teacher_name) + '}'
+    replacements = {'CONTENT': content, 'TOPIC': _escape_header(topic), 'TEACHER': teacher_line}
+    latex_source = re.sub(r'PLACEHOLDER:(CONTENT|TOPIC|TEACHER)',
+                          lambda match: replacements[match.group(1)], template)
+    return compile_latex_local(latex_source, filename_base)
 
-
-def _compile_single_doc(content, topic, filename_base, teacher_name, layout="1col"):
-    # 1. Read Template
-    try:
-        with open(TEMPLATE_PATH, 'r', encoding='utf-8') as f:
-            template = f.read()
-    except FileNotFoundError:
-        return None, "Template file not found."
-
-    # Wrap in multicols if requested
-    if layout == "2col":
-        # Ensure we don't break multicols with newpages if possible, but LaTeX multicols can handle it somewhat
-        content = f"\\begin{{multicols}}{{2}}\n{content}\n\\end{{multicols}}"
-
-    # 2. Inject Content
-    latex_source = template.replace('PLACEHOLDER:CONTENT', content)
-    latex_source = latex_source.replace('PLACEHOLDER:TOPIC', topic)
-    
-    # Generate teacher line only if teacher name is provided
-    if teacher_name and teacher_name.strip():
-        teacher_line = f"\\par\\vspace{{1mm}}{{\\small\\color{{textgray!70}} Учитель: {teacher_name}}}"
-    else:
-        teacher_line = ""
-    latex_source = latex_source.replace('PLACEHOLDER:TEACHER', teacher_line)
-
-    # 3. Compile using appropriate method
-    if USE_CLOUD_LATEX:
-        return compile_latex_cloud(latex_source, filename_base)
-    else:
-        # Try local first, fall back to cloud if pdflatex not found
-        result = compile_latex_local(latex_source, filename_base)
-        if result[1] and ("pdflatex" in result[1].lower() and "not found" in result[1].lower()):
-            # Auto-fallback to cloud
-            return compile_latex_cloud(latex_source, filename_base)
-        return result
 
 def extract_keys(content):
-    """
-    Разделяет сгенерированный LaTeX код на 'Задачи' и 'Ответы',
-    ища строку \\section*{Ответы...
-    """
-    parts = content.split(r'\section*{Ответы')
-    if len(parts) > 1:
-        tasks = parts[0].strip()
-        if tasks.endswith(r'\newpage'):
-            tasks = tasks[:-8].strip()
-        keys = r'\section*{Ответы' + parts[1]
-        return tasks, keys
-    return content, ""
+    """Split at the first answers heading, preserving all subsequent sections."""
+    match = re.search(r'\\section\s*\*?\s*\{\s*Ответы(?:[^{}]*)\}', content, re.IGNORECASE)
+    if not match:
+        return content, ''
+    tasks = re.sub(r'(?:\\(?:newpage|clearpage)\s*)+$', '', content[:match.start()].strip()).strip()
+    return tasks, content[match.start():].strip()
 
-def compile_latex(content, topic="Рабочий лист", filename_base="worksheet", teacher_name="", layout="1col"):
-    """
-    Разделяет контент на листы с задачами и ключами, 
-    и компилирует два отдельных PDF файла.
-    Возвращает: (worksheet_pdf, keys_pdf, error)
-    """
-    tasks_content, keys_content = extract_keys(content)
-    
-    # Compile main worksheet
-    main_pdf, error = _compile_single_doc(tasks_content, topic, filename_base, teacher_name, layout=layout)
+
+def compile_latex(content, topic='Рабочий лист', filename_base='worksheet', teacher_name='', layout='1col'):
+    """Return (worksheet_pdf, answers_pdf, error); never silently omit answers."""
+    if not _safe_filename(filename_base):
+        return None, None, 'Недопустимое имя выходного файла.'
+    if not isinstance(topic, str) or not isinstance(teacher_name, str):
+        return None, None, 'Тема и имя учителя должны быть текстом.'
+    if len(topic) > 240 or len(teacher_name) > 160:
+        return None, None, 'Сократите тему или имя учителя.'
+    if layout not in ('1col', '2col'):
+        return None, None, 'Выберите одну или две колонки.'
+    error = _validate_content(content)
     if error:
         return None, None, error
-        
+    tasks, keys = extract_keys(content)
+    if not tasks:
+        return None, None, 'Перед ответами должны быть задания.'
+    main_pdf, error = _compile_single_doc(tasks, topic, filename_base, teacher_name, layout)
+    if error:
+        return None, None, error
     keys_pdf = None
-    if keys_content:
-        # Компилируем ответы в отдельный PDF
-        keys_topic = f"{topic} (Ответы)"
-        keys_filename = f"{filename_base}_keys"
-        keys_pdf, _ = _compile_single_doc(keys_content, keys_topic, keys_filename, teacher_name)
-        
+    if keys:
+        keys_pdf, error = _compile_single_doc(keys, topic + ' — ответы', filename_base + '_keys', teacher_name)
+        if error:
+            _remove_output(filename_base)
+            _remove_output(filename_base + '_keys')
+            return None, None, 'Ошибка в документе с ответами. ' + error
     return main_pdf, keys_pdf, None

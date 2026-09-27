@@ -1,161 +1,75 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Помощник Учителя</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <!-- Ionicons for icons -->
-    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#211438">
+<meta name="description" content="ЛистОК помогает учителям математики и физики готовить рабочие листы: проверить задания, оформить формулы с LaTeX и собрать PDF.">
+<title>ЛистОК — рабочие листы для математики и физики</title>
+<link rel="stylesheet" href="/style.css"><script src="/script.js" defer></script>
 </head>
-
 <body>
-    <div class="main-wrapper">
-        <header class="hero">
-            <div class="hero-content">
-                <div class="badge">Бета Версия</div>
-                <h1>AI Помощник Учителя</h1>
-                <p class="subtitle">Генерация рабочих листов за секунды. Загрузите фото задачи — получите готовый PDF с
-                    решением и оформлением.</p>
-
-                <div class="features">
-                    <div class="feature-item">
-                        <ion-icon name="scan-outline"></ion-icon>
-                        <span>OCR Распознавание</span>
-                    </div>
-                    <div class="feature-item">
-                        <ion-icon name="sparkles-outline"></ion-icon>
-                        <span>AI Генерация</span>
-                    </div>
-                    <div class="feature-item">
-                        <ion-icon name="document-text-outline"></ion-icon>
-                        <span>PDF Экспорт</span>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <main class="app-container">
-            <div class="glass-panel">
-                <div class="settings-panel">
-                    <label class="settings-label">Тема рабочего листа:</label>
-                    <input type="text" id="topicInput" class="topic-input" placeholder="Например: Квадратные уравнения">
-                </div>
-
-                <div class="settings-panel">
-                    <label class="settings-label">ФИО учителя (необязательно):</label>
-                    <input type="text" id="teacherNameInput" class="topic-input" placeholder="Иванов И.И.">
-                </div>
-
-                <div class="settings-panel">
-                    <label class="settings-label">Количество задач на листе:</label>
-                    <div class="task-count-selector">
-                        <input type="radio" name="taskCount" id="t1" value="1">
-                        <label for="t1">1</label>
-
-                        <input type="radio" name="taskCount" id="t2" value="2">
-                        <label for="t2">2</label>
-
-                        <input type="radio" name="taskCount" id="t3" value="3" checked>
-                        <label for="t3">3</label>
-
-                        <input type="radio" name="taskCount" id="t4" value="4">
-                        <label for="t4">4</label>
-
-                        <input type="radio" name="taskCount" id="t5" value="5">
-                        <label for="t5">5</label>
-
-                        <input type="radio" name="taskCount" id="t6" value="6">
-                        <label for="t6">6</label>
-                    </div>
-                </div>
-
-                <div class="settings-panel">
-                    <label class="settings-label">Стиль (Колонки):</label>
-                    <div class="task-count-selector">
-                        <input type="radio" name="layout" id="lay1" value="1col" checked>
-                        <label for="lay1">1 колонка</label>
-
-                        <input type="radio" name="layout" id="lay2" value="2col">
-                        <label for="lay2">2 колонки</label>
-                    </div>
-                </div>
-
-                <div class="settings-panel">
-                    <label class="settings-label">Модель GigaChat:</label>
-                    <div class="model-selector">
-                        <input type="radio" name="gigaModel" id="mMax" value="GigaChat-Max" checked>
-                        <label for="mMax">
-                            <span class="model-name">Max</span>
-                            <span class="model-desc">📸 + Текст</span>
-                        </label>
-
-                        <input type="radio" name="gigaModel" id="mPro" value="GigaChat-Pro" disabled>
-                        <label for="mPro" title="Не поддерживает распознавание изображений">
-                            <span class="model-name">Pro</span>
-                            <span class="model-desc">Только текст</span>
-                        </label>
-
-                        <input type="radio" name="gigaModel" id="mLite" value="GigaChat" disabled>
-                        <label for="mLite" title="Не поддерживает распознавание изображений">
-                            <span class="model-name">Lite</span>
-                            <span class="model-desc">Только текст</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="tip-banner">
-                    <ion-icon name="information-circle-outline"></ion-icon>
-                    <span>Рекомендуем загружать не более 10 задач для лучшего качества</span>
-                </div>
-
-                <a href="https://t.me/latex_list_bot" target="_blank" class="tip-banner"
-                    style="background: linear-gradient(135deg, #0088cc1a 0%, #0088cc33 100%); color: #0088cc; text-decoration: none; display: flex; align-items: center; border-color: #0088cc33; margin-top: 15px; cursor: pointer; transition: all 0.3s ease;">
-                    <ion-icon name="paper-plane-outline" style="min-width: 24px; min-height: 24px;"></ion-icon>
-                    <span><strong>Попробуйте в Telegram!</strong> Отправьте боту @latex_list_bot фото задач и получите
-                        готовый Worksheet прямо в чате.</span>
-                </a>
-
-                <div class="upload-zone" id="uploadZone">
-                    <div class="upload-content">
-                        <div class="icon-box">
-                            <ion-icon name="cloud-upload-outline"></ion-icon>
-                        </div>
-                        <h3>Загрузите файлы</h3>
-                        <p>Выделите несколько изображений (PNG, JPG) или нажмите для выбора</p>
-                    </div>
-                    <input type="file" id="fileInput" hidden accept="image/*,.pdf" multiple>
-                </div>
-
-                <div id="status" class="status-container"></div>
-            </div>
-        </main>
-
-        <section class="glass-panel" style="max-width: 800px; margin-top: 2rem;">
-            <h2
-                style="font-size: 1.5rem; margin-top: 0; margin-bottom: 1.5rem; text-align: left; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem;">
-                <ion-icon name="time-outline" style="vertical-align: middle;"></ion-icon> История генераций
-            </h2>
-            <div id="historyContainer">
-                <p>Загрузка архива...</p>
-            </div>
-        </section>
-
-        <footer>
-            <p>Powered by GigaChat & LaTeX</p>
-            <p class="credits">
-                Проект выполнили учащиеся ГБОУ «Школа 2200»<br>
-                Драндров Максим Дмитриевич, Головков Владимир Сергеевич<br>
-                Научный руководитель: Неумоин Павел Дмитриевич
-            </p>
-        </footer>
-    </div>
-    <script src="script.js"></script>
+<a class="skip-link" href="#workspace">Перейти к редактору</a>
+<div class="hero-shell">
+<header class="site-header page-width">
+<a class="brand" href="/" aria-label="ЛистОК — на главную"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M9 3h11l6 6v20H9a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" fill="currentColor"/><path d="M20 3v7h6M11 19l4 4 8-9" fill="none" stroke="#211438" stroke-width="2.5" stroke-linejoin="round"/></svg></span><span>Лист<span class="brand-ok">ОК</span></span></a>
+<nav aria-label="Основная навигация"><a href="#how-it-works">Как это работает</a><a href="#history">Мои листы</a><a class="nav-action" href="#workspace">Создать лист <span aria-hidden="true">↗</span></a></nav>
+</header>
+<section class="hero page-width" aria-labelledby="hero-title">
+<div class="hero-copy">
+<p class="eyebrow"><span class="status-dot" aria-hidden="true"></span>ДЛЯ УЧИТЕЛЕЙ МАТЕМАТИКИ И ФИЗИКИ</p>
+<h1 id="hero-title">Меньше ручного<br>набора формул —<br><span>больше времени на урок.</span></h1>
+<p class="hero-description">Ваши задания, аккуратные формулы и место для решения. Подготовьте черновик, проверьте содержание — оформление рабочего листа возьмёт на себя LaTeX.</p>
+<div class="hero-actions"><button class="button mint" id="heroDemoBtn" type="button">Открыть пример <span aria-hidden="true">↗</span></button><a class="button hero-secondary" href="#workspace">Загрузить свои задания</a></div>
+<p class="hero-note">Пример без ИИ · Редактируемый LaTeX · Настоящий PDF</p>
+</div>
+<div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span class="formula formula-one">x² + bx + c</span><span class="formula formula-two">F = ma</span><img src="/img/hero.png" alt="" width="1280" height="1280" fetchpriority="high"><div class="art-caption"><span class="caption-icon">✓</span><span>Формулы, задания<br><strong>и пространство для мысли</strong></span></div></div>
+</section>
+<div class="hero-bottom page-width"><span>МАТЕМАТИКА</span><span class="separator">/</span><span>ФИЗИКА</span><span class="hero-bottom-line"></span><span>МАТЕРИАЛ → ПРОВЕРКА → РАБОЧИЙ ЛИСТ</span></div>
+</div>
+<main>
+<section class="workflow page-width" id="how-it-works" aria-label="Как это работает">
+<article><span class="step-number">01</span><div><h2>Возьмите свои задания</h2><p>Загрузите фото или откройте готовый пример.</p></div></article>
+<article><span class="step-number">02</span><div><h2>Проверьте содержание</h2><p>Уточните условия, формулы и ответы в редакторе.</p></div></article>
+<article><span class="step-number">03</span><div><h2>Получите лист A4</h2><p>Соберите PDF для учеников и отдельные ответы.</p></div></article>
+</section>
+<section class="workspace-section page-width" id="workspace" aria-labelledby="workspace-title">
+<div class="section-heading"><div><p class="eyebrow purple">ВАШ СЛЕДУЮЩИЙ УРОК</p><h2 id="workspace-title">Соберите рабочий лист</h2></div><div class="connection-status" id="serverStatus" role="status"><span class="status-dot"></span><span>Проверяем возможности сервера…</span></div></div>
+<div class="workspace-grid">
+<aside class="setup-panel panel" aria-label="Материал и оформление">
+<div class="panel-heading"><span class="section-index">1</span><div><h3>Материал и оформление</h3><p>Настройте лист под своё занятие.</p></div></div>
+<fieldset class="field subject-field"><legend>Предмет</legend><div class="segmented"><input id="subjectMath" type="radio" name="subject" value="math" checked><label for="subjectMath">Математика</label><input id="subjectPhysics" type="radio" name="subject" value="physics"><label for="subjectPhysics">Физика</label></div></fieldset>
+<div class="demo-card"><span class="small-label">БЕЗ ИИ</span><h4>Начните с примера</h4><p id="demoDescription">Задачи по математике с ответами. Можно менять условия и оформление.</p><button id="demoBtn" type="button" class="button small dark">Открыть пример <span aria-hidden="true">↗</span></button></div>
+<div class="divider-label"><span>или свои задания</span></div>
+<input id="fileInput" class="visually-hidden" type="file" accept=".jpg,.jpeg,.png" multiple aria-label="Выберите фотографии заданий">
+<button id="uploadZone" type="button" class="upload-zone" aria-controls="fileInput"><span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 22H5a4 4 0 0 1-1-8 7 7 0 0 1 13-4 6 6 0 1 1 10 12h-3M16 28V15m-5 5 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>Добавить фото заданий</strong><span id="uploadHelp">JPG или PNG · до 10 файлов, всего 20 МБ</span><span class="drop-hint">Можно перетащить сюда</span></button>
+<ul id="fileList" class="file-list" aria-label="Выбранные файлы" hidden></ul><button id="clearFilesBtn" class="text-button" type="button" hidden>Очистить выбор</button>
+<button id="processBtn" class="button primary full-width" type="button" disabled>Подготовить черновик с ИИ</button><p class="field-help" id="aiHint">Проверяем подключение ИИ…</p>
+<div class="form-divider"></div>
+<div class="field"><label for="topicInput">Тема листа</label><input id="topicInput" type="text" maxlength="160" placeholder="Например, квадратные уравнения"></div>
+<div class="field"><label for="teacherNameInput">Имя учителя <span class="optional">необязательно</span></label><input id="teacherNameInput" type="text" maxlength="100" placeholder="Как подписать рабочий лист"></div>
+<div class="field-grid"><div class="field"><label for="taskCount">Задач на странице</label><select id="taskCount"><option value="1">1 задача</option><option value="2">2 задачи</option><option value="3" selected>3 задачи</option><option value="4">4 задачи</option><option value="5">5 задач</option><option value="6">6 задач</option></select></div><div class="field"><label for="layoutSelect">Макет</label><select id="layoutSelect"><option value="1col">1 колонка</option><option value="2col">2 колонки</option></select></div></div>
+<p class="field-help">Количество задач задаёт ориентир для черновика. Перед печатью проверьте размещение в PDF.</p>
+</aside>
+<div class="editor-panel panel">
+<div class="panel-heading"><span class="section-index mint-index">2</span><div><h3>Проверьте и соберите</h3><p>Вы решаете, какие задания попадут к ученикам.</p></div></div>
+<div class="message" id="workspaceMessage" role="status" aria-live="polite" hidden></div>
+<div class="editor-empty" id="editorEmpty"><div class="empty-sheet" aria-hidden="true"><span class="sheet-corner"></span><span class="sheet-small">РАБОЧИЙ ЛИСТ</span><span class="sheet-formula">a² + b² = c²</span><span class="sheet-line"></span><span class="sheet-line short"></span><span class="sheet-grid"></span><span class="sheet-tick">✓</span></div><h4>От задания — к готовому листу</h4><p>Откройте пример слева, чтобы попробовать редактор и сборку PDF. Или добавьте фото своих задач.</p><span class="empty-note">Проверка содержания всегда остаётся за учителем.</span></div>
+<div id="editorContent" hidden>
+<div class="editor-topline"><div class="variant-tabs" role="group" aria-label="Вариант рабочего листа"><button id="variant1Tab" type="button" aria-pressed="true">Вариант 1</button><button id="variant2Tab" type="button" aria-pressed="false" hidden>Вариант 2</button></div><span class="source-badge" id="sourceBadge">Черновик</span></div>
+<div class="editor-title"><label for="latexEditorInput">Задания и ответы · LaTeX</label><button type="button" class="text-button" id="copyLatexBtn">Копировать</button></div>
+<p class="editor-help" id="editorHelp">Это содержимое рабочего листа. Шаблон A4 добавится при сборке PDF.</p>
+<textarea id="latexEditorInput" class="latex-textarea" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="editorHelp reviewHint" placeholder="Здесь появятся задания в LaTeX"></textarea>
+<div class="editor-bottomline"><span id="editorStats">0 символов</span><span id="draftState">Черновик ещё не собран</span></div>
+<label class="review-check"><input id="reviewCheckbox" type="checkbox"><span>Я проверил(а) условия, формулы и ответы</span></label>
+<div class="compile-row"><button id="compilePdfBtn" type="button" class="button primary" disabled>Собрать PDF <span aria-hidden="true">↗</span></button><p class="field-help" id="reviewHint">Отметьте проверку, чтобы собрать этот вариант.</p></div>
+<div id="compileResults" class="compile-results" hidden><div class="result-heading"><span class="result-check" aria-hidden="true">✓</span><div><h4>Рабочий лист готов</h4><p id="resultDescription">Откройте PDF и проверьте оформление перед печатью.</p></div></div><div class="result-links"><a id="worksheetLink" class="button dark small" target="_blank" rel="noopener">Открыть рабочий лист ↗</a><a id="keysLink" class="button subtle small" target="_blank" rel="noopener" hidden>Ответы ↗</a></div><p id="compileWarnings" class="result-warning" hidden></p><details class="pdf-details"><summary>Посмотреть PDF здесь</summary><iframe id="pdfPreview" title="Предпросмотр собранного рабочего листа" loading="lazy"></iframe></details></div>
+<div class="similar-section"><h4>Ещё один вариант</h4><p>ИИ предложит похожие задачи. Вы проверите их в редакторе перед сборкой.</p><div class="similar-actions"><label for="variantDifficulty" class="visually-hidden">Сложность второго варианта</label><select id="variantDifficulty"><option value="same">Такая же сложность</option><option value="easier">Проще</option><option value="harder">Сложнее</option></select><button id="genSimilarBtn" class="button subtle small" type="button" disabled>Подготовить вариант 2</button></div></div>
+</div>
+<div class="editor-footer"><span><span class="mini-dot" id="pdfStatusDot"></span><span id="pdfCapability">Проверяем сборку PDF</span></span><button id="refreshStatusBtn" class="text-button" type="button">Обновить статус</button></div>
+</div>
+</div>
+</section>
+<section class="history-section page-width" id="history" aria-labelledby="history-title"><div class="section-heading"><div><p class="eyebrow purple">ПРОДОЛЖИТЬ РАБОТУ</p><h2 id="history-title">Мои рабочие листы</h2></div><button id="refreshHistoryBtn" class="text-button" type="button">Обновить историю ↻</button></div><div id="historyContainer" class="history-container" aria-live="polite"><p class="history-empty">Загружаем сохранённые листы…</p></div><p class="history-caption">Локальная история этого экземпляра сервиса.</p></section>
+</main>
+<footer class="site-footer"><div class="page-width footer-grid"><div><a class="brand" href="/">Лист<span class="brand-ok">ОК</span></a><p>Меньше ручного набора формул.<br>Больше времени на урок.</p></div><div class="footer-team"><strong>Команда «Код урока»</strong><p>Алексинская Таисия · Мазка Дмитрий<br>Почкина Анастасия · Скоков Максим</p><p>Наставник — Семченков Николай Андреевич<br>11С · ГБОУ «Школа 2200», Москва</p></div><div class="footer-links"><a href="https://github.com/pavelneumoin/worksheet-creator" target="_blank" rel="noopener">Код и инструкция ↗</a><span>Локальный прототип</span><p>Адаптация для MAX находится в разработке.</p></div></div></footer>
 </body>
-
 </html>

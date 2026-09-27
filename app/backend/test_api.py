@@ -1,21 +1,16 @@
-import sys
-import os
-sys.path.append(r"c:\Users\NeumoinPD\YandexDisk\Latex\Проекты 10С\Проекты\Драндров\ИТ проект\app\backend")
+"""Check local ListOK without reading or printing credentials."""
+import requests
 
-from config import GIGACHAT_CREDENTIALS, GIGACHAT_SCOPE
-from gigachat import GigaChat
-from gigachat.models import Chat, Messages, MessagesRole
 
-print(f"Using Scope: {GIGACHAT_SCOPE}")
-print(f"Credentials start with: {GIGACHAT_CREDENTIALS[:10]}...")
+def main():
+    response = requests.get('http://127.0.0.1:3005/api/status', timeout=10)
+    response.raise_for_status()
+    status = response.json()
+    print('Model:', status.get('ai_model'))
+    print('AI configured:', bool(status.get('ai_ready')))
+    print('Local PDF compiler:', bool(status.get('latex_ready')))
+    print('A photo request is required to verify access to the AI provider.')
 
-try:
-    with GigaChat(credentials=GIGACHAT_CREDENTIALS, scope=GIGACHAT_SCOPE, verify_ssl_certs=False) as giga:
-        response = giga.chat(Chat(
-            messages=[Messages(role=MessagesRole.USER, content="Привет! Просто ответь 'ОК', это тест.")]
-        ))
-        print("SUCCESS. GigaChat replied:")
-        print(response.choices[0].message.content)
-except Exception as e:
-    print("ERROR:")
-    print(e)
+
+if __name__ == '__main__':
+    main()

@@ -1,14 +1,13 @@
-# GigaChat Configuration
-# For local development: fill in your credentials below
-# For production (Render): set GIGACHAT_CREDENTIALS as environment variable
-
+# Optional compatibility configuration. Keep credentials in the root .env
+# (ignored by Git) or environment variables, never in this file.
 import os
 
-# Try to get from environment variable first (for Render/production)
-# Fall back to hardcoded value for local development
-GIGACHAT_CREDENTIALS = os.environ.get('GIGACHAT_CREDENTIALS', 'YOUR_GIGACHAT_AUTHORIZATION_KEY')
+GIGACHAT_CREDENTIALS = os.environ.get('GIGACHAT_CREDENTIALS', '')
+GIGACHAT_SCOPE = os.environ.get('GIGACHAT_SCOPE', 'GIGACHAT_API_PERS')
+GIGACHAT_MODEL = os.environ.get('GIGACHAT_MODEL', 'GigaChat-3-Ultra')
 
-# Scope setting:
-# - GIGACHAT_API_PERS = персональный ключ (для личного использования)
-# - GIGACHAT_API_CORP = корпоративный ключ (для проектов)
-GIGACHAT_SCOPE = os.environ.get('GIGACHAT_SCOPE', 'GIGACHAT_API_CORP')
+# The adapter also reads these environment variables:
+# GIGACHAT_BASE_URL=https://api.giga.chat/v1
+# GIGACHAT_CA_BUNDLE_FILE=/absolute/path/to/trusted-ca-bundle.pem
+# TLS certificate verification is always enabled.
+# Choose a model available to your account; this project tested 3-Ultra.

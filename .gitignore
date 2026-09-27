@@ -1,5 +1,11 @@
 # Environments
 .env
+.env.*
+!.env.example
+!.env.sample
+.envrc
+.local-certs/
+app/backend/config.py
 .venv
 env/
 venv/
@@ -35,3 +41,10 @@ bot/tmp_*.jpg
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# TeX build products
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
