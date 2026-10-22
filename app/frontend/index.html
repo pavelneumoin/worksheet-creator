@@ -15,6 +15,7 @@
     <script defer src="/jobs.js"></script>
     <script defer src="/script.js"></script>
     <script defer src="/classes.js"></script>
+    <script defer src="/schedule.js"></script>
   </head>
   <body>
     <header class="topbar">
@@ -25,12 +26,13 @@
           ></a
         >
         <nav aria-label="Основная навигация">
-          <button class="nav-button active" id="createNav">Создать лист</button
+          <button class="nav-button active" id="createNav">Главная</button
           ><button class="nav-button" id="savedNav">
             <span class="nav-label">Мои материалы</span>
             <span id="savedCount">0</span></button
           ><button class="nav-button" id="libraryNav">Библиотека</button>
           <button class="nav-button" id="classesNav">Классы</button>
+          <button class="nav-button" id="scheduleNav">Расписание</button>
         </nav>
         <span class="edition" id="accountName">ЛатехТим</span>
       </div>
@@ -133,6 +135,9 @@
                   required
               /></label>
               <label
+                >Дата проведения <span class="quiet">· необязательно</span
+                ><input id="assignScheduled" type="date" /></label
+              ><label
                 >Сдать до <span class="quiet">· необязательно</span
                 ><input id="assignDue" type="date"
               /></label>
@@ -161,25 +166,86 @@
           </form>
         </div>
       </section>
-      <section id="workspace">
-        <div class="intro">
+      <section id="homeView" class="home-view" hidden>
+        <p class="eyebrow">ВАШ УЧЕБНЫЙ ДЕНЬ</p>
+        <h1>Больше времени<br />на сам урок.</h1>
+        <p class="lead">
+          Задания из учебника — в аккуратный рабочий лист.<br
+            class="desktop-only"
+          />
+          С ответами, местом для решения и вашим оформлением.
+        </p>
+        <button class="button primary home-create" id="startCreate">
+          ＋ Создать рабочий лист
+        </button>
+        <button class="button secondary" id="resumeSheet" hidden>
+          Продолжить начатый лист
+        </button>
+        <p class="quiet home-formats">
+          Фото, PDF или текст · математика и физика
+        </p>
+        <div class="home-links">
+          <button id="homeMaterials" class="home-link">
+            <strong>Мои материалы <span aria-hidden="true">↗</span></strong
+            ><span>Продолжить начатое или взять готовый лист</span>
+          </button>
+          <button id="homeSchedule" class="home-link">
+            <strong>Расписание <span aria-hidden="true">↗</span></strong
+            ><span>Работы классов по дням и темам</span>
+          </button>
+        </div>
+        <p class="quiet home-private">
+          Созданные листы сохраняются в вашем личном кабинете.
+        </p>
+      </section>
+      <section id="scheduleView" hidden>
+        <div class="section-title">
           <div>
-            <p class="eyebrow">ВАШ ПОМОЩНИК В ПОДГОТОВКЕ К УРОКУ</p>
-            <h1>
-              <span class="desktop-title"
-                >Хороший урок начинается<br />с одного листа.</span
-              ><span class="mobile-title">Рабочий лист из фото</span>
-            </h1>
-            <p class="lead">
-              Добавьте задания. Проверьте содержание. Получите аккуратный лист и
-              ответы для себя.
+            <p class="eyebrow">УЧЕБНЫЙ КАЛЕНДАРЬ</p>
+            <h1>Расписание работ</h1>
+            <p class="quiet">
+              Дата проведения и сохранённая версия каждого листа.
             </p>
           </div>
-          <div class="intro-note">
-            <span class="note-symbol" aria-hidden="true">↗</span
-            ><strong>Меньше оформления.<br />Больше времени детям.</strong
-            ><span>Математика и физика · A4</span>
+        </div>
+        <div class="panel schedule-panel">
+          <div class="month-controls">
+            <button
+              id="previousMonth"
+              class="button secondary"
+              aria-label="Предыдущий месяц"
+            >
+              ←</button
+            ><label>Месяц<input type="month" id="scheduleMonth" /></label
+            ><button
+              id="nextMonth"
+              class="button secondary"
+              aria-label="Следующий месяц"
+            >
+              →
+            </button>
           </div>
+          <div
+            id="monthGrid"
+            class="month-grid"
+            aria-label="Работы по дням месяца"
+          ></div>
+          <p class="quiet">
+            Точка под датой — есть назначенная работа. Откройте её в списке
+            ниже.
+          </p>
+        </div>
+        <div id="scheduleList" class="saved-list"></div>
+        <button id="scheduleClasses" class="button secondary">
+          Назначить работу классу
+        </button>
+      </section>
+      <section id="workspace" hidden>
+        <div class="workspace-heading">
+          <h1>Создать рабочий лист</h1>
+          <p class="quiet">
+            Добавьте материал, проверьте задания и скачайте PDF.
+          </p>
         </div>
         <ol class="steps" aria-label="Этапы создания листа">
           <li class="current" data-step="1"><span>1</span>Материал</li>
@@ -198,9 +264,7 @@
                 <span class="section-number">01</span>
                 <div>
                   <h2 id="inputTitle">С чего начнём?</h2>
-                  <p>
-                    Подойдут фотографии учебника, карточек или ваших заданий.
-                  </p>
+                  <p>Выберите страницы учебника или свои задания.</p>
                 </div>
               </div>
               <fieldset>
@@ -222,15 +286,28 @@
               </fieldset>
               <label class="upload-zone" id="dropZone" for="fileInput"
                 ><span class="upload-icon" aria-hidden="true">＋</span
-                ><strong>Добавьте фотографии заданий</strong
+                ><strong>Выбрать фото или PDF</strong
                 ><span>Выберите файлы или перетащите их сюда</span
-                ><small>PNG или JPEG · до 10 фото · всего до 20 МБ</small
+                ><small
+                  >До 10 фото или один PDF до 10 страниц · файл до 15 МБ, всего
+                  до 20 МБ</small
                 ><input
                   id="fileInput"
                   type="file"
-                  accept="image/png,image/jpeg"
+                  accept="image/png,image/jpeg,application/pdf,.pdf"
                   multiple
               /></label>
+              <div class="camera-row">
+                <button id="takePhoto" class="button secondary" type="button">
+                  Сфотографировать</button
+                ><input
+                  id="cameraInput"
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  capture="environment"
+                  hidden
+                />
+              </div>
               <div id="fileList" class="file-list" aria-live="polite"></div>
               <details class="text-input">
                 <summary>Или вставьте текст заданий</summary>
@@ -243,9 +320,72 @@
                   placeholder="Например: решите уравнения 2x + 5 = 17 и 3x − 4 = 8."
                 ></textarea>
               </details>
+              <details class="setup-settings">
+                <summary>
+                  Оформление листа
+                  <span id="setupSummary">Карточки · в клетку · 1 столбец</span>
+                </summary>
+                <div class="form-grid">
+                  <label
+                    >Структура<select id="setupTemplate">
+                      <option value="cards">Карточки</option>
+                      <option value="list">Компактный список</option>
+                      <option value="guided">По шагам</option>
+                      <option value="check">С проверкой</option>
+                    </select></label
+                  >
+                  <label
+                    >Место для решения<select id="setupField">
+                      <option value="grid">В клетку</option>
+                      <option value="blank">Пустое поле</option>
+                      <option value="none">Решение в тетради</option>
+                    </select></label
+                  >
+                  <label
+                    >Столбцы<select id="setupColumns">
+                      <option value="1">Один</option>
+                      <option value="2">Два</option>
+                    </select></label
+                  >
+                  <label
+                    >Заданий на странице<select id="setupCount">
+                      <option>1</option>
+                      <option>2</option>
+                      <option selected>3</option>
+                      <option>4</option>
+                      <option>5</option>
+                      <option>6</option>
+                    </select></label
+                  >
+                </div>
+                <p id="setupHint" class="quiet">
+                  Условие и место для решения объединены в карточку.
+                </p>
+              </details>
+              <label class="teacher-instructions"
+                >Пожелания к листу <span class="quiet">· необязательно</span
+                ><textarea
+                  id="teacherInstructions"
+                  rows="2"
+                  maxlength="2000"
+                  placeholder="Например, только № 12 и 14, без задачи со звёздочкой."
+                ></textarea>
+              </label>
+              <label class="variant-count"
+                >Сколько вариантов<select id="setupVariants">
+                  <option value="1">Один — по исходному материалу</option>
+                  <option value="2">Два: исходный и аналогичный</option>
+                  <option value="3">Три: исходный и два аналогичных</option>
+                  <option value="4">Четыре: исходный и три аналогичных</option>
+                </select></label
+              >
+              <p class="quiet">
+                Ответы подготовим для каждого варианта. Перед печатью их можно
+                проверить и исправить.
+              </p>
               <div class="actions">
                 <button class="button primary" id="recognizeBtn">
-                  Распознать задания →</button
+                  Подготовить задания →</button
                 ><span class="quiet" id="aiCaption"
                   >Проверяем подключение…</span
                 >
@@ -345,51 +485,17 @@
                   />
                 </div>
               </div>
-              <fieldset class="template-picker">
-                <legend>Структура листа</legend>
-                <div class="template-options">
-                  <label
-                    ><input type="radio" name="template" value="list" /><span
-                      class="template-sketch sketch-list"
-                      aria-hidden="true"
-                      ><i></i><i></i><i></i></span
-                    ><strong>Компактный</strong
-                    ><small>Нумерованный список</small></label
-                  >
-                  <label
-                    ><input
-                      type="radio"
-                      name="template"
-                      value="cards"
-                      checked
-                    /><span
-                      class="template-sketch sketch-cards"
-                      aria-hidden="true"
-                      ><i></i><i></i><i></i></span
-                    ><strong>Карточки</strong
-                    ><small>Условие и решение в рамке</small></label
-                  >
-                  <label
-                    ><input type="radio" name="template" value="guided" /><span
-                      class="template-sketch sketch-guided"
-                      aria-hidden="true"
-                      ><i></i><i></i><i></i></span
-                    ><strong>По шагам</strong
-                    ><small>Дано → решение → ответ</small></label
-                  >
-                  <label
-                    ><input type="radio" name="template" value="check" /><span
-                      class="template-sketch sketch-check"
-                      aria-hidden="true"
-                      ><i></i><i></i><i></i></span
-                    ><strong>С проверкой</strong
-                    ><small>Поле для баллов и замечаний</small></label
-                  >
-                </div>
-                <p class="quiet" id="templateHint">
-                  Условие и место для решения объединены в карточку.
-                </p>
-              </fieldset>
+              <label class="field-label"
+                >Структура листа<select id="templateSelect">
+                  <option value="cards">Карточки</option>
+                  <option value="list">Компактный список</option>
+                  <option value="guided">По шагам</option>
+                  <option value="check">С проверкой</option>
+                </select></label
+              >
+              <p class="quiet" id="templateHint">
+                Условие и место для решения объединены в карточку.
+              </p>
               <fieldset>
                 <legend>Место для решения</legend>
                 <div class="layout-options">
@@ -533,6 +639,14 @@
                   Исходный лист сохранится. Новый вариант нужно проверить
                   отдельно.
                 </p>
+                <label class="variant-count"
+                  >Новых вариантов<select id="resultVariantCount">
+                    <option>1</option>
+                    <option>2</option>
+                    <option>3</option>
+                    <option>4</option>
+                  </select></label
+                >
                 <div class="variant-actions">
                   <button class="button secondary" data-variant="same">
                     Другой вариант</button

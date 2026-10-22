@@ -46,8 +46,17 @@ function renderJobs() {
       heading,
       node("p", status, job.status === "failed" ? "job-error" : "quiet"),
     );
+    if (job.result?.warning)
+      card.append(node("p", job.result.warning, "job-error"));
     const actions = node("div", undefined, "actions");
-    if (job.status === "succeeded")
+    if (job.status === "succeeded" && job.result?.materials?.length > 1) {
+      for (const material of job.result.materials)
+        actions.append(
+          jobButton("Вариант " + material.variant, () =>
+            openJobResult(job, material.material_id),
+          ),
+        );
+    } else if (job.status === "succeeded")
       actions.append(
         jobButton("Открыть результат", () => openJobResult(job), "primary"),
       );
@@ -109,7 +118,10 @@ async function refreshJobs() {
       );
       jobSnapshot = snapshot;
       renderJobs();
-      if (firstLoad && currentJobs.length) $("jobsPanel").open = true;
+      if (firstLoad)
+        $("jobsPanel").open = currentJobs.some((job) =>
+          ["queued", "running"].includes(job.status),
+        );
       if (justCompleted) await refreshMaterials();
     }
     $("jobsConnection").hidden = true;
@@ -188,12 +200,17 @@ async function enqueueJob(kind, body, json = true) {
   await sendPendingJob();
 }
 
-async function openJobResult(job) {
+async function openJobResult(job, chosenMaterial = null) {
   // Preserve any edits made while a task was running.
   if (state.dirty && state.sheet) await saveCurrent();
   const fresh = (await request("/api/v2/jobs/" + job.id)).job;
   if (fresh.status !== "succeeded") throw new Error("Результат ещё не готов.");
-  const result = fresh.result;
+  const result = { ...fresh.result };
+  if (
+    chosenMaterial &&
+    result.materials?.some((m) => m.material_id === chosenMaterial)
+  )
+    result.material_id = chosenMaterial;
   if (result.material_id) {
     const material = (await request("/api/v2/materials/" + result.material_id))
       .material;
@@ -227,7 +244,11 @@ async function openJobResult(job) {
     await renderResult();
     step(4);
   } else notice("Черновик сохранён. Проверьте условия и ответы перед печатью.");
-  await request("/api/v2/jobs/" + job.id + "/acknowledge", { method: "POST" });
+  if (result.warning) notice(result.warning);
+  if (!result.materials || result.materials.length === 1)
+    await request("/api/v2/jobs/" + job.id + "/acknowledge", {
+      method: "POST",
+    });
   await refreshJobs();
 }
 

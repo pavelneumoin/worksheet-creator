@@ -13,6 +13,16 @@ def fail(message, code='invalid_class', status=400):
     raise AIServiceError(message, code, status)
 
 
+def student_code(student_id):
+    # The full internal UUID remains the identity. The short code is scoped to a class.
+    return 'У-' + student_id[:10].upper()
+
+
+def student_row(row):
+    return {'id': row['id'], 'code': student_code(row['id']),
+            **({'archived': bool(row['archived'])} if 'archived' in row.keys() else {})}
+
+
 def label(value, title, limit, required=True):
     if not isinstance(value, str) or len(value) > limit or any(ord(c) < 32 for c in value):
         fail(f'{title}: введите текст до {limit} символов без переносов строк.')
@@ -52,9 +62,9 @@ def class_row(conn, row):
 
 def class_detail(conn, owner, class_id):
     result = class_row(conn, owned_class(conn, owner, class_id))
-    result['students'] = [dict(r, archived=bool(r['archived'])) for r in conn.execute(
-        'SELECT id,name,archived FROM students WHERE class_id=? ORDER BY created_at,id', (class_id,))]
-    result['students'].sort(key=lambda s: (s['archived'], s['name'].casefold()))
+    result['students'] = [student_row(r) for r in conn.execute(
+        'SELECT id,archived FROM students WHERE class_id=? ORDER BY created_at,id', (class_id,))]
+    result['students'].sort(key=lambda s: (s['archived'], s['code']))
     result['assignments'] = [assignment_row(conn, r) for r in conn.execute(
         '''SELECT a.*,e.code FROM assignments a JOIN editions e ON e.id=a.edition_id
            WHERE a.owner_id=? AND a.class_id=? ORDER BY a.created_at DESC''', (owner, class_id))]
@@ -102,37 +112,34 @@ def update_class(owner, class_id, value):
         return class_detail(conn, owner, class_id)
 
 
-def validate_roster(conn, class_id, names, exclude=None):
-    existing = {r['name'].casefold() for r in conn.execute('SELECT id,name FROM students WHERE class_id=?', (class_id,)) if r['id'] != exclude}
-    seen = set()
-    for name in names:
-        key = name.casefold()
-        if key in existing or key in seen:
-            fail(f'«{name}» уже есть в списке или архиве. Для тёзок добавьте отчество или инициал.', 'duplicate_student', 409)
-        seen.add(key)
-
-
 def add_students(owner, class_id, value):
-    names = value.get('names')
-    if not isinstance(names, list) or not 1 <= len(names) <= 100:
-        fail('Добавьте от 1 до 100 учеников за один раз.')
-    names = [label(n, 'Имя ученика', 120) for n in names]
     with connection() as conn:
         conn.execute('BEGIN IMMEDIATE')
         owned_class(conn, owner, class_id, value, active=True)
-        validate_roster(conn, class_id, names)
+        if set(value) - {'revision', 'count'}:
+            fail('ФИО не сохраняются. Укажите только количество учеников; таблицу соответствия заполните на своём устройстве.', 'student_names_disabled')
+        amount = value.get('count')
+        if type(amount) is not int or not 1 <= amount <= 100:
+            fail('Добавьте от 1 до 100 учеников за один раз.')
         count = conn.execute('SELECT COUNT(*) FROM students WHERE class_id=?', (class_id,)).fetchone()[0]
-        if count + len(names) > 200:
+        if count + amount > 200:
             fail('В одном классе можно хранить до 200 записей, включая архив.', 'student_limit', 409)
         now = timestamp()
+        existing = {student_code(r['id']) for r in conn.execute('SELECT id FROM students WHERE class_id=?', (class_id,))}
+        records = []
+        while len(records) < amount:
+            student_id = uuid.uuid4().hex
+            code = student_code(student_id)
+            if code not in existing:
+                existing.add(code)
+                records.append((student_id, class_id, code, now))
         conn.executemany('INSERT INTO students (id,class_id,name,created_at) VALUES (?,?,?,?)',
-                         [(uuid.uuid4().hex, class_id, name, now) for name in names])
+                         records)
         touch(conn, class_id)
         return class_detail(conn, owner, class_id)
 
 
 def update_student(owner, class_id, student_id, value):
-    name = label(value.get('name'), 'Имя ученика', 120)
     if type(value.get('archived')) is not bool:
         fail('Укажите состояние ученика.')
     with connection() as conn:
@@ -141,20 +148,21 @@ def update_student(owner, class_id, student_id, value):
         row = conn.execute('SELECT id FROM students WHERE id=? AND class_id=?', (student_id, class_id)).fetchone()
         if row is None:
             fail('Ученик не найден в этом классе.', 'student_not_found', 404)
-        validate_roster(conn, class_id, [name], student_id)
-        conn.execute('UPDATE students SET name=?,archived=? WHERE id=? AND class_id=?', (name, int(value['archived']), student_id, class_id))
+        if set(value) - {'revision', 'archived'}:
+            fail('Код ученика постоянный. ФИО храните в своей таблице.', 'student_names_disabled')
+        conn.execute('UPDATE students SET archived=? WHERE id=? AND class_id=?', (int(value['archived']), student_id, class_id))
         touch(conn, class_id)
         return class_detail(conn, owner, class_id)
 
 
 def assignment_row(conn, row, detail=False):
-    result = {k: row[k] for k in ('id', 'class_id', 'class_name', 'edition_id', 'title', 'due_date', 'instructions', 'status', 'revision', 'created_at', 'code')}
+    result = {k: row[k] for k in ('id', 'class_id', 'class_name', 'edition_id', 'title', 'due_date', 'scheduled_date', 'instructions', 'status', 'revision', 'created_at', 'code')}
     result['student_count'] = conn.execute('SELECT COUNT(*) FROM assignment_students WHERE assignment_id=?', (row['id'],)).fetchone()[0]
     if detail:
         result['worksheet'] = json.loads(row['worksheet'])
         result['result'] = result_links(dict(row, id=row['edition_id']))
-        result['students'] = [dict(r) for r in conn.execute('SELECT student_id AS id,name FROM assignment_students WHERE assignment_id=?', (row['id'],))]
-        result['students'].sort(key=lambda s: s['name'].casefold())
+        result['students'] = [student_row(r) for r in conn.execute('SELECT student_id AS id FROM assignment_students WHERE assignment_id=?', (row['id'],))]
+        result['students'].sort(key=lambda s: s['code'])
     return result
 
 
@@ -172,20 +180,38 @@ def get_assignment(owner, assignment_id):
         return assignment_detail(conn, owner, assignment_id)
 
 
+def validate_date(value, title):
+    if not isinstance(value, str):
+        fail(f'{title}: укажите дату или оставьте поле пустым.')
+    if value:
+        try:
+            if date.fromisoformat(value).isoformat() != value:
+                raise ValueError()
+        except ValueError:
+            fail(f'{title}: укажите существующую дату в формате ГГГГ-ММ-ДД.')
+    return value
+
+
+def schedule(owner, month):
+    if not isinstance(month, str) or not re.fullmatch(r'\d{4}-\d{2}', month):
+        fail('Выберите месяц.', 'invalid_month')
+    validate_date(month + '-01', 'Месяц')
+    with connection() as conn:
+        rows = conn.execute('''SELECT a.*,e.code FROM assignments a JOIN editions e ON e.id=a.edition_id
+                               WHERE a.owner_id=? AND substr(a.scheduled_date,1,7)=?
+                               ORDER BY a.scheduled_date,a.created_at''', (owner, month)).fetchall()
+        return [assignment_row(conn, r) for r in rows]
+
+
 def assign(owner, class_id, value):
     title = label(value.get('title'), 'Название работы', 160)
     instructions = value.get('instructions', '')
     if not isinstance(instructions, str) or len(instructions) > 2000 or any(ord(c) < 32 and c not in '\n\r\t' for c in instructions):
         fail('Комментарий должен быть текстом до 2000 символов.')
-    due = value.get('due_date', '')
-    if not isinstance(due, str):
-        fail('Укажите дату сдачи или оставьте поле пустым.')
-    if due:
-        try:
-            if date.fromisoformat(due).isoformat() != due:
-                raise ValueError()
-        except ValueError:
-            fail('Укажите существующую дату сдачи в формате ГГГГ-ММ-ДД.')
+    due = validate_date(value.get('due_date', ''), 'Срок сдачи')
+    scheduled = validate_date(value.get('scheduled_date', ''), 'Дата проведения')
+    if due and scheduled and due < scheduled:
+        fail('Срок сдачи не может быть раньше даты проведения.')
     key = value.get('request_key')
     edition_id = value.get('edition_id')
     if not isinstance(key, str) or not re.fullmatch(r'[A-Za-z0-9_-]{16,80}', key):
@@ -193,6 +219,8 @@ def assign(owner, class_id, value):
     if not isinstance(edition_id, str) or not re.fullmatch(r'[a-f0-9]{32}', edition_id):
         fail('Выберите готовую версию листа.', 'invalid_edition')
     payload = [class_id, value.get('revision'), edition_id, title, due, instructions.strip()]
+    if scheduled:
+        payload.append(scheduled)  # Preserve idempotency keys from the previous release.
     fingerprint = hashlib.sha256(json.dumps(payload, ensure_ascii=False).encode()).hexdigest()
     with connection() as conn:
         conn.execute('BEGIN IMMEDIATE')
@@ -211,10 +239,10 @@ def assign(owner, class_id, value):
         if conn.execute('SELECT COUNT(*) FROM assignments WHERE class_id=?', (class_id,)).fetchone()[0] >= 500:
             fail('В одном классе можно хранить до 500 назначенных работ.', 'assignment_limit', 409)
         assignment_id = uuid.uuid4().hex
-        conn.execute('''INSERT INTO assignments (id,owner_id,class_id,edition_id,class_name,title,due_date,instructions,request_key,fingerprint,created_at)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
-                     (assignment_id, owner, class_id, edition_id, classroom['name'], title, due, instructions.strip(), key, fingerprint, timestamp()))
-        conn.executemany('INSERT INTO assignment_students VALUES (?,?,?)', [(assignment_id, s['id'], s['name']) for s in students])
+        conn.execute('''INSERT INTO assignments (id,owner_id,class_id,edition_id,class_name,title,due_date,instructions,request_key,fingerprint,created_at,scheduled_date)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+                     (assignment_id, owner, class_id, edition_id, classroom['name'], title, due, instructions.strip(), key, fingerprint, timestamp(), scheduled))
+        conn.executemany('INSERT INTO assignment_students VALUES (?,?,?)', [(assignment_id, s['id'], student_code(s['id'])) for s in students])
         touch(conn, class_id)
         return assignment_detail(conn, owner, assignment_id), True
 

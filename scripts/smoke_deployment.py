@@ -52,13 +52,15 @@ for key in ('pdf_url','keys_url','tex_url','marp_url'):
 assert call('get','/api/v2/materials/'+material['id']).json['material']['result']['artifact_id']==job['result']['artifact_id']
 classroom=call('post','/api/v2/classes',json={'name':'CI '+material['id'][:12]}).json['classroom']
 base='/api/v2/classes/'+classroom['id']
-classroom=call('post',base+'/students',json={'revision':classroom['revision'],'names':['Demo pupil 1','Demo pupil 2']}).json['classroom']
+classroom=call('post',base+'/students',json={'revision':classroom['revision'],'count':2}).json['classroom']
+assert all('name' not in s and s['code'].startswith('У-') for s in classroom['students'])
 assignment_payload={'revision':classroom['revision'],'edition_id':job['result']['artifact_id'],
-                    'title':'CI fixed worksheet','due_date':'2026-11-06','request_key':uuid.uuid4().hex}
+                    'title':'CI fixed worksheet','due_date':'2026-11-06','scheduled_date':'2026-11-05','request_key':uuid.uuid4().hex}
 assignment=call('post',base+'/assignments',json=assignment_payload).json['assignment']
 assert assignment['worksheet']==sheet and assignment['student_count']==2
 classroom=call('get',base).json['classroom']
-call('post',base+'/students',json={'revision':classroom['revision'],'names':['Later pupil']})
+call('post',base+'/students',json={'revision':classroom['revision'],'count':1})
+assert assignment['id'] in [a['id'] for a in call('get','/api/v2/schedule?month=2026-11').json['assignments']]
 assert call('post',base+'/assignments',json=assignment_payload).json['assignment']['id']==assignment['id']
 assert call('get','/api/v2/assignments/'+assignment['id']).json['assignment']['student_count']==2
 print('PASS: signed MAX fixture, CSRF, separate compiler, four downloads, classes, fixed roster, retry and restart persistence')

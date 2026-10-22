@@ -211,155 +211,140 @@ function renderClass() {
   else renderAssignments(target, c);
 }
 function renderRoster(target, c) {
+  const info = node("div", undefined, "panel roster-privacy");
+  info.append(
+    node("h2", "Ученики под кодами"),
+    node(
+      "p",
+      "Сервис хранит только постоянные коды. Скачайте таблицу, впишите ФИО у себя на устройстве и сохраните её. Загружать заполненную таблицу сюда не нужно.",
+      "quiet",
+    ),
+  );
+  if (c.students.length)
+    info.append(classButton("Скачать таблицу кодов", () => downloadCodes(c)));
+  target.append(info);
   if (!c.archived) {
     const form = node("form", undefined, "panel roster-add");
-    const label = node("label", "Добавить учеников"),
-      input = node("textarea");
-    input.rows = 3;
-    input.maxLength = 12100;
+    const label = node("label", "Сколько учеников добавить"),
+      input = node("input");
+    input.type = "number";
+    input.min = "1";
+    input.max = "100";
+    input.value = c.students.length ? "1" : "25";
     input.required = true;
-    input.placeholder = "Фамилия и имя\nПо одному ученику на строку";
     label.append(input);
-    const submit = node("button", "Добавить в список", "button primary");
+    const submit = node("button", "Создать коды учеников", "button primary");
     submit.type = "submit";
-    form.append(
-      label,
-      node(
-        "p",
-        "Можно вставить сразу весь список. Для полных тёзок добавьте отчество или инициал.",
-        "quiet",
-      ),
-      submit,
-    );
+    form.append(label, submit);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      const names = input.value
-        .split(/\r?\n/)
-        .map((n) => n.trim())
-        .filter(Boolean);
-      busy("Сохраняем учеников", async () => {
+      busy("Создаём коды", async () => {
         classState.current = (
           await request(
-            "/api/v2/classes/" + c.id + "/students",
-            classJson("POST", { revision: c.revision, names }),
+            `/api/v2/classes/${c.id}/students`,
+            classJson("POST", {
+              revision: c.revision,
+              count: Number(input.value),
+            }),
           )
         ).classroom;
         renderClass();
-        notice(`Добавлено учеников: ${names.length}.`);
+        notice(
+          "Коды созданы. Скачайте таблицу и заполните соответствие на своём устройстве.",
+        );
       });
     });
-    if (c.student_count) {
-      const add = node("details", undefined, "panel roster-add");
-      add.append(node("summary", "Добавить учеников"));
-      form.className = "roster-add-form";
-      add.append(form);
-      target.append(add);
+    if (c.students.length) {
+      const more = node("details", undefined, "panel");
+      more.append(node("summary", "Добавить учеников"), form);
+      target.append(more);
     } else target.append(form);
   }
-  const panel = node("div", undefined, "panel roster-panel");
-  panel.append(node("h2", "Список учеников"));
-  if (!c.students.length) {
-    panel.append(
-      node(
-        "p",
-        "Список пока пуст. Добавьте учеников, чтобы назначить работу классу.",
-        "quiet",
-      ),
-    );
-    target.append(panel);
-    return;
-  }
-  const label = node("label", "Найти ученика"),
+  if (!c.students.length) return;
+  const panel = node("div", undefined, "panel roster-panel"),
+    label = node("label", "Найти по коду"),
     search = node("input");
   search.type = "search";
-  search.placeholder = "Фамилия или имя";
+  search.placeholder = "Например, У-3A…";
   label.append(search);
   panel.append(label);
-  const list = node("div", undefined, "roster-list");
-  const archived = node("details", undefined, "roster-archive");
-  archived.append(
-    node(
-      "summary",
-      "Архив учеников · " + c.students.filter((s) => s.archived).length,
-    ),
+  const list = node("div", undefined, "roster-list"),
+    archive = node("details", undefined, "roster-archive"),
+    archivedList = node("div", undefined, "roster-list");
+  archive.append(
+    node("summary", `В архиве: ${c.students.filter((s) => s.archived).length}`),
+    archivedList,
   );
-  const archivedList = node("div", undefined, "roster-list");
-  archived.append(archivedList);
   const draw = () => {
     list.replaceChildren();
     archivedList.replaceChildren();
     for (const s of c.students.filter((s) =>
-      s.name
+      s.code
         .toLocaleLowerCase("ru")
         .includes(search.value.trim().toLocaleLowerCase("ru")),
     )) {
       const row = node("div", undefined, "student-row");
-      row.append(node("span", s.name, "student-name"));
-      if (!c.archived) {
-        const details = node("details", undefined, "student-edit");
-        details.append(
-          node("summary", s.archived ? "Вернуть / изменить" : "Изменить"),
-        );
-        const form = node("form"),
-          label = node("label", "Фамилия и имя"),
-          input = node("input");
-        input.value = s.name;
-        input.maxLength = 120;
-        input.required = true;
-        label.append(input);
-        const actions = node("div", undefined, "actions");
-        const save = node("button", "Сохранить", "button secondary");
-        save.type = "submit";
-        const update = (archived) =>
-          busy("Сохраняем ученика", async () => {
-            classState.current = (
-              await request(
-                `/api/v2/classes/${c.id}/students/${s.id}`,
-                classJson("PUT", {
-                  name: input.value,
-                  archived,
-                  revision: c.revision,
-                }),
-              )
-            ).classroom;
-            renderClass();
-            notice("Список обновлён. Состав ранее назначенных работ сохранён.");
-          });
-        form.addEventListener("submit", (e) => {
-          e.preventDefault();
-          update(s.archived);
-        });
-        actions.append(
-          save,
+      row.append(node("span", s.code, "student-name"));
+      if (!c.archived)
+        row.append(
           classButton(
-            s.archived ? "Вернуть в список" : "В архив",
-            () => update(!s.archived),
+            s.archived ? "Вернуть" : "В архив",
+            () =>
+              busy("Обновляем список", async () => {
+                classState.current = (
+                  await request(
+                    `/api/v2/classes/${c.id}/students/${s.id}`,
+                    classJson("PUT", {
+                      revision: c.revision,
+                      archived: !s.archived,
+                    }),
+                  )
+                ).classroom;
+                renderClass();
+                notice(
+                  "Код сохранён. Состав ранее назначенных работ не изменился.",
+                );
+              }),
             "ghost",
           ),
         );
-        form.append(label, actions);
-        details.append(form);
-        row.append(details);
-      }
       (s.archived ? archivedList : list).append(row);
     }
     if (!list.children.length)
       list.append(
-        node("p", "В текущем списке нет подходящих учеников.", "quiet"),
+        node("p", "Подходящих учеников в текущем списке нет.", "quiet"),
       );
   };
   search.addEventListener("input", draw);
   draw();
-  panel.append(
-    list,
-    archived,
-    node(
-      "p",
-      "Изменение списка действует для новых назначений. В выданных работах остаётся исходный состав.",
-      "quiet",
-    ),
-  );
+  panel.append(list, archive);
   target.append(panel);
+}
+function downloadCodes(c) {
+  const rows = [
+    ["Код ученика", "ФИО — заполните только у себя", "Состояние"],
+    ...c.students.map((s) => [s.code, "", s.archived ? "Архив" : "В классе"]),
+  ];
+  const csv =
+    "\uFEFF" +
+    rows
+      .map((row) =>
+        row.map((cell) => '"' + cell.replaceAll('"', '""') + '"').join(";"),
+      )
+      .join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" }),
+    url = URL.createObjectURL(blob),
+    link = node("a");
+  link.href = url;
+  link.download =
+    "Коды учеников — " + c.name.replace(/[<>:\"/\\|?*]/g, "_") + ".csv";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  notice(
+    "В таблице только коды. Заполните ФИО на своём устройстве и храните таблицу у себя.",
+  );
 }
 function assignmentDate(value) {
   return value ? value.split("-").reverse().join(".") : "Без срока";
@@ -380,7 +365,15 @@ function renderAssignments(target, c) {
         `${a.due_date ? "Сдать до " : ""}${assignmentDate(a.due_date)} · Учеников: ${a.student_count}`,
         "quiet",
       ),
-      node("p", "Версия " + a.code, "quiet"),
+      node(
+        "p",
+        (a.scheduled_date
+          ? "Проведение: " + assignmentDate(a.scheduled_date) + " · "
+          : "") +
+          "Версия " +
+          a.code,
+        "quiet",
+      ),
       classButton("Открыть работу", () =>
         busy("Открываем работу", () => openAssignment(a.id)),
       ),
@@ -445,6 +438,14 @@ async function openAssignment(id, loaded = null) {
       "assignment-meta",
     ),
   );
+  if (a.scheduled_date)
+    panel.append(
+      node(
+        "p",
+        "Проведение: " + assignmentDate(a.scheduled_date),
+        "assignment-meta",
+      ),
+    );
   if (a.instructions)
     panel.append(node("p", a.instructions, "assignment-instructions"));
   panel.append(
@@ -485,7 +486,7 @@ async function openAssignment(id, loaded = null) {
   const members = node("details", undefined, "assignment-members");
   members.append(node("summary", "Кому назначено · " + a.student_count));
   const list = node("ol");
-  for (const s of a.students) list.append(node("li", s.name));
+  for (const s of a.students) list.append(node("li", s.code));
   members.append(list);
   panel.append(members);
   const tasks = node("details", undefined, "assignment-tasks");
@@ -719,6 +720,7 @@ $("assignmentForm").addEventListener("submit", (e) => {
           edition_id: $("assignEdition").value,
           title: $("assignTitle").value,
           due_date: $("assignDue").value,
+          scheduled_date: $("assignScheduled").value,
           instructions: $("assignInstructions").value,
           request_key: crypto.randomUUID(),
         },

@@ -25,7 +25,7 @@ class ClassTests(unittest.TestCase):
         self.assertEqual(r.status_code, 201, r.json)
         c = r.json['classroom']
         if names is not None:
-            r = self.call(client, 'post', f"/api/v2/classes/{c['id']}/students", json={'names':names,'revision':c['revision']})
+            r = self.call(client, 'post', f"/api/v2/classes/{c['id']}/students", json={'count':len(names),'revision':c['revision']})
             self.assertEqual(r.status_code, 201, r.json)
             c = r.json['classroom']
         return c
@@ -70,13 +70,15 @@ class ClassTests(unittest.TestCase):
         r = self.call(self.client,'put',f"/api/v2/classes/{second['id']}/students/{c['students'][0]['id']}",json={'name':'Имя','archived':True,'revision':second['revision']})
         self.assertEqual(r.status_code,404)
 
-    def test_bulk_add_is_atomic_rejects_duplicates_and_preserves_unicode(self):
+    def test_bulk_add_is_atomic_and_rejects_personal_names(self):
         c = self.classroom(names=['Семён Ёлкин'])
         path = f"/api/v2/classes/{c['id']}/students"
         for names in (['Новый','СЕМЁН ЁЛКИН'],['Дважды','дважды'],['Добрый',''],['x'*121],[],['x']*101):
             self.assertIn(self.call(self.client,'post',path,json={'names':names,'revision':c['revision']}).status_code,[400,409])
         fresh=class_store.get_class('max:11',c['id'])
-        self.assertEqual([s['name'] for s in fresh['students']],['Семён Ёлкин'])
+        self.assertEqual(fresh['students'],c['students'])
+        self.assertNotIn('name',fresh['students'][0])
+        self.assertRegex(fresh['students'][0]['code'],r'^У-[A-F0-9]{10}$')
         self.assertEqual(fresh['revision'],c['revision'])
 
     def test_class_and_roster_revisions_prevent_lost_updates(self):
@@ -93,8 +95,8 @@ class ClassTests(unittest.TestCase):
         c,m,a,_=self.assignment()
         c=class_store.get_class('max:11',c['id'])
         s=c['students'][0]
-        c=class_store.update_student('max:11',c['id'],s['id'],{'revision':c['revision'],'name':'Новое имя','archived':True})
-        c=class_store.add_students('max:11',c['id'],{'revision':c['revision'],'names':['Новый ученик']})
+        c=class_store.update_student('max:11',c['id'],s['id'],{'revision':c['revision'],'archived':True})
+        c=class_store.add_students('max:11',c['id'],{'revision':c['revision'],'count':1})
         class_store.update_class('max:11',c['id'],{'revision':c['revision'],'name':'Новое название','archived':True})
         changed=dict(m['worksheet'],title='Другой лист')
         workspace_store.put_material('max:11',changed,'manual',m['id'],revision=1)
@@ -119,7 +121,7 @@ class ClassTests(unittest.TestCase):
     def test_retry_after_roster_changed_returns_same_assignment_and_changed_payload_conflicts(self):
         c,m,a,payload=self.assignment()
         fresh=class_store.get_class('max:11',c['id'])
-        class_store.add_students('max:11',c['id'],{'revision':fresh['revision'],'names':['Добавлен позже']})
+        class_store.add_students('max:11',c['id'],{'revision':fresh['revision'],'count':1})
         path=f"/api/v2/classes/{c['id']}/assignments"
         r=self.call(self.client,'post',path,json=payload)
         self.assertEqual(r.status_code,200); self.assertEqual(r.json['assignment']['id'],a['id'])
@@ -143,7 +145,7 @@ class ClassTests(unittest.TestCase):
         path=f"/api/v2/classes/{c['id']}/assignments"
         payload={'revision':c['revision'],'edition_id':edition,'title':'Лист','request_key':uuid.uuid4().hex}
         self.assertEqual(self.call(self.client,'post',path,json=payload).json['code'],'empty_class')
-        c=class_store.add_students('max:11',c['id'],{'revision':c['revision'],'names':['А']})
+        c=class_store.add_students('max:11',c['id'],{'revision':c['revision'],'count':1})
         self.assertEqual(self.call(self.client,'post',path,json=payload).json['code'],'revision_conflict')
         c=class_store.update_class('max:11',c['id'],{'revision':c['revision'],'name':c['name'],'archived':True})
         self.assertEqual(self.call(self.client,'post',path,json=dict(payload,revision=c['revision'])).json['code'],'class_archived')
@@ -152,11 +154,12 @@ class ClassTests(unittest.TestCase):
     def test_archived_student_excluded_from_new_assignment_and_can_be_restored(self):
         c=self.classroom(names=['А','Б'])
         s=c['students'][0]
-        c=class_store.update_student('max:11',c['id'],s['id'],{'revision':c['revision'],'name':s['name'],'archived':True})
+        other_code=c['students'][1]['code']
+        c=class_store.update_student('max:11',c['id'],s['id'],{'revision':c['revision'],'archived':True})
         c,m,a,_=self.assignment(c)
-        self.assertEqual([s['name'] for s in a['students']],['Б'])
+        self.assertEqual([s['code'] for s in a['students']],[other_code])
         c=class_store.get_class('max:11',c['id'])
-        c=class_store.update_student('max:11',c['id'],s['id'],{'revision':c['revision'],'name':s['name'],'archived':False})
+        c=class_store.update_student('max:11',c['id'],s['id'],{'revision':c['revision'],'archived':False})
         self.assertEqual(c['student_count'],2)
         self.assertEqual(class_store.get_assignment('max:11',a['id'])['student_count'],1)
 

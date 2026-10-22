@@ -15,7 +15,7 @@ const state = {
   materials: [],
   auth: null,
   dirty: false,
-  view: "workspace",
+  view: "home",
   origin: null,
   library: [],
   libraryPage: 1,
@@ -120,8 +120,16 @@ function step(number) {
     $("step" + number).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function showView(view, refresh = true) {
+  const changedView = state.view !== view;
   state.view = view;
+  $("resumeSheet").hidden = !(
+    state.sheet ||
+    state.files.length ||
+    $("sourceText").value.trim()
+  );
   for (const [name, id] of Object.entries({
+    home: "homeView",
+    schedule: "scheduleView",
     workspace: "workspace",
     saved: "savedView",
     library: "libraryView",
@@ -129,10 +137,16 @@ function showView(view, refresh = true) {
     classes: "classesView",
   }))
     $(id).hidden = view !== name;
-  $("createNav").classList.toggle("active", view === "workspace");
+  $("createNav").classList.toggle(
+    "active",
+    ["workspace", "home"].includes(view),
+  );
   $("savedNav").classList.toggle("active", ["saved", "publish"].includes(view));
   $("libraryNav").classList.toggle("active", view === "library");
   $("classesNav").classList.toggle("active", view === "classes");
+  $("scheduleNav").classList.toggle("active", view === "schedule");
+  if (view === "schedule" && refresh)
+    busy("Загружаем расписание", refreshSchedule);
   if (view === "classes" && refresh) busy("Загружаем классы", refreshClasses);
   if (view === "saved" && refresh)
     busy("Загружаем ваши материалы", refreshMaterials);
@@ -141,9 +155,10 @@ function showView(view, refresh = true) {
     busy("Загружаем библиотеку", () => refreshLibrary());
   }
   if (window.WebApp?.BackButton) {
-    if (view !== "workspace" || state.step > 1) window.WebApp.BackButton.show();
+    if (view !== "home") window.WebApp.BackButton.show();
     else window.WebApp.BackButton.hide();
   }
+  if (changedView) window.scrollTo({ top: 0 });
 }
 async function request(url, options = {}) {
   const headers = new Headers(options.headers || {});
@@ -321,12 +336,7 @@ function renderSettings() {
     .forEach((n) => (n.checked = n.value === state.sheet.settings.field));
   $("columnsSelect").value = state.sheet.settings.columns;
   $("countSelect").value = state.sheet.settings.tasks_per_page;
-  document
-    .querySelectorAll('[name="template"]')
-    .forEach(
-      (n) =>
-        (n.checked = n.value === (state.sheet.settings.template || "cards")),
-    );
+  $("templateSelect").value = state.sheet.settings.template || "cards";
   $("variantInput").value = state.sheet.settings.variant || "";
   $("lessonDateInput").value = state.sheet.settings.lesson_date || "";
   $("printSides").value = state.sheet.settings.print_sides || "single";
@@ -350,15 +360,14 @@ function readSettings() {
     columns: Number($("columnsSelect").value),
     tasks_per_page: Number($("countSelect").value),
     field: document.querySelector('[name="field"]:checked').value,
-    template: document.querySelector('[name="template"]:checked').value,
+    template: $("templateSelect").value,
     variant: $("variantInput").value,
     lesson_date: $("lessonDateInput").value,
     print_sides: $("printSides").value,
   };
 }
 function templateHint() {
-  const value =
-    document.querySelector('[name="template"]:checked')?.value || "cards";
+  const value = $("templateSelect").value;
   $("templateHint").textContent = {
     list: "Меньше рамок, больше места. Удобно для коротких упражнений.",
     cards: "Условие и место для решения объединены в карточку.",
@@ -962,12 +971,16 @@ function renderFiles() {
   $("fileList").replaceChildren();
   state.files.forEach((file, index) => {
     const row = node("div", undefined, "file-item"),
-      image = node("img");
-    image.alt = "Фото " + (index + 1);
-    image.src = URL.createObjectURL(file);
-    state.urls.push(image.src);
+      image = /\.pdf$/i.test(file.name)
+        ? node("span", "PDF", "pdf-file-icon")
+        : node("img");
+    if (image.tagName === "IMG") {
+      image.alt = "Фото " + (index + 1);
+      image.src = URL.createObjectURL(file);
+      state.urls.push(image.src);
+    }
     const remove = node("button", "×");
-    remove.setAttribute("aria-label", "Убрать фото " + (index + 1));
+    remove.setAttribute("aria-label", "Убрать файл " + (index + 1));
     remove.addEventListener("click", () => {
       state.files.splice(index, 1);
       renderFiles();
@@ -982,17 +995,25 @@ function addFiles(files) {
     next.length > 10 ||
     next.reduce((sum, f) => sum + f.size, 0) > 20 * 1024 * 1024
   ) {
-    notice("Можно добавить до 10 фотографий общим размером до 20 МБ.", true);
+    notice("Добавьте до 10 фото или один PDF. Общий размер — до 20 МБ.", true);
     return;
   }
   if (
     next.some(
       (f) =>
-        !["image/png", "image/jpeg"].includes(f.type) ||
+        (!["image/png", "image/jpeg", "application/pdf"].includes(f.type) &&
+          !/\.pdf$/i.test(f.name)) ||
         f.size > 15 * 1024 * 1024,
     )
   ) {
-    notice("Выберите PNG или JPEG. Одна фотография — до 15 МБ.", true);
+    notice("Выберите PNG, JPEG или PDF. Один файл — до 15 МБ.", true);
+    return;
+  }
+  if (next.some((f) => /\.pdf$/i.test(f.name)) && next.length !== 1) {
+    notice(
+      "Добавьте один PDF или фотографии. Уберите текущие файлы, чтобы сменить источник.",
+      true,
+    );
     return;
   }
   state.files = next;
@@ -1066,11 +1087,11 @@ async function prepareMax() {
     else if (state.view === "library" && !$("libraryDetail").hidden)
       backToLibrary();
     else if (state.view === "publish") showView("saved");
-    else if (state.view !== "workspace") showView("workspace");
+    else if (state.view !== "workspace") showView("home");
     else if (state.step > 1) {
       if (state.step === 3) readSettings();
       step(state.step - 1);
-    }
+    } else showView("home");
   });
   renderAccount();
   if (state.auth.authenticated) {
@@ -1081,7 +1102,10 @@ async function prepareMax() {
 function renderAccount() {
   const loggedIn = !!state.auth?.authenticated;
   $("loginPanel").hidden = loggedIn;
-  $("workspace").hidden = !loggedIn;
+  $("workspace").hidden = true;
+  $("homeView").hidden = !loggedIn;
+  $("scheduleView").hidden = true;
+  if (loggedIn) showView("home", false);
   $("savedView").hidden = true;
   $("libraryView").hidden = true;
   $("publishView").hidden = true;
@@ -1090,6 +1114,7 @@ function renderAccount() {
   $("savedNav").disabled = !loggedIn;
   $("libraryNav").disabled = !loggedIn;
   $("classesNav").disabled = !loggedIn;
+  $("scheduleNav").disabled = !loggedIn;
   $("localLoginBtn").hidden = !state.auth?.local_available;
   $("maxLoginLink").hidden = !state.auth?.max_url;
   if (state.auth?.max_url) $("maxLoginLink").href = state.auth.max_url;
@@ -1121,6 +1146,10 @@ $("dropZone").addEventListener("drop", (e) =>
 $("demoBtn").addEventListener("click", () =>
   busy("Открываем пример", async () => {
     const result = await request("/api/v2/demo?subject=" + subject());
+    result.worksheet.settings = {
+      ...result.worksheet.settings,
+      ...initialSettings(),
+    };
     loadSheet(result.worksheet, result.source);
   }),
 );
@@ -1130,6 +1159,9 @@ $("recognizeBtn").addEventListener("click", () =>
     state.files.forEach((file) => form.append("files", file));
     form.append("subject", subject());
     form.append("text", $("sourceText").value);
+    form.append("instructions", $("teacherInstructions").value);
+    form.append("settings", JSON.stringify(initialSettings()));
+    form.append("variant_count", $("setupVariants").value);
     await enqueueJob("recognize", form, false);
   }),
 );
@@ -1183,13 +1215,11 @@ document.querySelectorAll('[name="field"]').forEach((n) =>
     readSettings();
   }),
 );
-document.querySelectorAll('[name="template"]').forEach((n) =>
-  n.addEventListener("change", () => {
-    invalidate();
-    readSettings();
-    templateHint();
-  }),
-);
+$("templateSelect").addEventListener("change", () => {
+  invalidate();
+  readSettings();
+  templateHint();
+});
 for (const id of ["folderFilter", "archiveFilter"])
   $(id).addEventListener("change", renderSaved);
 $("reviewCheckbox").addEventListener("change", () => {
@@ -1229,11 +1259,12 @@ document.querySelectorAll("[data-variant]").forEach((button) =>
         material_id: state.savedId,
         revision: state.revision,
         difficulty: button.dataset.variant,
+        variant_count: Number($("resultVariantCount").value),
       });
     }),
   ),
 );
-$("createNav").addEventListener("click", () => showView("workspace"));
+$("createNav").addEventListener("click", () => showView("home"));
 $("savedNav").addEventListener("click", () => showView("saved"));
 $("libraryNav").addEventListener("click", () => showView("library"));
 $("shareFromSaved").addEventListener("click", () => {
@@ -1324,14 +1355,8 @@ $("confirmWithdraw").addEventListener("click", () => {
     notice("Лист снят с публикации. Личный материал сохранён.");
   });
 });
-$("newSheetBtn").addEventListener("click", () => {
-  if (
-    state.dirty &&
-    !window.confirm(
-      "Начать новый лист? Несохранённые изменения будут потеряны.",
-    )
-  )
-    return;
+async function startSheet() {
+  if (state.dirty && state.sheet) await saveCurrent();
   state.sheet = null;
   state.savedId = null;
   state.revision = null;
@@ -1339,11 +1364,45 @@ $("newSheetBtn").addEventListener("click", () => {
   state.files = [];
   renderFiles();
   $("sourceText").value = "";
+  $("teacherInstructions").value = "";
   markDirty(false);
   showView("workspace");
   notice("");
   step(1);
+}
+for (const id of ["newSheetBtn", "startCreate"])
+  $(id).addEventListener("click", () =>
+    busy("Открываем новый лист", startSheet),
+  );
+$("homeMaterials").addEventListener("click", () => showView("saved"));
+$("resumeSheet").addEventListener("click", () => showView("workspace"));
+$("homeSchedule").addEventListener("click", () => showView("schedule"));
+$("takePhoto").addEventListener("click", () => $("cameraInput").click());
+$("cameraInput").addEventListener("change", (e) => {
+  addFiles([...e.target.files]);
+  e.target.value = "";
 });
+function initialSettings() {
+  return {
+    template: $("setupTemplate").value,
+    field: $("setupField").value,
+    columns: Number($("setupColumns").value),
+    tasks_per_page: Number($("setupCount").value),
+  };
+}
+function initialSummary() {
+  const s = initialSettings();
+  $("setupSummary").textContent =
+    `${$("setupTemplate").selectedOptions[0].text} · ${$("setupField").selectedOptions[0].text.toLowerCase()} · ${s.columns === 1 ? "1 столбец" : "2 столбца"}`;
+  $("setupHint").textContent = {
+    cards: "Условие и место для решения объединены в карточку.",
+    list: "Нумерованный список для коротких упражнений.",
+    guided: "Дано → решение → ответ. Удобно для разбора по шагам.",
+    check: "Место для баллов и замечаний учителя.",
+  }[s.template];
+}
+for (const id of ["setupTemplate", "setupField", "setupColumns", "setupCount"])
+  $(id).addEventListener("change", initialSummary);
 $("materialSearch").addEventListener("input", renderSaved);
 $("materialSort").addEventListener("change", renderSaved);
 $("localLoginBtn").addEventListener("click", () =>
@@ -1394,6 +1453,7 @@ $("createNav").disabled = true;
 $("savedNav").disabled = true;
 $("libraryNav").disabled = true;
 $("classesNav").disabled = true;
+$("scheduleNav").disabled = true;
 updateCount();
 refreshStatus();
 busy("Открываем ваш профиль", async () => {

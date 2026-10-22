@@ -115,6 +115,30 @@ class ProviderTests(unittest.TestCase):
             structured_ai.generate('math',original=demo_worksheet('math'),difficulty='harder')
         self.assertEqual(error.exception.code,'ai_variant_unchanged')
 
+    def test_malformed_response_has_one_bounded_repair_and_keeps_teacher_instructions(self):
+        client=self.fake_client()
+        def response(content):
+            return SimpleNamespace(choices=[SimpleNamespace(finish_reason='stop',message=SimpleNamespace(content=content))])
+        with patch.object(client,'chat',side_effect=[response('bad JSON'),response(json.dumps(demo_worksheet('math')))]) as chat, patch.object(structured_ai,'_create_client',return_value=client):
+            sheet=structured_ai.generate('math',text='Источник',instructions='Только уравнения')
+        self.assertEqual(len(sheet['tasks']),3)
+        self.assertEqual(chat.call_count,2)
+        self.assertIn('Только уравнения',chat.call_args.args[0].messages[0].content)
+
+    def test_instructions_apply_to_every_page_and_can_skip_an_excluded_page(self):
+        client=self.fake_client()
+        def response(content):
+            return SimpleNamespace(choices=[SimpleNamespace(finish_reason='stop',message=SimpleNamespace(content=content))])
+        with tempfile.TemporaryDirectory() as temp:
+            paths=[Path(temp)/'1.jpg',Path(temp)/'2.jpg']
+            for path in paths:path.write_bytes(b'test')
+            with patch.object(client,'chat',side_effect=[response('{"tasks":[]}'),response(json.dumps(demo_worksheet('math')))]) as chat,patch.object(structured_ai,'_create_client',return_value=client):
+                result=structured_ai.generate('math',image_paths=paths,instructions='Только уравнения')
+        self.assertEqual(len(result['tasks']),3)
+        self.assertEqual(result['title'],demo_worksheet('math')['title'])
+        for call in chat.call_args_list:self.assertIn('Только уравнения',call.args[0].messages[0].content)
+        self.assertEqual(client.deleted,['1','2'])
+
     def test_provider_failure_still_deletes_uploaded_photo(self):
         client=self.fake_client(fail=True)
         with tempfile.TemporaryDirectory() as temp:

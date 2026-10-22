@@ -136,6 +136,9 @@ def init_db():
         c.execute('ALTER TABLE history ADD COLUMN owner_id TEXT')
     if 'marp' not in {row[1] for row in c.execute('PRAGMA table_info(artifacts)')}:
         c.execute('ALTER TABLE artifacts ADD COLUMN marp TEXT')
+    if 'scheduled_date' not in {row[1] for row in c.execute('PRAGMA table_info(assignments)')}:
+        c.execute("ALTER TABLE assignments ADD COLUMN scheduled_date TEXT NOT NULL DEFAULT ''")
+    c.execute('CREATE INDEX IF NOT EXISTS assignments_schedule ON assignments(owner_id,scheduled_date)')
     conn.commit()
     conn.close()
 

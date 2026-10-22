@@ -20,6 +20,8 @@ pydantic==2.14.1
 pydantic-settings==2.16.1
 pydantic_core==2.50.1
 pypdf==6.21.2
+pypdfium2==5.14.0
+Pillow==13.0.0
 pyTelegramBotAPI==4.16.1
 python-dotenv==1.2.4
 requests==2.34.2

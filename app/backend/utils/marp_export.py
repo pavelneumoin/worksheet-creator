@@ -37,7 +37,7 @@ def markdown(value, answers=False, origin=None):
         if meta:
             page.extend(['<div class="meta">', '', plain(meta), '', '</div>', ''])
         if not answers:
-            page.extend(['<div class="student">ФИО __________________________ Дата __________</div>', ''])
+            page.extend(['<div class="student">Код ученика ____________________ Дата __________</div>', ''])
         page.extend(['<div class="task-grid">', ''])
         for i, task in enumerate(sheet['tasks'][offset:offset + count], offset + 1):
             content = task['answer'] or 'Ответ не указан — требуется проверка.' if answers else task['question']

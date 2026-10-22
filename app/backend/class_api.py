@@ -18,6 +18,11 @@ def classes():
     return jsonify(classes=class_store.list_classes(g.identity['owner_id']))
 
 
+@api.get('/schedule')
+def schedule():
+    return jsonify(assignments=class_store.schedule(g.identity['owner_id'], request.args.get('month')))
+
+
 @api.post('/classes')
 def create():
     return jsonify(classroom=class_store.create_class(g.identity['owner_id'], body())), 201

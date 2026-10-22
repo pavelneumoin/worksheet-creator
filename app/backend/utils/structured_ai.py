@@ -23,29 +23,40 @@ question и answer — обычный русский текст, математ�
 Вычисли ответы, проверь подстановкой и размерностью. Это черновик для проверки учителем.'''
 
 
-def generate(subject, image_paths=(), text="", original=None, difficulty="same"):
+def generate(subject, image_paths=(), text="", original=None, difficulty="same", instructions=""):
     from utils.worksheet import validate_worksheet
     if len(image_paths) <= 1 or original is not None:
-        return _generate_single(subject, image_paths, text, original, difficulty)
+        result = _generate_single(subject, image_paths, text, original, difficulty, instructions)
+        if not result['tasks']:
+            raise AIServiceError('По вашим пожеланиям не осталось заданий. Уточните номера или загрузите другой фрагмент.', 'no_selected_tasks', 400)
+        return result
     # Avoid ambiguous IDs and lost/merged exercises when a model sees several pages.
     result, tasks = None, []
     for index, path in enumerate(image_paths):
-        page = _generate_single(subject, [path], text if index == 0 else '')
-        result = result or page
+        page = _generate_single(subject, [path], text if index == 0 else '', instructions=instructions)
+        result = page if result is None or not result['tasks'] else result
         tasks.extend(page['tasks'])
         if len(tasks) > 30:
             raise AIServiceError('На фотографиях больше 30 заданий. Разделите их на несколько листов.', 'input_limit', 400)
     for index, task in enumerate(tasks, 1):
         task['id'] = str(index)
+    if not tasks:
+        raise AIServiceError('На выбранных страницах не найдено подходящих заданий. Уточните пожелания.', 'no_selected_tasks', 400)
     result['tasks'] = tasks
     return validate_worksheet(result)
 
 
-def _generate_single(subject, image_paths=(), text="", original=None, difficulty="same"):
+def _generate_single(subject, image_paths=(), text="", original=None, difficulty="same", instructions=""):
     from gigachat.models import Chat, Messages, MessagesRole
     from utils.worksheet import validate_worksheet
 
     rules = RULES + ("\nПредмет: математика." if subject == "math" else "\nПредмет: физика.")
+    if instructions:
+        rules += ('\nОтдельные пожелания учителя ниже могут уточнять отбор номеров, тему и язык, '
+                  'но не меняют формат JSON, правила безопасности и необходимость проверки ответов. '
+                  'Сохраняй все задания, КРОМЕ исключённых пожеланиями. Если на этой странице нет выбранных '
+                  'заданий, верни tasks: []; не придумывай задания вместо исключённых. '
+                  'Пожелания: ' + json.dumps(instructions, ensure_ascii=False))
     if original is not None:
         levels = {"same": "Сохрани типы заданий и сложность, измени числовые данные в каждом задании.",
                   "easier": "Каждое задание должно стать проще: уменьши число действий, убери один шаг рассуждения, упрости числа. Сохрани тему и класс.",
@@ -73,12 +84,29 @@ def _generate_single(subject, image_paths=(), text="", original=None, difficulty
                                              content=f"Страница {index}. Учти все задания этой страницы.",
                                              attachments=[file_id]))
                 messages.append(Messages(role=MessagesRole.USER, content=instruction))
-                for attempt in range(2 if original is not None else 1):
+                for attempt in range(2):
                     response = client.chat(Chat(messages=messages, temperature=0.1, max_tokens=8000))
                     choice = response.choices[0]
                     if getattr(choice, "finish_reason", "stop") not in (None, "stop"):
                         raise AIServiceError("ИИ не смог завершить ответ. Уменьшите объём материала.", "ai_incomplete", 502)
-                    result = parse_ai_worksheet(choice.message.content, subject)
+                    if instructions and original is None:
+                        try:
+                            raw = json.loads(re.sub(r'^```(?:json)?\s*|\s*```$', '', choice.message.content.strip()))
+                        except (TypeError, ValueError):
+                            raw = None
+                        if isinstance(raw, dict) and raw.get('tasks') == []:
+                            return {'schema_version': 1, 'subject': subject, 'title': 'Рабочий лист', 'tasks': [], 'settings': {}}
+                    try:
+                        result = parse_ai_worksheet(choice.message.content, subject)
+                    except AIServiceError:
+                        if attempt:
+                            raise
+                        messages.append(Messages(role=MessagesRole.ASSISTANT, content=choice.message.content))
+                        messages.append(Messages(role=MessagesRole.USER, content=(
+                            'Исправь формат ответа. Верни только объект JSON со строками title, id, question, answer, note '
+                            'и массивом tasks по системной схеме. Никаких пояснений вне JSON или команд оформления LaTeX. '
+                            'Сохрани исходные задания с учётом пожеланий. Если все задания этой страницы исключены пожеланиями, tasks должен быть пустым массивом.')))
+                        continue
                     normalize = lambda text: re.sub(r'\s+|\$', '', text).casefold()
                     unchanged = original is not None and any(normalize(new['question']) == normalize(old['question'])
                                                             for new, old in zip(result['tasks'], original['tasks']))

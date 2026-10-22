@@ -2086,3 +2086,308 @@ select {
     flex: 1;
   }
 }
+
+/* A quiet starting point, with settings available before the first AI request. */
+.topbar-inner {
+  gap: 22px;
+}
+.home-view {
+  max-width: 820px;
+  margin: 35px auto 65px;
+}
+.home-view h1 {
+  font-size: clamp(36px, 5vw, 56px);
+  line-height: 1.15;
+  letter-spacing: -1.8px;
+  margin: 18px 0 22px;
+}
+.home-view .lead {
+  max-width: 620px;
+  font-size: 18px;
+}
+.home-create {
+  min-height: 58px;
+  padding-inline: 26px;
+  margin-top: 18px;
+  font-size: 17px;
+}
+.home-formats {
+  margin: 12px 0 38px;
+  font-size: 13px;
+}
+#resumeSheet {
+  margin: 14px 0 0;
+  display: block;
+}
+summary {
+  min-height: 44px;
+  align-content: center;
+}
+select {
+  min-height: 44px;
+}
+.home-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.home-link {
+  text-align: left;
+  color: var(--ink);
+  background: #fff;
+  padding: 23px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.home-link strong {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.home-link > span {
+  color: var(--muted);
+  display: block;
+  font-size: 14px;
+}
+.home-link:hover {
+  border-color: var(--accent);
+}
+.home-private {
+  margin-top: 22px;
+  font-size: 13px;
+}
+.workspace-heading {
+  margin: 8px 0 26px;
+}
+.workspace-heading h1 {
+  font-size: 30px;
+  line-height: 1.25;
+  letter-spacing: -0.7px;
+  margin-bottom: 8px;
+}
+.workspace-heading p {
+  margin: 0;
+}
+.upload-zone {
+  min-height: 150px;
+}
+.camera-row {
+  margin-top: 12px;
+}
+.pdf-file-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: var(--light);
+  color: var(--accent);
+  border-radius: 8px;
+  font-weight: 700;
+}
+.file-item > span:not(.pdf-file-icon) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.setup-settings {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px 16px;
+  margin: 22px 0;
+}
+.setup-settings summary {
+  min-height: 60px;
+  padding-block: 10px;
+  cursor: pointer;
+  font-weight: 650;
+}
+#setupSummary {
+  display: block;
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 13px;
+}
+.setup-settings .form-grid {
+  margin-top: 18px;
+}
+.setup-settings label,
+.teacher-instructions,
+.variant-count {
+  display: block;
+  font-weight: 600;
+}
+.teacher-instructions textarea {
+  margin: 8px 0 18px;
+}
+.variant-count select {
+  margin-top: 8px;
+}
+#templateSelect {
+  margin: 8px 0 0;
+}
+.roster-privacy {
+  margin-bottom: 16px;
+}
+.roster-privacy h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.roster-add label {
+  display: block;
+}
+.roster-add input {
+  max-width: 160px;
+  display: block;
+  margin: 8px 0 18px;
+}
+.student-row .student-name {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.4px;
+}
+.schedule-panel {
+  max-width: 580px;
+  margin-bottom: 24px;
+}
+.month-controls {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  align-items: end;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.month-controls .button {
+  padding: 8px;
+  min-height: 48px;
+}
+.month-controls label {
+  min-width: 0;
+}
+.month-controls input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+}
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+  text-align: center;
+}
+.calendar-day {
+  display: grid;
+  place-items: center;
+  position: relative;
+  min-height: 48px;
+  padding-bottom: 6px;
+  border-radius: 12px;
+}
+.calendar-day.today {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  color: var(--accent);
+}
+.calendar-day.has-work {
+  background: var(--light);
+  font-weight: 700;
+}
+.calendar-day.has-work::after {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 100%;
+  background: var(--accent);
+  position: absolute;
+  bottom: 7px;
+  left: calc(50% - 2px);
+}
+.calendar-weekday {
+  font-size: 12px;
+  color: var(--muted);
+  padding-bottom: 8px;
+}
+.schedule-work h2 {
+  font-size: 20px;
+}
+#scheduleClasses {
+  margin-top: 22px;
+}
+@media (max-width: 720px) {
+  .topbar-inner {
+    gap: 12px;
+  }
+  .topbar nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+  }
+  .topbar .nav-button {
+    min-width: 0;
+    font-size: 12px;
+    padding: 8px 5px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .home-view {
+    margin: 24px 0 35px;
+  }
+  .home-view h1 {
+    font-size: 38px;
+  }
+  .home-view .lead {
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .home-create {
+    width: 100%;
+    font-size: 16px;
+    padding-inline: 12px;
+  }
+  .home-links {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .home-link {
+    padding: 19px;
+  }
+  .home-formats {
+    margin-bottom: 27px;
+  }
+  .workspace-heading h1 {
+    font-size: 26px;
+  }
+  .desktop-only {
+    display: none;
+  }
+  .setup-settings {
+    padding-inline: 12px;
+  }
+  .setup-settings .form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .setup-settings select,
+  .teacher-instructions textarea,
+  .variant-count select,
+  #templateSelect,
+  #scheduleMonth {
+    font-size: 16px;
+  }
+  .camera-row .button,
+  #recognizeBtn {
+    width: 100%;
+  }
+  .month-controls {
+    gap: 8px;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+  .month-grid {
+    gap: 2px;
+  }
+  .calendar-day {
+    min-height: 42px;
+  }
+}

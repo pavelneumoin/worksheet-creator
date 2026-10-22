@@ -45,7 +45,7 @@ def remove_outputs(job_id):
 
 def execute(job_id):
     """Child process: only material work, no database completion side effects."""
-    from utils import structured_ai
+    from utils import ai_batch, source_pages
     from utils.marp_export import export_bundle
     from utils.worksheet import compile_worksheet
     from utils.workspace_store import connection
@@ -62,20 +62,20 @@ def execute(job_id):
             compile_worksheet(payload['worksheet'], base)
             export_bundle(payload['worksheet'], Path(latex.OUTPUT_DIR) / (base + '_marp.zip'), payload.get('origin'))
             result = {'ok': True}
-        elif job['kind'] == 'recognize':
-            paths = [str(directory / name) for name in payload['images']]
-            result = {'worksheet': structured_ai.generate(payload['subject'], image_paths=paths, text=payload['text'])}
         else:
-            result = {'worksheet': structured_ai.generate(payload['worksheet']['subject'], original=payload['worksheet'], difficulty=payload['difficulty'])}
+            paths = source_pages.prepare([directory / name for name in payload['images']], directory / 'pages') if job['kind'] == 'recognize' else []
+            result = ai_batch.generate(job['kind'], payload, paths, directory)
     except AIServiceError as exc:
         result = {'error': str(exc), 'code': exc.code}
     except Exception as exc:
         result = {'error': 'Не удалось завершить обработку. Исходный материал сохранён. Повторите действие.', 'code': 'job_failed'}
         logger.error('Job failed (%s)', type(exc).__name__)
-    target = directory / 'result.json'
-    temporary = directory / 'result.tmp'
-    temporary.write_text(json.dumps(result, ensure_ascii=False), encoding='utf-8')
-    temporary.replace(target)
+    # Keep a usable checkpoint if a later call unexpectedly failed.
+    if result.get('error') and (directory / 'result.json').is_file():
+        previous = json.loads((directory / 'result.json').read_text(encoding='utf-8'))
+        if previous.get('worksheets'):
+            result = previous
+    ai_batch.write_result(directory, result)
     return 0
 
 
@@ -94,7 +94,8 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
             del environment[key]
     environment['LISTOK_SKIP_DOTENV'] = '1'
     command = [sys.executable, str(ROOT / 'scripts/run_worker.py'), '--execute', job['id']]
-    timeout = timeout_override if timeout_override is not None else {'recognize': 1500, 'variant': 300, 'compile': 180}[job['kind']]
+    count = json.loads(job['payload']).get('variant_count', 1)
+    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180}[job['kind']]
     process = None
     succeeded = False
     try:
@@ -110,7 +111,7 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
                 last_beat = time.monotonic()
             time.sleep(0.2)
         result_path = directory / 'result.json'
-        if process.returncode or not result_path.is_file() or result_path.stat().st_size > 512 * 1024:
+        if not result_path.is_file() or result_path.stat().st_size > 2 * 1024 * 1024:
             raise RuntimeError('Child failed')
         output = json.loads(result_path.read_text(encoding='utf-8'))
         if output.get('error'):
@@ -118,19 +119,42 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
         else:
             succeeded = job_store.complete(job, output)
     except TimeoutError:
+        if process is not None:
+            stop_process(process)
+        succeeded = complete_checkpoint(job, directory)
         job_store.fail(job['id'], job['claim'], 'Обработка заняла слишком много времени. Попробуйте меньше фотографий или более короткий лист.', 'job_timeout')
     except (InterruptedError, KeyboardInterrupt):
+        if process is not None:
+            stop_process(process)
+        succeeded = complete_checkpoint(job, directory)
         job_store.fail(job['id'], job['claim'], 'Сервер перезапустился во время обработки. Повторите действие вручную; автоматического повторного запроса к ИИ не было.', 'worker_interrupted')
     except Exception as exc:
         logger.error('Worker failure (%s)', type(exc).__name__)
+        if process is not None:
+            stop_process(process)
+        succeeded = complete_checkpoint(job, directory)
         job_store.fail(job['id'], job['claim'], 'Не удалось завершить задачу. Исходный материал сохранён. Повторите действие.', 'job_failed')
     finally:
         if process is not None:
             stop_process(process)
         if not succeeded:
+            succeeded = complete_checkpoint(job, directory)
+        if not succeeded:
             remove_outputs(job['id'])
         job_store.remove_inputs(job['id'])
     return True
+
+
+def complete_checkpoint(job, directory):
+    """Only a still-running claim can commit. Failed/cancelled jobs stay fenced."""
+    path = directory / 'result.json'
+    if job['kind'] == 'compile' or not path.is_file() or path.stat().st_size > 2 * 1024 * 1024:
+        return False
+    try:
+        result = json.loads(path.read_text(encoding='utf-8'))
+        return bool(result.get('worksheets')) and job_store.complete(job, result)
+    except (ValueError, AIServiceError):
+        return False
 
 
 def serve(lane):

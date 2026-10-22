@@ -58,11 +58,11 @@ python3 -m venv .venv
 ## Контейнер и CLI
 
 ```bash
-docker build -t listok:night5 .
+docker build -t listok:night6 .
 docker compose up -d --wait
-docker run --rm --network none listok:night5 python -m unittest discover -s tests -v
-docker run --rm --network none listok:night5 python scripts/smoke_pdf.py
-docker run --rm --network none listok:night5 python scripts/smoke_queue.py
+docker run --rm --network none listok:night6 python -m unittest discover -s tests -v
+docker run --rm --network none listok:night6 python scripts/smoke_pdf.py
+docker run --rm --network none listok:night6 python scripts/smoke_queue.py
 ```
 
 На локальном компьютере Docker не установлен. Образ собран и проверен в [GitHub Actions](https://github.com/pavelneumoin/worksheet-creator/actions/workflows/check.yml?query=branch%3Acodex%2Fqueue-marp-docker). Выберите успешную сборку того же коммита, что и ваш checkout. Готовый образ и SHA256 находятся в артефакте `listok-docker-image`: после распаковки выполните `docker load -i listok-image.tar.gz`, затем `docker compose up -d --no-build --wait`. Нужны `.env` и каталог `.local-certs`; для GigaChat нужен действующий CA-набор. Локальный `.env` не перезаписывайте.

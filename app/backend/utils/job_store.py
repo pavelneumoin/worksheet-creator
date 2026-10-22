@@ -1,5 +1,6 @@
 """Durable SQLite queue with owner isolation, idempotency and fenced completion."""
 import hashlib
+from contextlib import nullcontext
 import json
 import os
 from pathlib import Path
@@ -126,8 +127,8 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
                 raise AIServiceError('У вас уже есть задача. Дождитесь её результата — он появится в разделе «Задачи».', 'owner_job_limit', 429)
             if conn.execute("SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running')").fetchone()[0] >= 30:
                 raise AIServiceError('Сейчас много запросов. Попробуйте через несколько минут.', 'queue_full', 429)
-            if kind != 'compile' and conn.execute('SELECT COUNT(*) FROM materials WHERE owner_id=?', (owner,)).fetchone()[0] >= 500:
-                raise AIServiceError('Удалите ненужный материал: в профиле уже 500 листов.', 'materials_limit', 409)
+            if kind != 'compile' and conn.execute('SELECT COUNT(*) FROM materials WHERE owner_id=?', (owner,)).fetchone()[0] + payload.get('variant_count', 1) > 500:
+                raise AIServiceError('В профиле можно хранить до 500 листов. Освободите место для новых вариантов.', 'materials_limit', 409)
             # Validate the saved snapshot in the same transaction as enqueueing.
             material_id = payload.get('material_id')
             if material_id:
@@ -183,10 +184,11 @@ def fail(job_id, claim, message, code):
                                  (message, code, now, now, job_id, claim)).rowcount)
 
 
-def complete(job, output):
+def complete(job, output, active_connection=None):
     """Commit saved material/artifact and result together; a stale worker cannot publish."""
-    with connection() as conn:
-        conn.execute('BEGIN IMMEDIATE')
+    with (nullcontext(active_connection) if active_connection is not None else connection()) as conn:
+        if not conn.in_transaction:
+            conn.execute('BEGIN IMMEDIATE')
         current = conn.execute("SELECT * FROM jobs WHERE id=? AND claim=? AND status='running'", (job['id'], job['claim'])).fetchone()
         if current is None:
             return False
@@ -208,14 +210,24 @@ def complete(job, output):
                       'material_id': material['id'] if attached else None, 'attached': attached,
                       **result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone())}
         else:
-            worksheet = validate_worksheet(output['worksheet'])
-            conn.execute('INSERT INTO materials VALUES (?,?,?,?,1,?,?)',
-                         (job_id, owner, json.dumps(worksheet, ensure_ascii=False), 'ai_draft', now, now))
+            worksheets = output.get('worksheets', [output.get('worksheet')])
+            requested = payload.get('variant_count', 1)
+            if not isinstance(worksheets, list) or not 1 <= len(worksheets) <= requested <= 4:
+                raise AIServiceError('Неверный результат обработки вариантов.', 'invalid_batch', 502)
+            worksheets = [validate_worksheet(w) for w in worksheets]
+            origin = None
             if payload.get('material_id'):
                 origin = conn.execute('SELECT * FROM material_origins WHERE material_id=?', (payload['material_id'],)).fetchone()
+            materials = []
+            for index, worksheet in enumerate(worksheets):
+                material_id = job_id if index == 0 else uuid.uuid5(uuid.UUID(job_id), str(index)).hex
+                conn.execute('INSERT INTO materials VALUES (?,?,?,?,1,?,?)',
+                             (material_id, owner, json.dumps(worksheet, ensure_ascii=False), 'ai_draft', now, now))
                 if origin:
-                    conn.execute('INSERT INTO material_origins VALUES (?,?,?,?)', (job_id, origin['publication_id'], origin['author'], origin['title']))
-            result = {'material_id': job_id}
+                    conn.execute('INSERT INTO material_origins VALUES (?,?,?,?)', (material_id, origin['publication_id'], origin['author'], origin['title']))
+                materials.append({'material_id': material_id, 'title': worksheet['title'], 'variant': worksheet['settings']['variant']})
+            result = {'material_id': job_id, 'materials': materials, 'requested_count': requested,
+                      'warning': output.get('warning', '')[:1000]}
         completed = time.time()
         conn.execute("UPDATE jobs SET status='succeeded',result=?,finished_at=?,updated_at=? WHERE id=?", (json.dumps(result, ensure_ascii=False), completed, completed, job_id))
         return True
@@ -247,6 +259,18 @@ def maintain():
     now = time.time()
     with connection() as conn:
         conn.execute('BEGIN IMMEDIATE')
+        # Recover already generated drafts after a worker/machine restart without
+        # making any new provider request. The claim and result are committed together.
+        expired = conn.execute("SELECT * FROM jobs WHERE status='running' AND heartbeat<? AND kind!='compile'", (now - LEASE_SECONDS,)).fetchall()
+        for row in expired:
+            path = job_directory(row['id']) / 'result.json'
+            try:
+                if path.is_file() and path.stat().st_size <= 2 * 1024 * 1024:
+                    output = json.loads(path.read_text(encoding='utf-8'))
+                    if output.get('worksheets'):
+                        complete(dict(row), output, conn)
+            except (ValueError, AIServiceError, OSError):
+                pass
         conn.execute("""UPDATE jobs SET status='failed',error='Обработка прервалась. Повторите действие вручную; автоматического повторного запроса к ИИ не было.',
                         error_code='worker_interrupted',finished_at=?,updated_at=? WHERE status='running' AND heartbeat<?""", (now, now, now - LEASE_SECONDS))
         conn.execute("""UPDATE jobs SET status='failed',error='Время ожидания истекло. Повторите действие.',error_code='queue_expired',finished_at=?,updated_at=?

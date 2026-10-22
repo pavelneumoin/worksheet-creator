@@ -1,5 +1,6 @@
 """Fast enqueue/poll endpoints. Expensive work runs outside the web process."""
 from pathlib import Path
+import json
 import tempfile
 import uuid
 
@@ -49,9 +50,22 @@ def recognize():
     text = request.form.get('text', '').strip()
     files = [file for file in request.files.getlist('files') if file.filename]
     if not text and not files:
-        raise AIServiceError('Добавьте фотографии или текст заданий.', 'no_input', 400)
+        raise AIServiceError('Добавьте фотографии, PDF или текст заданий.', 'no_input', 400)
     if len(text) > 16000 or len(files) > 10:
-        raise AIServiceError('Добавьте до 10 фото или до 16000 символов текста.', 'input_limit', 400)
+        raise AIServiceError('Добавьте до 10 фото, один PDF или до 16000 символов текста.', 'input_limit', 400)
+    pdf_count = sum(Path(f.filename).suffix.lower() == '.pdf' for f in files)
+    if pdf_count and (pdf_count != 1 or len(files) != 1):
+        raise AIServiceError('Загрузите один PDF или фотографии. PDF и фото обрабатываются отдельно.', 'input_limit', 400)
+    instructions = request.form.get('instructions', '').strip()
+    if len(instructions) > 2000 or '\x00' in instructions:
+        raise AIServiceError('Пожелания к листу — до 2000 символов.', 'invalid_instructions', 400)
+    try:
+        settings = json.loads(request.form.get('settings', '{}'))
+        count = json.loads(request.form.get('variant_count', '1'))
+    except (ValueError, TypeError) as exc:
+        raise AIServiceError('Проверьте настройки листа.', 'invalid_settings', 400) from exc
+    count = variant_count(count)
+    settings = validate_worksheet({'schema_version': 1, 'tasks': [{'question': 'Проверка настроек'}], 'settings': settings})['settings']
     status = get_ai_status()
     if not status['ai_ready']:
         raise AIServiceError(status['ai_message'], 'ai_not_configured', 503)
@@ -64,14 +78,22 @@ def recognize():
             size = file.stream.tell()
             file.stream.seek(0)
             if size > 15 * 1024 * 1024:
-                raise AIServiceError('Одна фотография должна быть не больше 15 МБ.', 'file_too_large', 413)
+                raise AIServiceError('Один файл должен быть не больше 15 МБ.', 'file_too_large', 413)
             if not ((ext == '.png' and head.startswith(b'\x89PNG\r\n\x1a\n')) or
-                    (ext in ('.jpg', '.jpeg') and head.startswith(b'\xff\xd8\xff'))):
-                raise AIServiceError('Поддерживаются фотографии PNG и JPEG.', 'invalid_image', 415)
+                    (ext in ('.jpg', '.jpeg') and head.startswith(b'\xff\xd8\xff')) or
+                    (ext == '.pdf' and head.startswith(b'%PDF-'))):
+                raise AIServiceError('Поддерживаются PNG, JPEG и PDF без пароля.', 'invalid_image', 415)
             path = Path(temporary) / (uuid.uuid4().hex + ext)
             file.save(path)
             paths.append(path)
-        return accepted('recognize', {'subject': discipline, 'text': text}, paths)
+        return accepted('recognize', {'subject': discipline, 'text': text, 'instructions': instructions,
+                                     'settings': settings, 'variant_count': count}, paths)
+
+
+def variant_count(value):
+    if type(value) is not int or not 1 <= value <= 4:
+        raise AIServiceError('Выберите от 1 до 4 вариантов.', 'invalid_variant_count', 400)
+    return value
 
 
 @api.post('/compile')
@@ -97,4 +119,5 @@ def worksheet_job():
         if not status['ai_ready']:
             raise AIServiceError(status['ai_message'], 'ai_not_configured', 503)
         payload['difficulty'] = difficulty
+        payload['variant_count'] = variant_count(data.get('variant_count', 1))
     return accepted(kind, payload)
