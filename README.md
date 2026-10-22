@@ -58,7 +58,7 @@ docker compose down
 
 Контейнер по умолчанию требует вход через MAX. Для полноценного запуска нужны `MAX_BOT_TOKEN`, `MAX_BOT_USERNAME`, `MAX_APP_URL` с HTTPS и набор CA-сертификатов. Compose запускает веб-сервер и два обработчика: ИИ и сборку. Обработчик TeX работает без сети и без ключей провайдеров. SQLite, очередь и PDF сохраняются в томах; корневая файловая система контейнеров доступна только для чтения. До HTTPS-размещения используйте локальный запуск или автономные проверки CLI.
 
-Образ **собран и проверен в GitHub Actions**: [первый успешный запуск](https://github.com/pavelneumoin/worksheet-creator/actions/runs/39723619649). [Workflow](.github/workflows/check.yml) проверяет тесты, настоящую PDF-сборку, очередь, Marp, запуск трёх сервисов и перезапуск веб-сервера. В успешном запуске скачайте артефакт `listok-docker-image`, распакуйте его и загрузите образ:
+Образ **собран и проверен в GitHub Actions**: [сборки рабочей ветки](https://github.com/pavelneumoin/worksheet-creator/actions/workflows/check.yml?query=branch%3Acodex%2Fqueue-marp-docker). [Workflow](.github/workflows/check.yml) проверяет тесты, настоящую PDF-сборку, очередь, Marp, запуск трёх сервисов и перезапуск веб-сервера. В успешном запуске скачайте артефакт `listok-docker-image`, распакуйте его и загрузите образ:
 
 ```bash
 docker load -i listok-image.tar.gz

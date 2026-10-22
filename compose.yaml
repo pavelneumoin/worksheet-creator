@@ -26,6 +26,7 @@ services:
       <<: *data
       LISTOK_AUTH_MODE: max
       GIGACHAT_CA_BUNDLE_FILE: /app/certs/gigachat-ca.pem
+      MAX_CA_BUNDLE_FILE: /app/certs/gigachat-ca.pem
     volumes:
       - generated:/app/app/backend/static/generated
       - materials:/app/data

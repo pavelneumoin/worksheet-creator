@@ -58,23 +58,23 @@ python3 -m venv .venv
 ## Контейнер и CLI
 
 ```bash
-docker build -t listok:night3 .
+docker build -t listok:night5 .
 docker compose up -d --wait
-docker run --rm --network none listok:night3 python -m unittest discover -s tests -v
-docker run --rm --network none listok:night3 python scripts/smoke_pdf.py
-docker run --rm --network none listok:night3 python scripts/smoke_queue.py
+docker run --rm --network none listok:night5 python -m unittest discover -s tests -v
+docker run --rm --network none listok:night5 python scripts/smoke_pdf.py
+docker run --rm --network none listok:night5 python scripts/smoke_queue.py
 ```
 
-На локальном компьютере Docker не установлен. Образ собран и проверен в [GitHub Actions](https://github.com/pavelneumoin/worksheet-creator/actions/runs/39723619649). Готовый образ и SHA256 находятся в артефакте `listok-docker-image`: после распаковки выполните `docker load -i listok-image.tar.gz`, затем `docker compose up -d --no-build --wait`. Нужны `.env` и каталог `.local-certs`; для GigaChat нужен действующий CA-набор. Локальный `.env` не перезаписывайте.
+На локальном компьютере Docker не установлен. Образ собран и проверен в [GitHub Actions](https://github.com/pavelneumoin/worksheet-creator/actions/workflows/check.yml?query=branch%3Acodex%2Fqueue-marp-docker). Выберите успешную сборку того же коммита, что и ваш checkout. Готовый образ и SHA256 находятся в артефакте `listok-docker-image`: после распаковки выполните `docker load -i listok-image.tar.gz`, затем `docker compose up -d --no-build --wait`. Нужны `.env` и каталог `.local-certs`; для GigaChat нужен действующий CA-набор. Локальный `.env` не перезаписывайте.
 
 ## Хранение и границы
 
-- Материалы, сессии, публикации, оценки и авторство копий — SQLite (`LISTOK_DB_PATH`, по умолчанию `app/backend/worksheets.db`). Compose хранит базу в томе `materials`, PDF — в `generated`. Для резервной копии сохраняйте оба тома; `docker compose down -v` удалит их.
+- Материалы, классы, ученики, назначения, сессии, публикации, оценки и авторство копий — SQLite (`LISTOK_DB_PATH`, по умолчанию `app/backend/worksheets.db`). Compose хранит базу в томе `materials`, PDF — в `generated`. Для резервной копии сохраняйте оба тома; `docker compose down -v` удалит их.
 - `run_local.py` включает отдельный локальный профиль для каждого браузера только на loopback. Он не выдаётся за MAX-профиль. При очистке cookies этот тестовый профиль теряет вход; настоящий профиль MAX восстанавливается по подписанному ID. Локальные сессии не принимаются в режиме `max`.
 - Загрузка хранится в отдельном временном каталоге и удаляется после успеха или ошибки. Для файлов GigaChat выполняется запрос удаления; сбой этого запроса записывается в серверный журнал.
 - Ответы создаются ИИ, но их правильность не гарантирована. Статус «проверено» означает подтверждение учителем, не математическое доказательство.
 - Слишком длинный лист отклоняется: уменьшите заданий на странице, используйте один столбец или сократите формулу.
-- PDF на входе и чат-команды MAX-бота — следующие этапы. Marp, очередь и библиотека реализованы. Серверные сессии MAX реализованы; реальный запуск ждёт токена бота и HTTPS.
+- PDF на входе и чат-команды MAX-бота — следующие этапы. Marp, очередь и библиотека реализованы. Серверные сессии MAX реализованы; токен бота проверен, реальный запуск ждёт HTTPS и привязки мини-приложения.
 
 ## Вход и личные материалы
 
@@ -95,3 +95,5 @@ docker run --rm --network none listok:night3 python scripts/smoke_queue.py
 Последние две команды расходуют квоту GigaChat и сохраняют результаты в игнорируемой папке `output/qa`. `smoke_live.py` требует уже запущенный локальный сервер. Для проверки без сетевых вызовов используйте unittest и `smoke_pdf.py`.
 
 Для Compose подготовьте `.local-certs/gigachat-ca.pem`: стандартные CA плюс официальный корневой сертификат из [инструкции GigaChat](https://developers.sber.ru/docs/ru/gigachat/certificates). Compose монтирует каталог только для чтения и задаёт путь внутри контейнера. Ключи и сертификаты не встраиваются в образ.
+
+Классы и назначение неизменяемой версии: [инструкция](docs/CLASSES.md). Для проверки MAX API в контейнере Compose также задаёт `MAX_CA_BUNDLE_FILE=/app/certs/gigachat-ca.pem`; локальный Windows-путь из `.env` не используется внутри контейнера. Проверка: `docker compose exec listok python scripts/check_connections.py --max`.
