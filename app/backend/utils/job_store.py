@@ -11,7 +11,7 @@ import uuid
 from utils import db
 from utils.gigachat_client import AIServiceError
 from utils.worksheet import validate_worksheet
-from utils.workspace_store import connection, result_links, timestamp
+from utils.workspace_store import connection, result_links, timestamp, record_edition
 
 ACTIVE = ('queued', 'running')
 TERMINAL = ('succeeded', 'failed', 'cancelled')
@@ -135,7 +135,7 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
                 if material is None:
                     raise AIServiceError('Сохранённый лист не найден.', 'material_not_found', 404)
                 if (type(payload.get('revision')) is not int or material['revision'] != payload['revision']
-                        or json.loads(material['worksheet']) != payload['worksheet']):
+                        or validate_worksheet(json.loads(material['worksheet'])) != validate_worksheet(payload['worksheet'])):
                     raise AIServiceError('Лист изменился. Откройте свежую версию перед обработкой.', 'revision_conflict', 409)
             directory.mkdir()
             created = True
@@ -198,6 +198,7 @@ def complete(job, output):
             conn.execute('INSERT INTO artifacts (id,owner_id,pdf,answers,tex,created_at,marp) VALUES (?,?,?,?,?,?,?)',
                          (job_id, owner, base + '.pdf', base + '_keys.pdf', base + '.tex', now, base + '_marp.zip'))
             material = conn.execute('SELECT * FROM materials WHERE id=? AND owner_id=?', (payload['material_id'], owner)).fetchone()
+            record_edition(conn, job_id, owner, material['id'] if material else None, payload['worksheet'], payload['revision'])
             attached = material is not None and material['revision'] == payload['revision']
             if attached:
                 conn.execute('UPDATE artifacts SET material_id=NULL WHERE material_id=? AND owner_id=?', (material['id'], owner))

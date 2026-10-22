@@ -6,6 +6,7 @@ import re
 from utils.gigachat_client import _create_client, _provider_failure, AIServiceError
 from utils.worksheet import parse_ai_worksheet
 from utils.arithmetic_check import check_numeric_answers
+from utils import provider_files
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ def _generate_single(subject, image_paths=(), text="", original=None, difficulty
                         uploaded = client.upload_file(stream, purpose="general")
                     file_id = uploaded.id_
                     uploaded_ids.append(file_id)
+                    provider_files.uploaded(file_id)
                     messages.append(Messages(role=MessagesRole.USER,
                                              content=f"Страница {index}. Учти все задания этой страницы.",
                                              attachments=[file_id]))
@@ -98,6 +100,7 @@ def _generate_single(subject, image_paths=(), text="", original=None, difficulty
                 for file_id in uploaded_ids:
                     try:
                         client.delete_file(file_id)
+                        provider_files.deleted(file_id)
                     except Exception as exc:
                         logger.warning("Provider file cleanup failed (%s)", type(exc).__name__)
     except AIServiceError:

@@ -318,6 +318,16 @@ function renderSettings() {
     .forEach((n) => (n.checked = n.value === state.sheet.settings.field));
   $("columnsSelect").value = state.sheet.settings.columns;
   $("countSelect").value = state.sheet.settings.tasks_per_page;
+  document
+    .querySelectorAll('[name="template"]')
+    .forEach(
+      (n) =>
+        (n.checked = n.value === (state.sheet.settings.template || "cards")),
+    );
+  $("variantInput").value = state.sheet.settings.variant || "";
+  $("lessonDateInput").value = state.sheet.settings.lesson_date || "";
+  $("printSides").value = state.sheet.settings.print_sides || "single";
+  templateHint();
   $("compileBtn").disabled =
     !$("reviewCheckbox").checked || !state.status?.latex_ready;
   summary();
@@ -337,7 +347,23 @@ function readSettings() {
     columns: Number($("columnsSelect").value),
     tasks_per_page: Number($("countSelect").value),
     field: document.querySelector('[name="field"]:checked').value,
+    template: document.querySelector('[name="template"]:checked').value,
+    variant: $("variantInput").value,
+    lesson_date: $("lessonDateInput").value,
+    print_sides: $("printSides").value,
   };
+}
+function templateHint() {
+  const value =
+    document.querySelector('[name="template"]:checked')?.value || "cards";
+  $("templateHint").textContent = {
+    list: "Меньше рамок, больше места. Удобно для коротких упражнений.",
+    cards: "Условие и место для решения объединены в карточку.",
+    guided:
+      "Отдельные зоны для данных, решения и ответа. Начните с 2–3 заданий на странице.",
+    check:
+      "Справа — место для баллов и комментария учителя. Начните с одного столбца и 2–3 заданий.",
+  }[value];
 }
 function validTasks() {
   if (!state.sheet.title.trim()) {
@@ -415,14 +441,14 @@ async function saveCurrent(copy = false) {
       worksheet: state.sheet,
       source: state.source,
       revision: state.revision,
-      artifact_id: copy ? null : state.result?.artifact_id || null,
+      artifact_id: copy || !id ? null : state.result?.artifact_id || null,
       origin_material_id: copy ? state.savedId : null,
     }),
   });
   state.savedId = result.material.id;
   state.revision = result.material.revision;
   state.origin = result.material.origin;
-  if (copy) state.result = null;
+  if (copy || !id) state.result = null;
   markDirty(false);
   $("saveStatus").textContent = "Сохранено в профиле";
   $("saveBtn").textContent = "Сохранить изменения";
@@ -433,6 +459,23 @@ async function refreshMaterials() {
   if (!state.auth?.authenticated) return;
   const result = await request("/api/v2/materials");
   state.materials = result.materials;
+  const selected = $("folderFilter").value;
+  const folders = [
+    ...new Set(state.materials.map((m) => m.folder).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b, "ru"));
+  $("folderFilter").replaceChildren(
+    new Option("Все папки", "*"),
+    new Option("Без папки", ""),
+    ...folders.map((f) => new Option(f, f)),
+  );
+  $("folderFilter").value = [...$("folderFilter").options].some(
+    (o) => o.value === selected,
+  )
+    ? selected
+    : "*";
+  $("folderSuggestions").replaceChildren(
+    ...folders.map((f) => new Option(f, f)),
+  );
   updateCount();
   renderSaved();
 }
@@ -440,14 +483,19 @@ function renderSaved() {
   $("savedList").replaceChildren();
   $("importLocalBtn").hidden = !saved().length;
   const query = $("materialSearch").value.trim().toLocaleLowerCase("ru");
-  const items = state.materials.filter((item) =>
-    (
-      item.worksheet.title +
-      " " +
-      item.worksheet.tasks.map((t) => t.question).join(" ")
-    )
-      .toLocaleLowerCase("ru")
-      .includes(query),
+  const items = state.materials.filter(
+    (item) =>
+      ($("folderFilter").value === "*" ||
+        (item.folder || "") === $("folderFilter").value) &&
+      ($("archiveFilter").value === "all" ||
+        Boolean(item.archived) === ($("archiveFilter").value === "archived")) &&
+      (
+        item.worksheet.title +
+        " " +
+        item.worksheet.tasks.map((t) => t.question).join(" ")
+      )
+        .toLocaleLowerCase("ru")
+        .includes(query),
   );
   if ($("materialSort").value === "title")
     items.sort((a, b) =>
@@ -493,6 +541,8 @@ function renderSaved() {
       );
     if (item.origin)
       card.append(node("p", "Основа: " + item.origin.author, "quiet"));
+    if (item.folder) card.append(node("p", "Папка: " + item.folder, "quiet"));
+    if (item.archived) card.append(node("span", "В архиве", "material-badge"));
     const actions = node("div", undefined, "actions");
     const open = node("button", "Открыть", "button secondary");
     const remove = node("button", "Удалить", "button ghost");
@@ -556,8 +606,128 @@ function renderSaved() {
     );
     actions.append(open, share, remove);
     card.append(actions);
+    appendCabinetTools(card, item);
     $("savedList").append(card);
   }
+}
+function appendCabinetTools(card, item) {
+  const details = node("details", undefined, "cabinet-tools");
+  details.append(
+    node(
+      "summary",
+      "Папка и версии" + (item.edition_count ? " · " + item.edition_count : ""),
+    ),
+  );
+  const label = node("label", "Папка");
+  const folder = node("input");
+  folder.value = item.folder || "";
+  folder.maxLength = 60;
+  folder.placeholder = "Например, 8А · Физика";
+  folder.setAttribute("list", "folderSuggestions");
+  label.append(folder);
+  const save = node("button", "Сохранить папку", "button secondary");
+  const archive = node(
+    "button",
+    item.archived ? "Вернуть в работу" : "В архив",
+    "button ghost",
+  );
+  const organize = (archived) =>
+    busy("Сохраняем в кабинете", async () => {
+      await request("/api/v2/materials/" + item.id + "/organization", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: folder.value, archived }),
+      });
+      await refreshMaterials();
+      notice(
+        archived
+          ? "Материал в архиве. Все версии сохранены."
+          : "Папка сохранена в профиле.",
+      );
+    });
+  save.addEventListener("click", () => organize(Boolean(item.archived)));
+  archive.addEventListener("click", () => organize(!item.archived));
+  const actions = node("div", undefined, "actions");
+  actions.append(save, archive);
+  details.append(label, actions);
+  const versions = node("div", undefined, "edition-list");
+  const button = node(
+    "button",
+    "Версии для печати (" + (item.edition_count || 0) + ")",
+    "button secondary",
+  );
+  button.addEventListener("click", () =>
+    busy("Загружаем версии", async () => {
+      const data = await request("/api/v2/materials/" + item.id + "/editions");
+      versions.replaceChildren(
+        node(
+          "p",
+          "Каждая сборка хранит свои задания и ответы. Изменение черновика не меняет эти PDF.",
+          "quiet",
+        ),
+      );
+      if (!data.editions.length)
+        versions.append(
+          node("p", "Версии появятся после следующей сборки PDF.", "quiet"),
+        );
+      for (const edition of data.editions) {
+        const row = node("div", undefined, "edition-row");
+        row.append(
+          node("strong", "Код " + edition.code),
+          node("p", new Date(edition.created).toLocaleString("ru-RU")),
+        );
+        const links = node("div", undefined, "actions");
+        for (const [text, url] of [
+          ["Лист", edition.result.pdf_url],
+          ["Ответы", edition.result.keys_url],
+        ]) {
+          if (!url) continue;
+          const a = node("a", text, "button secondary");
+          a.href = url;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.addEventListener("click", (event) => {
+            if (!window.WebApp?.downloadFile) return;
+            event.preventDefault();
+            busy("Готовим файл", async () => {
+              const exports = await request("/api/v2/exports/" + edition.id, {
+                method: "POST",
+              });
+              const key = text === "Лист" ? "pdf_url" : "keys_url";
+              await window.WebApp.downloadFile(
+                new URL(exports[key], location.origin).href,
+                text + " " + edition.code + ".pdf",
+              );
+            });
+          });
+          links.append(a);
+        }
+        const copy = node("button", "Создать копию версии", "button ghost");
+        copy.addEventListener("click", () =>
+          busy("Создаём копию версии", async () => {
+            const result = await request("/api/v2/materials", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                worksheet: edition.worksheet,
+                source: item.source,
+                origin_material_id: item.id,
+              }),
+            });
+            await refreshMaterials();
+            notice(
+              "Копия сохранена. Исходный лист и версия остались в кабинете.",
+            );
+          }),
+        );
+        links.append(copy);
+        row.append(links);
+        versions.append(row);
+      }
+    }),
+  );
+  details.append(button, versions);
+  card.append(details);
 }
 function ratingText(item) {
   return item.rating_count
@@ -951,7 +1121,15 @@ $("backToTasks").addEventListener("click", () => {
   readSettings();
   step(2);
 });
-for (const id of ["teacherInput", "gradeInput", "columnsSelect", "countSelect"])
+for (const id of [
+  "teacherInput",
+  "gradeInput",
+  "columnsSelect",
+  "countSelect",
+  "variantInput",
+  "lessonDateInput",
+  "printSides",
+])
   $(id).addEventListener("change", () => {
     invalidate();
     readSettings();
@@ -963,6 +1141,15 @@ document.querySelectorAll('[name="field"]').forEach((n) =>
     readSettings();
   }),
 );
+document.querySelectorAll('[name="template"]').forEach((n) =>
+  n.addEventListener("change", () => {
+    invalidate();
+    readSettings();
+    templateHint();
+  }),
+);
+for (const id of ["folderFilter", "archiveFilter"])
+  $(id).addEventListener("change", renderSaved);
 $("reviewCheckbox").addEventListener("change", () => {
   $("compileBtn").disabled =
     !$("reviewCheckbox").checked || !state.status?.latex_ready;

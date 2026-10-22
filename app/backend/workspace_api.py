@@ -102,6 +102,20 @@ def get_material(material_id):
     return jsonify(material=workspace_store.get_material(g.identity['owner_id'], material_id))
 
 
+@api.put('/materials/<material_id>/organization')
+def organize_material(material_id):
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise AIServiceError('Передайте настройки папки.', 'invalid_json', 400)
+    return jsonify(material=workspace_store.organize_material(g.identity['owner_id'], material_id,
+                   data.get('folder', ''), data.get('archived', False)))
+
+
+@api.get('/materials/<material_id>/editions')
+def material_editions(material_id):
+    return jsonify(editions=workspace_store.list_editions(g.identity['owner_id'], material_id))
+
+
 @api.post('/materials')
 @api.put('/materials/<material_id>')
 def save_material(material_id=None):

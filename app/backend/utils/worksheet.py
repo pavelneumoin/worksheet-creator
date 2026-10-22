@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import re
 import math
+import hashlib
 from pathlib import Path
 
 from pypdf import PdfReader
@@ -62,12 +63,35 @@ def validate_worksheet(value):
     field = settings.get("field", "grid")
     if field not in ("grid", "blank", "none"):
         invalid("Выберите клетку, пустое поле или список.")
+    template = settings.get('template', 'cards')
+    if template not in ('list', 'cards', 'guided', 'check'):
+        invalid('Выберите шаблон рабочего листа.')
+    print_sides = settings.get('print_sides', 'single')
+    if print_sides not in ('single', 'duplex'):
+        invalid('Выберите одностороннюю или двустороннюю печать.')
+    variant = text_field(settings.get('variant', ''), 'Вариант', 12)
+    lesson_date = text_field(settings.get('lesson_date', ''), 'Дата работы', 10)
+    if lesson_date:
+        from datetime import date
+        try:
+            if date.fromisoformat(lesson_date).isoformat() != lesson_date:
+                raise ValueError()
+        except ValueError:
+            invalid('Укажите дату работы в формате ГГГГ-ММ-ДД.')
     return {"schema_version": 1, "subject": subject,
             "title": text_field(value.get("title", "Рабочий лист"), "Тема", 160, True),
             "teacher_name": text_field(value.get("teacher_name", ""), "Учитель", 120),
             "grade": text_field(value.get("grade", ""), "Класс", 20),
             "tasks": tasks,
-            "settings": {"columns": columns, "tasks_per_page": per_page, "field": field}}
+            "settings": {"columns": columns, "tasks_per_page": per_page, "field": field,
+                         "template": template, "print_sides": print_sides,
+                         "variant": variant, "lesson_date": lesson_date}}
+
+
+def edition_code(value):
+    """Content-addressed edition, including answers and print settings (not a user ID)."""
+    canonical = json.dumps(validate_worksheet(value), ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+    return hashlib.sha256(canonical.encode()).hexdigest()[:12].upper()
 
 
 def rich_text_to_tex(text):
@@ -120,23 +144,26 @@ def worksheet_tex(data):
     count, columns = settings["tasks_per_page"], settings["columns"]
     # Conservative spacing leaves room for conditions. Overflow is rejected by compiler.
     rows = (count + columns - 1) // columns
-    height = {1: 100, 2: 55, 3: 30, 4: 18, 5: 10, 6: 6}[rows]
+    height = {1: 100, 2: 49, 3: 27, 4: 15, 5: 8, 6: 5}[rows]
+    template = settings.get('template', 'cards')
+    command = {'list': 'ListTask', 'cards': 'CardTask', 'guided': 'GuidedTask', 'check': 'CheckTask'}[template]
+    field = rf'\WriteField{{{height}mm}}' if settings['field'] != 'none' else r'\vspace{2mm}'
     pages = []
     for offset in range(0, len(tasks), count):
         cells = []
         for index, task in enumerate(tasks[offset:offset + count], offset + 1):
-            body = rf"\TaskBox{{{index}}}{{{rich_text_to_tex(task['question'])}}}" + "\n"
-            if settings["field"] != "none":
-                body += rf"\WriteField{{{height}mm}}" + "\n"
-            if columns == 2:
-                body = "\\begin{minipage}[t]{0.48\\linewidth}\n\\vspace{0pt}\n" + body + "\\end{minipage}"
+            body = rf'\{command}{{{index}}}{{{rich_text_to_tex(task["question"])}}}{{{field}}}' + '\n'
+            width = '0.48' if columns == 2 else '1'
+            body = rf'\begin{{minipage}}[t]{{{width}\linewidth}}' + '\n\\vspace{0pt}\n' + body + '\\end{minipage}'
+            if columns == 1:
+                body += '\\par\n'
             cells.append(body)
         if columns == 2:
             rows_tex = [r"\hfill".join(cells[i:i + 2]) for i in range(0, len(cells), 2)]
             pages.append("\n\\par\\vspace{4mm}\n".join(rows_tex))
         else:
-            pages.append("\n".join(cells))
-    return "\n\\newpage\n".join(pages)
+            pages.append("\n\\vspace{4mm}\n".join(cells))
+    return "\n\\newpage\n\\ContinuationHeader\n".join(pages)
 
 
 def compile_worksheet(value, base):
@@ -145,13 +172,15 @@ def compile_worksheet(value, base):
     answers = "\n".join(
         rf"\noindent\textbf{{{i}.}} {rich_text_to_tex(task['answer'] or 'Ответ не указан — требуется проверка.')}\par\vspace{{5mm}}"
         for i, task in enumerate(data["tasks"], 1))
-    title = data["title"] + (f" · {data['grade']} класс" if data["grade"] else "")
+    title = data['title']
     answers = r'\noindent\textbf{' + latex._escape_header(title) + '}\\par\\vspace{6mm}\n' + answers
     files = []
     for suffix, content, heading in (("", body, title), ("_keys", answers, 'Ответы для учителя')):
         pdf, error = latex._compile_single_doc(content, heading, base + suffix,
                                               data["teacher_name"], field_style=data["settings"]["field"],
-                                              strict_layout=True, student_fields=not suffix)
+                                              strict_layout=True, student_fields=not suffix,
+                                              print_settings={**data['settings'], 'grade': data['grade'],
+                                                              'code': edition_code(data), 'short_title': data['title']})
         if error:
             latex._remove_output(base)
             latex._remove_output(base + "_keys")

@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), '../templates/default_worksheet.tex')
 OUTPUT_DIR = os.environ.get('LISTOK_GENERATED_DIR') or os.path.join(os.path.dirname(__file__), '../static/generated')
@@ -49,14 +50,14 @@ _ESCAPES = {'\\': r'\textbackslash{}', '&': r'\&', '%': r'\%', '$': r'\$',
 
 
 def get_latex_compiler():
-    """Find XeLaTeX/pdfLaTeX, including a default Windows MiKTeX install."""
+    """Find XeLaTeX (CMU uses OpenType), including a default Windows MiKTeX install."""
     configured = os.environ.get('LATEX_COMPILER', '').strip().strip('"')
     if configured:
         candidate = shutil.which(configured)
         if not candidate and Path(configured).is_file():
             candidate = str(Path(configured).resolve())
         return candidate
-    for engine in ('xelatex', 'pdflatex'):
+    for engine in ('xelatex',):
         candidate = shutil.which(engine)
         if candidate:
             return candidate
@@ -64,7 +65,7 @@ def get_latex_compiler():
         roots = [Path(os.environ.get('LOCALAPPDATA', '')) / 'Programs/MiKTeX/miktex/bin/x64',
                  Path(os.environ.get('ProgramFiles', 'C:/Program Files')) / 'MiKTeX/miktex/bin/x64']
         for root in roots:
-            for engine in ('xelatex.exe', 'pdflatex.exe'):
+            for engine in ('xelatex.exe',):
                 candidate = root / engine
                 if candidate.is_file():
                     return str(candidate.resolve())
@@ -144,12 +145,20 @@ def compile_latex_local(latex_source, filename_base, strict_layout=False):
             environment = {key: value for key, value in os.environ.items()
                            if not key.upper().startswith(('GIGACHAT_', 'MAX_', 'OPENAI_', 'SESSION_', 'ANTHROPIC_'))}
             environment.update({'openin_any': 'p', 'openout_any': 'p', 'shell_escape': 'f'})
+            fonts = Path(__file__).resolve().parents[1] / 'assets' / 'fonts' / 'cmu'
+            shutil.copytree(fonts, temp_path / 'fonts')
             environment['PATH'] = str(Path(compiler).parent) + os.pathsep + environment.get('PATH', '')
             options = {'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}
+            started = time.monotonic()
             result = subprocess.run(command, cwd=temp_dir, env=environment,
                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                     timeout=timeout, check=False, **options)
             output = result.stdout.decode('utf-8', errors='replace')
+            if result.returncode == 0 and r'\pageref{LastPage}' in latex_source:
+                result = subprocess.run(command, cwd=temp_dir, env=environment,
+                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                        timeout=max(0.1, timeout - (time.monotonic() - started)), check=False, **options)
+                output = result.stdout.decode('utf-8', errors='replace')
             (output_dir / f'{filename_base}.tex').write_text(latex_source, encoding='utf-8')
             (output_dir / f'{filename_base}.log').write_text(output, encoding='utf-8')
             if re.search(r'Missing character\s*:', output, re.IGNORECASE):
@@ -182,7 +191,7 @@ def compile_latex_cloud(latex_source, filename_base):
 
 
 def _compile_single_doc(content, topic, filename_base, teacher_name, layout='1col',
-                        field_style='grid', strict_layout=False, student_fields=True):
+                        field_style='grid', strict_layout=False, student_fields=True, print_settings=None):
     try:
         template = Path(TEMPLATE_PATH).read_text(encoding='utf-8')
     except OSError:
@@ -195,9 +204,24 @@ def _compile_single_doc(content, topic, filename_base, teacher_name, layout='1co
         content = '\\begin{multicols}{2}\n' + content + '\n\\end{multicols}'
     teacher_line = ''
     if teacher_name.strip():
-        teacher_line = r'\par\vspace{1mm}{\small\color{textgray} Учитель: ' + _escape_header(teacher_name) + '}'
-    replacements = {'CONTENT': content, 'TOPIC': _escape_header(topic), 'TEACHER': teacher_line}
-    latex_source = re.sub(r'PLACEHOLDER:(CONTENT|TOPIC|TEACHER)',
+        teacher_line = r'\par\vspace{1mm}{\small\color{textgray} Учитель: ' + _escape_header(teacher_name) + '}\\par'
+    settings = print_settings or {}
+    short = settings.get('short_title', topic)
+    short = short if len(short) <= 48 else short[:45] + '…'
+    grade, variant = settings.get('grade', ''), settings.get('variant', '')
+    date = settings.get('lesson_date', '')
+    date = '.'.join(reversed(date.split('-'))) if date else r'\rule{25mm}{0.3pt}'
+    label = ' · '.join(x for x in (('Класс ' + grade) if grade else '', ('Вариант ' + variant) if variant else '') if x)
+    if not student_fields:
+        label = 'ОТВЕТЫ · ' + label
+    replacements = {'CONTENT': content, 'TOPIC': _escape_header(topic), 'TEACHER': teacher_line,
+                    'MARGINS': 'inner=20mm,outer=14mm' if settings.get('print_sides') == 'duplex' else 'left=17mm,right=17mm',
+                    'SHORTTITLE': _escape_header(short), 'LABEL': _escape_header(label),
+                    'CODE': _escape_header(settings.get('code', 'DEMO')),
+                    'KIND': ('РАБОЧИЙ ЛИСТ · ' + {'list':'КОМПАКТНЫЙ', 'cards':'КАРТОЧКИ', 'guided':'ПО ШАГАМ', 'check':'С ПРОВЕРКОЙ'}.get(settings.get('template'), '')) if student_fields else 'КЛЮЧ ДЛЯ УЧИТЕЛЯ',
+                    'VARIANT': _escape_header('Вариант ' + variant) if variant else '',
+                    'GRADE': _escape_header(grade) if grade else r'\rule{18mm}{0.3pt}', 'DATE': date}
+    latex_source = re.sub(r'PLACEHOLDER:([A-Z]+)',
                           lambda match: replacements[match.group(1)], template)
     if strict_layout:
         return compile_latex_local(latex_source, filename_base, strict_layout=True)

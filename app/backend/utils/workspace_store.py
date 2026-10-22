@@ -7,6 +7,7 @@ import uuid
 
 from utils import db
 from utils.gigachat_client import AIServiceError
+from utils.worksheet import validate_worksheet, edition_code, text_field
 
 
 @contextmanager
@@ -47,10 +48,14 @@ def material_row(conn, owner, row):
                                (row['id'], owner)).fetchone()
     origin = conn.execute('SELECT publication_id,author,title FROM material_origins WHERE material_id=?',
                           (row['id'],)).fetchone()
+    meta = conn.execute('SELECT folder,archived FROM material_meta WHERE material_id=?', (row['id'],)).fetchone()
+    versions = conn.execute('SELECT COUNT(*) FROM editions WHERE owner_id=? AND material_id=?', (owner, row['id'])).fetchone()[0]
     return {'id': row['id'], 'worksheet': json.loads(row['worksheet']), 'source': row['source'],
             'revision': row['revision'], 'updated': row['updated_at'], 'result': result_links(artifact),
             'publication_id': publication['id'] if publication else None,
-            'origin': dict(origin) if origin else None}
+            'origin': dict(origin) if origin else None,
+            'folder': meta['folder'] if meta else '', 'archived': bool(meta['archived']) if meta else False,
+            'edition_count': versions}
 
 
 def list_materials(owner):
@@ -88,6 +93,11 @@ def put_material(owner, worksheet, source, material_id=None, revision=None, arti
             artifact = conn.execute('SELECT material_id FROM artifacts WHERE id=? AND owner_id=?', (artifact_id, owner)).fetchone()
             if artifact is None or artifact['material_id'] not in (None, material_id):
                 missing()
+            edition = conn.execute('SELECT worksheet,material_id FROM editions WHERE id=? AND owner_id=?', (artifact_id, owner)).fetchone()
+            if edition and validate_worksheet(json.loads(edition['worksheet'])) != validate_worksheet(worksheet):
+                raise AIServiceError('PDF относится к другой версии. Соберите лист заново.', 'edition_mismatch', 409)
+            if edition and edition['material_id'] not in (None, material_id):
+                raise AIServiceError('Эта версия сохранена у исходного листа. Сохраните копию заданий и соберите её отдельно.', 'edition_material_mismatch', 409)
         now = timestamp()
         body = json.dumps(worksheet, ensure_ascii=False)
         if material_id:
@@ -103,6 +113,7 @@ def put_material(owner, worksheet, source, material_id=None, revision=None, arti
                              (material_id, origin['publication_id'], origin['author'], origin['title']))
         if artifact_id:
             conn.execute('UPDATE artifacts SET material_id=? WHERE id=? AND owner_id=?', (material_id, artifact_id, owner))
+            conn.execute('UPDATE editions SET material_id=? WHERE id=? AND owner_id=? AND material_id IS NULL', (material_id, artifact_id, owner))
         return material_row(conn, owner, conn.execute('SELECT * FROM materials WHERE id=? AND owner_id=?', (material_id, owner)).fetchone())
 
 
@@ -114,9 +125,42 @@ def delete_material(owner, material_id, revision):
             missing()
         if type(revision) is not int or revision != row['revision']:
             raise AIServiceError('Лист был изменён. Обновите список перед удалением.', 'revision_conflict', 409)
-        files = conn.execute('SELECT pdf,answers,tex,marp FROM artifacts WHERE material_id=? AND owner_id=?', (material_id, owner)).fetchall()
+        ids = [r[0] for r in conn.execute('SELECT id FROM editions WHERE material_id=? AND owner_id=?', (material_id, owner))]
+        files = list(conn.execute('SELECT pdf,answers,tex,marp FROM artifacts WHERE material_id=? AND owner_id=?', (material_id, owner)))
+        for artifact_id in ids:
+            files.extend(conn.execute('SELECT pdf,answers,tex,marp FROM artifacts WHERE id=? AND owner_id=?', (artifact_id, owner)))
+            conn.execute('DELETE FROM artifacts WHERE id=? AND owner_id=?', (artifact_id, owner))
         conn.execute('DELETE FROM materials WHERE id=? AND owner_id=?', (material_id, owner))
-        return [name for row in files for name in row if name]
+        return list({name for row in files for name in row if name})
+
+
+def organize_material(owner, material_id, folder, archived):
+    folder = text_field(folder, 'Папка', 60)
+    if type(archived) is not bool:
+        raise AIServiceError('Выберите состояние материала.', 'invalid_archive', 400)
+    with connection() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        row = conn.execute('SELECT * FROM materials WHERE id=? AND owner_id=?', (material_id, owner)).fetchone()
+        if row is None:
+            missing()
+        conn.execute('INSERT INTO material_meta VALUES (?,?,?) ON CONFLICT(material_id) DO UPDATE SET folder=excluded.folder,archived=excluded.archived',
+                     (material_id, folder, int(archived)))
+        return material_row(conn, owner, row)
+
+
+def record_edition(conn, artifact_id, owner, material_id, worksheet, revision):
+    conn.execute('INSERT INTO editions VALUES (?,?,?,?,?,?,?)',
+                 (artifact_id, owner, material_id, json.dumps(worksheet, ensure_ascii=False), edition_code(worksheet), revision, timestamp()))
+
+
+def list_editions(owner, material_id):
+    with connection() as conn:
+        if not conn.execute('SELECT 1 FROM materials WHERE id=? AND owner_id=?', (material_id, owner)).fetchone():
+            missing()
+        rows = conn.execute('SELECT e.*,a.pdf,a.answers,a.tex,a.marp FROM editions e JOIN artifacts a ON a.id=e.id WHERE e.owner_id=? AND e.material_id=? ORDER BY e.created_at DESC',
+                            (owner, material_id)).fetchall()
+        return [{'id': r['id'], 'code': r['code'], 'revision': r['revision'], 'created': r['created_at'],
+                 'worksheet': json.loads(r['worksheet']), 'result': result_links(r)} for r in rows]
 
 
 def add_artifact(owner, pdf, answers, tex, marp=None):

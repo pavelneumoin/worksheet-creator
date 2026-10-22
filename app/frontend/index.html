@@ -256,6 +256,51 @@
                   />
                 </div>
               </div>
+              <fieldset class="template-picker">
+                <legend>Структура листа</legend>
+                <div class="template-options">
+                  <label
+                    ><input type="radio" name="template" value="list" /><span
+                      class="template-sketch sketch-list"
+                      aria-hidden="true"
+                      ><i></i><i></i><i></i></span
+                    ><strong>Компактный</strong
+                    ><small>Нумерованный список</small></label
+                  >
+                  <label
+                    ><input
+                      type="radio"
+                      name="template"
+                      value="cards"
+                      checked
+                    /><span
+                      class="template-sketch sketch-cards"
+                      aria-hidden="true"
+                      ><i></i><i></i><i></i></span
+                    ><strong>Карточки</strong
+                    ><small>Условие и решение в рамке</small></label
+                  >
+                  <label
+                    ><input type="radio" name="template" value="guided" /><span
+                      class="template-sketch sketch-guided"
+                      aria-hidden="true"
+                      ><i></i><i></i><i></i></span
+                    ><strong>По шагам</strong
+                    ><small>Дано → решение → ответ</small></label
+                  >
+                  <label
+                    ><input type="radio" name="template" value="check" /><span
+                      class="template-sketch sketch-check"
+                      aria-hidden="true"
+                      ><i></i><i></i><i></i></span
+                    ><strong>С проверкой</strong
+                    ><small>Поле для баллов и замечаний</small></label
+                  >
+                </div>
+                <p class="quiet" id="templateHint">
+                  Условие и место для решения объединены в карточку.
+                </p>
+              </fieldset>
               <fieldset>
                 <legend>Место для решения</legend>
                 <div class="layout-options">
@@ -304,6 +349,33 @@
                   </select>
                 </div>
               </div>
+              <details class="print-details">
+                <summary>Подписи и печать</summary>
+                <div class="form-grid">
+                  <label
+                    >Вариант<input
+                      id="variantInput"
+                      maxlength="12"
+                      placeholder="Например, 2"
+                  /></label>
+                  <label
+                    >Дата работы<input id="lessonDateInput" type="date"
+                  /></label>
+                </div>
+                <label
+                  >Печать<select id="printSides">
+                    <option value="single">На одной стороне</option>
+                    <option value="duplex">
+                      На двух сторонах · поля для подшивки
+                    </option>
+                  </select></label
+                >
+                <p class="quiet">
+                  CMU Serif. На каждом листе — тема, вариант, код версии и номер
+                  страницы. Имя ученика заполняется от руки. Ответы печатаются
+                  отдельно.
+                </p>
+              </details>
               <div class="print-summary">
                 <span aria-hidden="true">▤</span>
                 <div>
@@ -433,8 +505,7 @@
             <p class="eyebrow">ПРОДОЛЖИТЬ РАБОТУ</p>
             <h1>Мои материалы</h1>
             <p class="lead">
-              Ваши задания, черновики и готовые листы. Откройте любой, чтобы
-              продолжить.
+              Ваш кабинет: черновики, папки и сохранённые версии для печати.
             </p>
           </div>
           <button class="button primary" id="newSheetBtn">
@@ -457,6 +528,22 @@
         <button id="importLocalBtn" class="button secondary" hidden>
           Перенести старые листы из этого браузера
         </button>
+        <div class="cabinet-filters">
+          <label
+            >Папка<select id="folderFilter">
+              <option value="*">Все папки</option>
+              <option value="">Без папки</option>
+            </select></label
+          >
+          <label
+            >Показать<select id="archiveFilter">
+              <option value="active">В работе</option>
+              <option value="archived">Архив</option>
+              <option value="all">Все материалы</option>
+            </select></label
+          >
+        </div>
+        <datalist id="folderSuggestions"></datalist>
         <div id="savedList" class="saved-list" aria-live="polite"></div>
         <button id="logoutBtn" class="button ghost" hidden>
           Выйти из профиля

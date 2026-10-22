@@ -43,6 +43,18 @@ def init_db():
             pdf TEXT NOT NULL, answers TEXT, tex TEXT, created_at TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS artifacts_owner ON artifacts(owner_id);
+        CREATE TABLE IF NOT EXISTS material_meta (
+            material_id TEXT PRIMARY KEY REFERENCES materials(id) ON DELETE CASCADE,
+            folder TEXT NOT NULL DEFAULT '', archived INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS editions (
+            id TEXT PRIMARY KEY REFERENCES artifacts(id) ON DELETE CASCADE,
+            owner_id TEXT NOT NULL REFERENCES users(id),
+            material_id TEXT REFERENCES materials(id) ON DELETE SET NULL,
+            worksheet TEXT NOT NULL, code TEXT NOT NULL, revision INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS editions_material ON editions(owner_id,material_id,created_at);
         CREATE TABLE IF NOT EXISTS download_tickets (
             token_hash TEXT PRIMARY KEY,
             session_hash TEXT NOT NULL REFERENCES sessions(token_hash) ON DELETE CASCADE,
@@ -88,6 +100,9 @@ def init_db():
         CREATE INDEX IF NOT EXISTS jobs_owner ON jobs(owner_id,created_at);
         CREATE TABLE IF NOT EXISTS workers (
             id TEXT PRIMARY KEY, lane TEXT NOT NULL, heartbeat REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS provider_uploads (
+            file_id TEXT PRIMARY KEY, created_at REAL NOT NULL
         );
     ''')
     if 'owner_id' not in {row[1] for row in c.execute('PRAGMA table_info(history)')}:

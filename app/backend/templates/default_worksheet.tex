@@ -1,79 +1,95 @@
-\documentclass[a4paper,11pt]{article}
-% XeLaTeX gives clean Cyrillic text; pdfLaTeX remains supported.
-\usepackage{iftex}
-\ifPDFTeX
-  \usepackage[utf8]{inputenc}
-  \usepackage[T2A]{fontenc}
-\else
-  \usepackage{fontspec}
-  \IfFontExistsTF{Arial}{\setmainfont{Arial}}{%
-    \IfFontExistsTF{DejaVu Sans}{\setmainfont{DejaVu Sans}}{\setmainfont{Liberation Sans}}}
-\fi
+\documentclass[a4paper,11pt,twoside]{article}
+% XeLaTeX; bundled CMU fonts are distributed under the SIL OFL.
+\usepackage{fontspec}
+\IfFileExists{fonts/cmunrm.otf}{%
+  \setmainfont{cmun}[Path=fonts/,Extension=.otf,UprightFont=*rm,
+    BoldFont=*bx,ItalicFont=*ti,BoldItalicFont=*bi]
+  \setmonofont{cmuntt.otf}[Path=fonts/]
+}{\setmainfont{CMU Serif}\setmonofont{CMU Typewriter Text}}
 \usepackage[russian]{babel}
-\usepackage{amsmath,amssymb}
-\usepackage{multicol}
-\usepackage[a4paper,margin=16mm,footskip=8mm]{geometry}
-\usepackage{tikz}
-\usepackage{xcolor}
+\usepackage{amsmath,amssymb,multicol}
+\usepackage[a4paper,top=26mm,bottom=22mm,headheight=28pt,headsep=5mm,footskip=10mm,PLACEHOLDER:MARGINS]{geometry}
+\usepackage{tikz,xcolor,fancyhdr,lastpage}
 \setlength{\parindent}{0pt}
 \setlength{\columnsep}{8mm}
 \setlength{\emergencystretch}{2em}
 \raggedbottom
-
-% Restrained grayscale remains legible on a classroom printer.
-\definecolor{accgray}{HTML}{4B5563}
-\definecolor{softgray}{HTML}{D1D5DB}
-\definecolor{gridgray}{HTML}{B7BEC8}
-\definecolor{textgray}{HTML}{111827}
+\definecolor{accgray}{HTML}{454545}
+\definecolor{softgray}{HTML}{C1C1C1}
+\definecolor{gridgray}{HTML}{B9B9B9}
+\definecolor{textgray}{HTML}{202020}
 \color{textgray}
-
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\parbox[b]{0.57\textwidth}{\scriptsize\color{accgray} PLACEHOLDER:SHORTTITLE}}
+\fancyhead[R]{\parbox[b]{0.39\textwidth}{\raggedleft\scriptsize\color{accgray} PLACEHOLDER:LABEL}}
+\fancyfoot[L]{\scriptsize\color{accgray} Код \texttt{PLACEHOLDER:CODE}}
+\fancyfoot[C]{\scriptsize\color{accgray} ЛистОК}
+\fancyfoot[R]{\scriptsize\color{accgray} \thepage\ /\ \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0pt}
 \newcommand{\WorksheetTitle}[1]{%
-  {\small\color{accgray} ЛИСТОК\hfill РАБОЧИЙ ЛИСТ}\par
-  \vspace{4mm}
-  {\fontsize{19}{23}\selectfont\bfseries #1}\par
+  {\footnotesize\color{accgray} PLACEHOLDER:KIND\hfill PLACEHOLDER:VARIANT}\par
+  \vspace{3mm}{\fontsize{21}{25}\selectfont\bfseries #1}\par
   PLACEHOLDER:TEACHER
   \vspace{4mm}
-  {\color{accgray}\hrule height 0.7pt}
-  \vspace{5mm}
 }
-
 \newcommand{\FirstPageHeader}{%
-  \noindent
-  \begin{minipage}[t]{0.54\linewidth}
-    \textbf{ФИО:}\ \hrulefill
-  \end{minipage}\hfill
-  \begin{minipage}[t]{0.18\linewidth}
-    \textbf{Класс:}\ \hrulefill
-  \end{minipage}\hfill
-  \begin{minipage}[t]{0.23\linewidth}
-    \textbf{Дата:}\ \hrulefill
-  \end{minipage}\par
-  \vspace{8mm}
+  {\small\textbf{Имя и фамилия:}\ \hrulefill}\par\vspace{3mm}
+  {\small\textbf{Класс:} PLACEHOLDER:GRADE\hfill\textbf{Дата:} PLACEHOLDER:DATE}\par
+  \vspace{5mm}{\color{accgray}\hrule height 0.6pt}\vspace{5mm}
 }
-
-\newcommand{\TaskBox}[2]{%
-  \noindent
-  \begin{tikzpicture}
-    \node[draw=accgray, line width=0.7pt, rounded corners=3pt,
-          inner sep=3mm, text width=\dimexpr\linewidth-6mm-1pt\relax,
-          anchor=north west] (B) at (0,0) {#2};
-    \node[anchor=south west, fill=white, draw=accgray,
-          rounded corners=2pt, inner xsep=6pt, inner ysep=1.5pt,
-          yshift=1pt, xshift=2pt] at (B.north west)
-          {\scriptsize\textbf{ЗАДАНИЕ #1}};
-  \end{tikzpicture}\par\nobreak\vspace{2mm}\nobreak
+\newcommand{\ContinuationHeader}{%
+  {\small Имя и фамилия:\ \hrulefill}\par\vspace{5mm}
 }
-
 \newcommand{\WriteField}[1]{%
-  \noindent
+  \par\vspace{2mm}\noindent
   \begin{tikzpicture}[x=1pt,y=1pt]
     \pgfmathsetlengthmacro{\W}{\linewidth-0.6pt}
     \pgfmathsetlengthmacro{\H}{#1}
-    \draw[line width=0.5pt,rounded corners=2pt,color=softgray] (0,0) rectangle (\W,\H);
+    \draw[line width=0.4pt,color=softgray] (0,0) rectangle (\W,\H);
     \draw[gridgray,densely dotted,step=5mm] (0,0) grid (\W,\H);
-  \end{tikzpicture}\par\vspace{6mm}
+  \end{tikzpicture}\par
 }
-
+\newcommand{\ListTask}[3]{%
+  \textbf{#1.}\enspace #2\par\nobreak #3
+}
+\newcommand{\CardTask}[3]{%
+  \noindent\begin{tikzpicture}
+    \node[draw=accgray,line width=0.5pt,rounded corners=3pt,inner sep=3mm,
+      text width=\dimexpr\linewidth-6mm-1pt\relax,anchor=north west] at (0,0)
+      {{\small\bfseries ЗАДАНИЕ #1}\par\vspace{2mm}#2\par #3};
+  \end{tikzpicture}\par
+}
+\newcommand{\GuidedTask}[3]{%
+  {\small\bfseries ЗАДАЧА #1}\par\vspace{1mm}#2\par\vspace{3mm}
+  \begin{minipage}[t]{0.24\linewidth}\vspace{0pt}
+    {\small\bfseries Дано}\par\vspace{2mm}
+    {\color{softgray}\hrule}\vspace{5mm}{\color{softgray}\hrule}\vspace{5mm}
+    {\small Найти:}\par\vspace{3mm}{\color{softgray}\hrule}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.72\linewidth}\vspace{0pt}
+    {\small\bfseries Решение}#3\vspace{2mm}{\small\textbf{Ответ:}\ \hrulefill}
+  \end{minipage}\par
+}
+\newcommand{\CheckTask}[3]{%
+  \ifdim\linewidth<110mm
+    \textbf{#1.}\enspace #2\par #3\vspace{2mm}
+    {\small\textbf{Ответ:}\ \hrulefill}\par\vspace{3mm}
+    {\scriptsize ПРОВЕРКА\quad Баллы:\ \hrulefill}\par\vspace{3mm}
+    {\scriptsize Комментарий:}\ \hrulefill\par
+  \else
+  \begin{minipage}[t]{0.77\linewidth}\vspace{0pt}
+    \textbf{#1.}\enspace #2\par #3\vspace{2mm}{\small\textbf{Ответ:}\ \hrulefill}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.19\linewidth}\vspace{0pt}
+    {\scriptsize\color{accgray} ПРОВЕРКА}\par\vspace{3mm}
+    {\small Баллы:}\par\vspace{4mm}{\color{softgray}\hrule}\vspace{5mm}
+    {\scriptsize Комментарий}\par\vspace{4mm}{\color{softgray}\hrule}\vspace{5mm}{\color{softgray}\hrule}
+  \end{minipage}\par\vspace{3mm}{\color{softgray}\hrule}
+  \fi
+}
+\newcommand{\TaskBox}[2]{\ListTask{#1}{#2}{}}
 \begin{document}
 \WorksheetTitle{PLACEHOLDER:TOPIC}
 \FirstPageHeader
