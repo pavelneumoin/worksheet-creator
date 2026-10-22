@@ -352,6 +352,16 @@ function validTasks() {
   return true;
 }
 async function renderResult() {
+  $("resultSheetTitle").textContent = state.sheet.title;
+  $("resultTasks").replaceChildren();
+  state.sheet.tasks.forEach((task, index) => {
+    const card = node("div", undefined, "result-task");
+    card.append(node("strong", "Задание " + (index + 1)));
+    const content = node("div");
+    mathPreview(content, task.question);
+    card.append(content);
+    $("resultTasks").append(card);
+  });
   $("downloadSheet").href = state.result.pdf_url;
   $("downloadKeys").href = state.result.keys_url;
   $("downloadTex").href = state.result.tex_url;

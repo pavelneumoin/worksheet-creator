@@ -56,7 +56,7 @@ jobs:
             listok-image.tar.gz
             listok-image.sha256
           compression-level: 0
-          retention-days: 14
+          retention-days: 90
       - name: Stop the CI deployment
         if: always()
         run: docker compose down --volumes --remove-orphans

@@ -179,7 +179,12 @@ async function enqueueJob(kind, body, json = true) {
     throw new Error(
       "Сначала повторите отправку предыдущей задачи в блоке «Задачи».",
     );
-  pendingSubmission = { kind, body, json, key: crypto.randomUUID() };
+  pendingSubmission = {
+    kind,
+    body: json ? structuredClone(body) : body,
+    json,
+    key: crypto.randomUUID(),
+  };
   await sendPendingJob();
 }
 
@@ -192,14 +197,25 @@ async function openJobResult(job) {
   if (result.material_id) {
     const material = (await request("/api/v2/materials/" + result.material_id))
       .material;
-    loadSheet(
-      material.worksheet,
-      material.source,
-      material.id,
-      material.origin,
-    );
-    state.revision = material.revision;
-    state.result = material.result;
+    if (
+      result.artifact_id &&
+      material.result?.artifact_id !== result.artifact_id
+    ) {
+      loadSheet(result.worksheet, result.source, null, material.origin);
+      state.result = result;
+      notice(
+        "После сборки исходный лист изменился. Открыта готовая версия из этой задачи — её можно сохранить отдельно.",
+      );
+    } else {
+      loadSheet(
+        material.worksheet,
+        material.source,
+        material.id,
+        material.origin,
+      );
+      state.revision = material.revision;
+      state.result = material.result;
+    }
   } else {
     loadSheet(result.worksheet, result.source);
     state.result = result;

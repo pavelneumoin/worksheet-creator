@@ -354,14 +354,18 @@
                   >Ответы для учителя ↗</a
                 >
               </div>
+              <p id="resultSheetTitle" class="result-sheet-title"></p>
               <iframe
                 id="pdfPreview"
                 title="Предпросмотр рабочего листа PDF"
               ></iframe>
-              <p class="quiet">
-                Если предпросмотр не открылся на телефоне, используйте кнопку
-                «Открыть лист PDF».
-              </p>
+              <details class="mobile-result-preview">
+                <summary>Быстрый просмотр заданий</summary>
+                <div id="resultTasks"></div>
+                <p class="quiet">
+                  Точный макет для печати — в PDF. Ответы скачиваются отдельно.
+                </p>
+              </details>
               <div class="variant-panel">
                 <h3>Для другого варианта или уровня</h3>
                 <p>
