@@ -131,6 +131,24 @@ def init_db():
         CREATE TABLE IF NOT EXISTS provider_uploads (
             file_id TEXT PRIMARY KEY, created_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS reviews (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
+            assignment_id TEXT NOT NULL REFERENCES assignments(id),
+            student_id TEXT NOT NULL, job_id TEXT NOT NULL,
+            fingerprint TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'processing',
+            answers TEXT NOT NULL DEFAULT '[]', warnings TEXT NOT NULL DEFAULT '[]',
+            comment TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL DEFAULT 1,
+            photo_count INTEGER NOT NULL DEFAULT 0, photo_expires REAL NOT NULL,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL, confirmed_at TEXT,
+            UNIQUE(assignment_id,student_id), UNIQUE(assignment_id,fingerprint),
+            FOREIGN KEY(assignment_id,student_id) REFERENCES assignment_students(assignment_id,student_id)
+        );
+        CREATE INDEX IF NOT EXISTS reviews_owner ON reviews(owner_id,assignment_id);
+        CREATE TABLE IF NOT EXISTS review_history (
+            review_id TEXT NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+            revision INTEGER NOT NULL, action TEXT NOT NULL, snapshot TEXT NOT NULL,
+            created_at TEXT NOT NULL, PRIMARY KEY(review_id,revision)
+        );
     ''')
     if 'owner_id' not in {row[1] for row in c.execute('PRAGMA table_info(history)')}:
         c.execute('ALTER TABLE history ADD COLUMN owner_id TEXT')

@@ -33,6 +33,18 @@ def legacy_names(conn):
     return names
 
 
+def review_photo_names(conn):
+    # Older backups predate photo reviews and remain restorable.
+    if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='reviews'").fetchone():
+        return set()
+    return {f"review_photos/{row[0]}/{i}.jpg" for row in conn.execute('SELECT id,photo_count FROM reviews') for i in range(row[1])}
+
+
+def fail_restored_reviews(conn):
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='reviews'").fetchone():
+        conn.execute("UPDATE reviews SET status='failed' WHERE status='processing'")
+
+
 def create_backup(destination):
     destination = Path(destination).resolve()
     if destination.exists():
@@ -49,6 +61,8 @@ def create_backup(destination):
             try:
                 source.backup(snapshot)
                 names = artifact_names(snapshot)
+                photos = review_photo_names(snapshot)
+                fail_restored_reviews(snapshot)
                 snapshot.execute('DELETE FROM download_tickets')
                 snapshot.execute('DELETE FROM sessions')
                 snapshot.execute('DELETE FROM workers')
@@ -67,6 +81,15 @@ def create_backup(destination):
                 if source_path.is_symlink() or not source_path.is_file():
                     raise ValueError('В базе есть отсутствующий файл. Сначала восстановите целостность хранилища.')
                 shutil.copyfile(source_path, stage / 'generated' / name)
+            for name in sorted(photos):
+                if not re.fullmatch(r'review_photos/[a-f0-9]{32}/[0-9]\.jpg', name):
+                    raise ValueError('Небезопасное имя фотографии в базе.')
+                source_path = Path(db.DB_PATH).resolve().parent.joinpath(*PurePosixPath(name).parts)
+                if source_path.is_symlink() or not source_path.is_file():
+                    raise ValueError('Фотография из базы отсутствует. Сначала восстановите целостность хранилища.')
+                target = stage.joinpath(*PurePosixPath(name).parts)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source_path, target)
         finally:
             guard.rollback(); guard.close()
         files = sorted(p for p in stage.rglob('*') if p.is_file())
@@ -96,7 +119,7 @@ def restore_backup(archive_path, destination):
             if len(names) != len(set(names)) or len(names) > 100000 or sum(i.file_size for i in entries) > 5 * 1024**3:
                 raise ValueError('Некорректный или слишком большой архив.')
             for name in names:
-                if name not in ('manifest.json', 'worksheets.db') and not re.fullmatch(r'generated/[A-Za-z0-9_-]+\.(pdf|tex|zip)', name):
+                if name not in ('manifest.json', 'worksheets.db') and not re.fullmatch(r'generated/[A-Za-z0-9_-]+\.(pdf|tex|zip)|review_photos/[a-f0-9]{32}/[0-9]\.jpg', name):
                     raise ValueError('Недопустимый путь в архиве.')
             if 'manifest.json' not in names or archive.getinfo('manifest.json').file_size > 20_000_000:
                 raise ValueError('Нет корректного манифеста.')
@@ -117,6 +140,9 @@ def restore_backup(archive_path, destination):
                 raise ValueError('Проверка базы не пройдена.')
             if {f'generated/{n}' for n in artifact_names(conn)} != {n for n in expected if n.startswith('generated/')}:
                 raise ValueError('Состав файлов не соответствует базе.')
+            if review_photo_names(conn) != {n for n in expected if n.startswith('review_photos/')}:
+                raise ValueError('Состав фотографий не соответствует базе.')
+            fail_restored_reviews(conn)
             conn.execute('DELETE FROM download_tickets'); conn.execute('DELETE FROM sessions'); conn.execute('DELETE FROM workers')
             conn.execute("UPDATE jobs SET status='failed',error_code='backup_restored',error='Восстановлено из копии. Повторите вручную.',finished_at=? WHERE status IN ('queued','running')", (time.time(),))
             conn.commit()

@@ -62,6 +62,11 @@ def execute(job_id):
             compile_worksheet(payload['worksheet'], base)
             export_bundle(payload['worksheet'], Path(latex.OUTPUT_DIR) / (base + '_marp.zip'), payload.get('origin'))
             result = {'ok': True}
+        elif job['kind'] == 'grade':
+            from utils import grading_ai
+            paths = source_pages.prepare([directory / name for name in payload['images']], directory / 'pages')
+            result = grading_ai.recognize(payload['tasks'], paths)
+            result['photos'] = [Path(path).name for path in paths]
         else:
             paths = source_pages.prepare([directory / name for name in payload['images']], directory / 'pages') if job['kind'] == 'recognize' else []
             result = ai_batch.generate(job['kind'], payload, paths, directory)
@@ -95,7 +100,7 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
     environment['LISTOK_SKIP_DOTENV'] = '1'
     command = [sys.executable, str(ROOT / 'scripts/run_worker.py'), '--execute', job['id']]
     count = json.loads(job['payload']).get('variant_count', 1)
-    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180}[job['kind']]
+    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'grade': 900}[job['kind']]
     process = None
     succeeded = False
     try:
@@ -152,7 +157,8 @@ def complete_checkpoint(job, directory):
         return False
     try:
         result = json.loads(path.read_text(encoding='utf-8'))
-        return bool(result.get('worksheets')) and job_store.complete(job, result)
+        usable = bool(result.get('worksheets')) or (job['kind'] == 'grade' and isinstance(result.get('answers'), list) and bool(result.get('photos')))
+        return usable and job_store.complete(job, result)
     except (ValueError, AIServiceError):
         return False
 

@@ -26,17 +26,17 @@ python3 -m venv .venv
 
 Создайте `.env` из `.env.example`, только если файла ещё нет. В рабочей копии могут уже быть ключи: не перезаписывайте существующий файл. Ручные примеры доступны без GigaChat.
 
-| Настройка | Назначение |
-|---|---|
-| `GIGACHAT_CREDENTIALS` | Серверный ключ авторизации GigaChat API |
-| `GIGACHAT_SCOPE` | Scope проекта из кабинета провайдера |
-| `GIGACHAT_MODEL` | Модель проекта с поддержкой изображений |
-| `GIGACHAT_BASE_URL` | `https://api.giga.chat/v1` |
-| `GIGACHAT_CA_BUNDLE_FILE` | При необходимости абсолютный путь к PEM-набору доверенных сертификатов |
-| `LATEX_COMPILER` | Необязательный путь к XeLaTeX/pdfLaTeX |
-| `LATEX_TIMEOUT_SECONDS` | Тайм-аут одного запуска компилятора, по умолчанию 60 секунд |
-| `MAX_BOT_TOKEN` | Токен для проверки API и подписей запуска MAX |
-| `MAX_BOT_USERNAME`, `MAX_APP_URL` | Имя бота и полный HTTPS-адрес мини-приложения (включая схему) |
+| Настройка                         | Назначение                                                             |
+| --------------------------------- | ---------------------------------------------------------------------- |
+| `GIGACHAT_CREDENTIALS`            | Серверный ключ авторизации GigaChat API                                |
+| `GIGACHAT_SCOPE`                  | Scope проекта из кабинета провайдера                                   |
+| `GIGACHAT_MODEL`                  | Модель проекта с поддержкой изображений                                |
+| `GIGACHAT_BASE_URL`               | `https://api.giga.chat/v1`                                             |
+| `GIGACHAT_CA_BUNDLE_FILE`         | При необходимости абсолютный путь к PEM-набору доверенных сертификатов |
+| `LATEX_COMPILER`                  | Необязательный путь к XeLaTeX/pdfLaTeX                                 |
+| `LATEX_TIMEOUT_SECONDS`           | Тайм-аут одного запуска компилятора, по умолчанию 60 секунд            |
+| `MAX_BOT_TOKEN`                   | Токен для проверки API и подписей запуска MAX                          |
+| `MAX_BOT_USERNAME`, `MAX_APP_URL` | Имя бота и полный HTTPS-адрес мини-приложения (включая схему)          |
 
 После изменения `.env` перезапустите сервер. Учитель не вводит личный API-ключ в интерфейсе. [Подробный список подключений](docs/ACCESS.md).
 
@@ -58,11 +58,11 @@ python3 -m venv .venv
 ## Контейнер и CLI
 
 ```bash
-docker build -t listok:night6 .
+docker build -t listok:night7 .
 docker compose up -d --wait
-docker run --rm --network none listok:night6 python -m unittest discover -s tests -v
-docker run --rm --network none listok:night6 python scripts/smoke_pdf.py
-docker run --rm --network none listok:night6 python scripts/smoke_queue.py
+docker run --rm --network none listok:night7 python -m unittest discover -s tests -v
+docker run --rm --network none listok:night7 python scripts/smoke_pdf.py
+docker run --rm --network none listok:night7 python scripts/smoke_queue.py
 ```
 
 На локальном компьютере Docker не установлен. Образ собран и проверен в [GitHub Actions](https://github.com/pavelneumoin/worksheet-creator/actions/workflows/check.yml?query=branch%3Acodex%2Fqueue-marp-docker). Выберите успешную сборку того же коммита, что и ваш checkout. Готовый образ и SHA256 находятся в артефакте `listok-docker-image`: после распаковки выполните `docker load -i listok-image.tar.gz`, затем `docker compose up -d --no-build --wait`. Нужны `.env` и каталог `.local-certs`; для GigaChat нужен действующий CA-набор. Локальный `.env` не перезаписывайте.

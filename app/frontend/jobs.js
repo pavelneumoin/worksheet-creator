@@ -205,6 +205,14 @@ async function openJobResult(job, chosenMaterial = null) {
   if (state.dirty && state.sheet) await saveCurrent();
   const fresh = (await request("/api/v2/jobs/" + job.id)).job;
   if (fresh.status !== "succeeded") throw new Error("Результат ещё не готов.");
+  if (fresh.kind === "grade") {
+    await openReview(fresh.result.review_id);
+    await request("/api/v2/jobs/" + job.id + "/acknowledge", {
+      method: "POST",
+    });
+    await refreshJobs();
+    return;
+  }
   const result = { ...fresh.result };
   if (
     chosenMaterial &&

@@ -16,8 +16,8 @@ from utils.workspace_store import connection, result_links, timestamp, record_ed
 
 ACTIVE = ('queued', 'running')
 TERMINAL = ('succeeded', 'failed', 'cancelled')
-LANES = {'recognize': 'ai', 'variant': 'ai', 'compile': 'compile'}
-LABELS = {'recognize': 'Распознаём задания и готовим ответы', 'variant': 'Готовим новый вариант', 'compile': 'Собираем лист, ответы и Marp'}
+LANES = {'recognize': 'ai', 'variant': 'ai', 'compile': 'compile', 'grade': 'ai'}
+LABELS = {'recognize': 'Распознаём задания и готовим ответы', 'variant': 'Готовим новый вариант', 'compile': 'Собираем лист, ответы и Marp', 'grade': 'Распознаём ответы ученика'}
 LEASE_SECONDS = 45
 RETENTION_SECONDS = 7 * 86400
 
@@ -127,7 +127,7 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
                 raise AIServiceError('У вас уже есть задача. Дождитесь её результата — он появится в разделе «Задачи».', 'owner_job_limit', 429)
             if conn.execute("SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running')").fetchone()[0] >= 30:
                 raise AIServiceError('Сейчас много запросов. Попробуйте через несколько минут.', 'queue_full', 429)
-            if kind != 'compile' and conn.execute('SELECT COUNT(*) FROM materials WHERE owner_id=?', (owner,)).fetchone()[0] + payload.get('variant_count', 1) > 500:
+            if kind in ('recognize', 'variant') and conn.execute('SELECT COUNT(*) FROM materials WHERE owner_id=?', (owner,)).fetchone()[0] + payload.get('variant_count', 1) > 500:
                 raise AIServiceError('В профиле можно хранить до 500 листов. Освободите место для новых вариантов.', 'materials_limit', 409)
             # Validate the saved snapshot in the same transaction as enqueueing.
             material_id = payload.get('material_id')
@@ -141,6 +141,10 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
             directory.mkdir()
             created = True
             stored = dict(payload)
+            if kind == 'grade':
+                from utils import review_store
+                assignment = review_store.enqueue(conn, owner, job_id, payload, fingerprint('review_photo', {}, image_paths))
+                stored['tasks'] = assignment['worksheet']['tasks']
             if material_id:
                 stored['source'] = material['source']
                 origin = conn.execute('SELECT author,title FROM material_origins WHERE material_id=?', (material_id,)).fetchone()
@@ -209,6 +213,13 @@ def complete(job, output, active_connection=None):
             result = {'worksheet': payload['worksheet'], 'source': payload.get('source', 'manual'),
                       'material_id': material['id'] if attached else None, 'attached': attached,
                       **result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone())}
+        elif current['kind'] == 'grade':
+            from utils import review_store
+            directory = job_directory(job_id) / 'pages'
+            names = output.get('photos', [])
+            if not isinstance(names, list) or not 1 <= len(names) <= 5 or any(not isinstance(n, str) or not re.fullmatch(r'page_[1-5]\.jpg', n) for n in names) or len(set(names)) != len(names):
+                raise AIServiceError('Не найдены обработанные фотографии.', 'invalid_recognition', 502)
+            result = review_store.complete(conn, owner, job_id, output, [directory / n for n in names])
         else:
             worksheets = output.get('worksheets', [output.get('worksheet')])
             requested = payload.get('variant_count', 1)
@@ -267,7 +278,7 @@ def maintain():
             try:
                 if path.is_file() and path.stat().st_size <= 2 * 1024 * 1024:
                     output = json.loads(path.read_text(encoding='utf-8'))
-                    if output.get('worksheets'):
+                    if output.get('worksheets') or (row['kind'] == 'grade' and isinstance(output.get('answers'), list) and output.get('photos')):
                         complete(dict(row), output, conn)
             except (ValueError, AIServiceError, OSError):
                 pass
@@ -276,6 +287,8 @@ def maintain():
         conn.execute("""UPDATE jobs SET status='failed',error='Время ожидания истекло. Повторите действие.',error_code='queue_expired',finished_at=?,updated_at=?
                         WHERE status='queued' AND created_at<?""", (now, now, now - 86400))
         terminal = [r['id'] for r in conn.execute("SELECT id FROM jobs WHERE status IN ('succeeded','failed','cancelled')")]
+        from utils import review_store
+        review_store.maintain(conn)
         conn.execute("DELETE FROM jobs WHERE finished_at<?", (now - RETENTION_SECONDS,))
         conn.execute('DELETE FROM workers WHERE heartbeat<?', (now - 86400,))
     for job_id in terminal:

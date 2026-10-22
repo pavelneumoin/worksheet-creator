@@ -33,6 +33,8 @@ for saved_class in call('get','/api/v2/classes').json['classes']:
     assert previous['student_count']==3 and len(previous['assignments'])==1
     previous_work=call('get','/api/v2/assignments/'+previous['assignments'][0]['id']).json['assignment']
     assert previous_work['student_count']==2
+    previous_report=call('get','/api/v2/assignments/'+previous_work['id']+'/report').json['report']
+    assert previous_report['summary']['not_submitted']==2 and previous_report['summary']['average'] is None
     response=call('get',previous_work['result']['pdf_url']); response.close()
 sheet=demo_worksheet('physics')
 material=call('post','/api/v2/materials',json={'worksheet':sheet,'source':'manual_demo'}).json['material']
@@ -63,4 +65,9 @@ call('post',base+'/students',json={'revision':classroom['revision'],'count':1})
 assert assignment['id'] in [a['id'] for a in call('get','/api/v2/schedule?month=2026-11').json['assignments']]
 assert call('post',base+'/assignments',json=assignment_payload).json['assignment']['id']==assignment['id']
 assert call('get','/api/v2/assignments/'+assignment['id']).json['assignment']['student_count']==2
-print('PASS: signed MAX fixture, CSRF, separate compiler, four downloads, classes, fixed roster, retry and restart persistence')
+report=call('get','/api/v2/assignments/'+assignment['id']+'/report').json['report']
+assert report['summary']['total']==2 and report['summary']['not_submitted']==2 and report['summary']['confirmed']==0
+assert report['summary']['average'] is None and all(s['score'] is None for s in report['students'])
+csv=call('get','/api/v2/assignments/'+assignment['id']+'/report.csv')
+assert csv.mimetype=='text/csv' and 'Не сдал' in csv.get_data(as_text=True)
+print('PASS: signed MAX fixture, CSRF, separate compiler, four downloads, classes, fixed roster, private class report, CSV, retry and restart persistence')

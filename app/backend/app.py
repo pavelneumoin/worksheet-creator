@@ -36,6 +36,8 @@ from job_api import api as job_api
 app.register_blueprint(job_api)
 from class_api import api as class_api
 app.register_blueprint(class_api)
+from review_api import api as review_api
+app.register_blueprint(review_api)
 
 
 @app.before_request

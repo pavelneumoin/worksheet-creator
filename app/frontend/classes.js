@@ -27,6 +27,8 @@ function classScreen(id) {
     "classDetail",
     "assignmentView",
     "assignmentCreate",
+    "reviewView",
+    "classReport",
   ])
     $(name).hidden = name !== id;
   showView("classes", false);
@@ -483,6 +485,18 @@ async function openAssignment(id, loaded = null) {
       "quiet",
     ),
   );
+  panel.append(
+    classButton(
+      "Проверить ответы и открыть отчёт",
+      () => busy("Открываем проверку", () => openClassReport(a.id)),
+      "primary",
+    ),
+    node(
+      "p",
+      "Добавляйте фото ответов по коду ученика. Итоговые баллы появляются в отчёте после вашего подтверждения.",
+      "quiet",
+    ),
+  );
   const members = node("details", undefined, "assignment-members");
   members.append(node("summary", "Кому назначено · " + a.student_count));
   const list = node("ol");
@@ -665,7 +679,15 @@ function renderAssignmentPreview() {
     classState.recipientClass.archived;
 }
 function backFromClass() {
-  if (!$("assignmentCreate").hidden) {
+  if (!$("reviewView").hidden) {
+    busy("Открываем отчёт", () =>
+      openClassReport(reviewState.current.assignment_id),
+    );
+  } else if (!$("classReport").hidden) {
+    busy("Открываем работу", () =>
+      openAssignment(reviewState.report.assignment_id),
+    );
+  } else if (!$("assignmentCreate").hidden) {
     if (classState.attempt) {
       notice(
         "Запрос ещё не подтверждён. Нажмите «Повторить назначение», чтобы безопасно узнать результат.",

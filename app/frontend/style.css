@@ -2314,6 +2314,220 @@ select {
 #scheduleClasses {
   margin-top: 22px;
 }
+.review-report,
+.review-form {
+  min-width: 0;
+}
+.review-report h1,
+.review-heading h1 {
+  overflow-wrap: anywhere;
+}
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 22px 0;
+}
+.report-stat {
+  padding: 18px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e4e7eb);
+  border-radius: 16px;
+  display: grid;
+  gap: 6px;
+}
+.report-stat strong {
+  font-size: 27px;
+}
+.report-stat span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.report-task,
+.report-student {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border, #e4e7eb);
+}
+.report-task {
+  align-items: flex-start;
+}
+.report-task > p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.report-task > strong {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.report-student p {
+  margin: 5px 0 0;
+}
+.review-upload-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.review-upload label,
+.review-form label {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+.review-upload select,
+.review-form select,
+.review-form input:not([type="checkbox"]),
+.review-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  font: inherit;
+  font-size: 16px;
+  padding: 11px 12px;
+  border: 1px solid var(--border, #dce0e5);
+  background: white;
+  border-radius: 10px;
+  color: inherit;
+}
+.review-form textarea {
+  resize: vertical;
+}
+.review-previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.review-preview img {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: contain;
+  background: #f4f5f7;
+  border-radius: 12px;
+}
+.review-preview .button {
+  width: 100%;
+  font-size: 12px;
+  padding: 8px;
+}
+.review-gallery img {
+  width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  display: block;
+  margin: 16px 0;
+  background: #f4f5f7;
+}
+.review-warning {
+  background: #fff6df;
+  color: #725410;
+  border-radius: 10px;
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+.review-key {
+  background: #f3f5f7;
+  border-radius: 10px;
+  padding: 12px;
+}
+.review-answer {
+  margin: 18px 0;
+}
+.review-answer h3 {
+  margin-top: 0;
+}
+.review-total {
+  font-weight: 650;
+}
+.review-form .review-attestation {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  min-height: 44px;
+}
+.review-attestation input {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin: 2px 0;
+}
+.review-attestation span {
+  line-height: 1.5;
+}
+.review-confirmation .actions {
+  margin-top: 18px;
+}
+@media (max-width: 720px) {
+  .report-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .report-stat {
+    padding: 14px;
+  }
+  .report-task {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .report-student {
+    flex-wrap: wrap;
+  }
+  .review-upload .actions,
+  .review-confirmation .actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .review-form .button,
+  .review-upload .button {
+    width: 100%;
+  }
+}
+@media print {
+  body[data-print-report="true"] > :not(main),
+  body[data-print-report="true"] main > :not(#classesView),
+  body[data-print-report="true"] #classesView > :not(#classReport) {
+    display: none !important;
+  }
+  body[data-print-report="true"] * {
+    visibility: hidden;
+  }
+  body[data-print-report="true"] .review-report,
+  body[data-print-report="true"] .review-report * {
+    visibility: visible;
+  }
+  body[data-print-report="true"] .review-report {
+    position: static;
+    width: 100%;
+    color: #111;
+  }
+  body[data-print-report="true"] .review-report .report-controls {
+    display: none !important;
+  }
+  body[data-print-report="true"] .report-summary {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  body[data-print-report="true"] .panel {
+    box-shadow: none;
+    padding: 12px;
+    border: 1px solid #ccc;
+    margin-bottom: 12px;
+  }
+  body[data-print-report="true"] .report-student .button {
+    display: none;
+  }
+  body[data-print-report="true"] .report-student,
+  body[data-print-report="true"] .report-task {
+    break-inside: avoid;
+  }
+}
 @media (max-width: 720px) {
   .topbar-inner {
     gap: 12px;
