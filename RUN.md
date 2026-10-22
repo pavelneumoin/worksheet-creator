@@ -20,7 +20,7 @@ python3 -m venv .venv
 .venv/bin/python run_local.py
 ```
 
-Нужен XeLaTeX из TeX Live или MiKTeX с пакетами `babel` (русский язык), `fontspec`, `amsmath`, `amssymb`, `multicol`, `geometry`, `tikz`, `xcolor`, `iftex` и шрифтом Arial / DejaVu Sans / Liberation Sans. Шаблон также поддерживает pdfLaTeX с T2A и кириллицей. Сборка не скачивает пакеты автоматически и не отправляет документы во внешний сервис.
+Нужен **XeLaTeX** из TeX Live или MiKTeX с пакетами `babel` (русский язык), `fontspec`, `amsmath`, `amssymb`, `multicol`, `geometry`, `tikz`, `xcolor`, `fancyhdr`, `lastpage`. CMU Serif и CMU Typewriter Text входят в репозиторий и копируются в каталог сборки; устанавливать шрифты в систему не требуется. Для существующего MiKTeX добавьте пакеты командой `miktex packages install fancyhdr lastpage`. Новые OpenType-шаблоны требуют XeLaTeX, pdfLaTeX для них не подходит. Сборка не скачивает пакеты автоматически и не отправляет документы во внешний сервис.
 
 ## Настройка ИИ и MAX
 

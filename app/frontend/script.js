@@ -705,6 +705,7 @@ function appendCabinetTools(card, item) {
         const copy = node("button", "Создать копию версии", "button ghost");
         copy.addEventListener("click", () =>
           busy("Создаём копию версии", async () => {
+            if (state.dirty && state.sheet) await saveCurrent();
             const result = await request("/api/v2/materials", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -714,6 +715,26 @@ function appendCabinetTools(card, item) {
                 origin_material_id: item.id,
               }),
             });
+            if (item.folder) {
+              await request(
+                "/api/v2/materials/" + result.material.id + "/organization",
+                {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    folder: item.folder,
+                    archived: false,
+                  }),
+                },
+              );
+            }
+            loadSheet(
+              result.material.worksheet,
+              result.material.source,
+              result.material.id,
+              result.material.origin,
+            );
+            state.revision = result.material.revision;
             await refreshMaterials();
             notice(
               "Копия сохранена. Исходный лист и версия остались в кабинете.",
