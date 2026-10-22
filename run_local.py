@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import subprocess
 
 
 class LocalApiAdapter:
@@ -75,14 +76,26 @@ def main():
         help="Repository root containing app/backend/app.py.",
     )
     parser.add_argument("--port", type=int, default=3005)
+    parser.add_argument("--no-workers", action="store_true", help="Run only the web server (for diagnostics).")
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error("--port must be between 1 and 65535")
 
     os.environ.setdefault("USE_CLOUD_LATEX", "false")
+    # Local accounts are enabled only by this loopback-only launcher.
+    os.environ.setdefault("LISTOK_AUTH_MODE", "local")
     application = load_application(args.repo_root)
-    print(f"Open http://127.0.0.1:{args.port}", flush=True)
-    application.run(host="127.0.0.1", port=args.port, debug=False, use_reloader=False)
+    from utils.job_runner import process_options, stop_process
+    workers = []
+    try:
+        if not args.no_workers:
+            for lane in ('ai', 'compile'):
+                workers.append(subprocess.Popen([sys.executable, str(args.repo_root / 'scripts/run_worker.py'), '--lane', lane], **process_options()))
+        print(f"Open http://127.0.0.1:{args.port}", flush=True)
+        application.run(host="127.0.0.1", port=args.port, debug=False, use_reloader=False)
+    finally:
+        for worker in workers:
+            stop_process(worker)
 
 
 if __name__ == "__main__":

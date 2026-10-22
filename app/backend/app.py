@@ -7,11 +7,11 @@ from pathlib import Path
 import tempfile
 import uuid
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, g, jsonify, request, send_from_directory
 from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
+load_dotenv(Path(__file__).resolve().parents[3] / ".env", override=False)
 
 from utils import latex as latex_engine
 from utils.db import init_db, save_worksheet, get_history
@@ -25,6 +25,33 @@ UPLOAD_FOLDER = Path(__file__).resolve().parent / "uploads"
 UPLOAD_FOLDER.mkdir(exist_ok=True)
 app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
 init_db()
+
+from utils.sessions import init_auth
+from utils import workspace_store
+init_auth(app)
+
+from workspace_api import api as workspace_api
+app.register_blueprint(workspace_api)
+from job_api import api as job_api
+app.register_blueprint(job_api)
+
+
+@app.before_request
+def require_queue_for_expensive_work():
+    if (request.method == 'POST' and request.path in {
+        '/api/process', '/api/generate_similar', '/api/compile',
+        '/api/v2/recognize', '/api/v2/variant', '/api/v2/compile',
+    } and not app.config.get('LISTOK_ALLOW_SYNC_API', False)):
+        return jsonify(error='Обновите страницу: обработка теперь выполняется через очередь.', code='use_job_queue'), 410
+
+
+@app.after_request
+def response_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    if request.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 MAX_FILES = 10
 SUBJECTS = {"math", "physics"}
@@ -151,6 +178,8 @@ def status():
         "supported_uploads": sorted(ALLOWED_SUFFIXES),
         "max_upload_mb": 20,
         "max_files": MAX_FILES,
+        "max_configured": bool(os.environ.get("MAX_BOT_TOKEN", "").strip()),
+        "deployment_stage": app.config["LISTOK_AUTH_MODE"],
     })
     return jsonify(result)
 
@@ -239,9 +268,10 @@ def compile_code():
         return api_error(str(error or "PDF не создан."), "latex_compile_failed", 422)
     pdf_url = f"/api/generated/{pdf}"
     keys_url = f"/api/generated/{keys}" if keys else None
+    workspace_store.add_artifact(g.identity['owner_id'], pdf, keys, f'{base}.tex')
     warnings = []
     try:
-        save_worksheet(title, teacher, content, pdf_url, keys_url)
+        save_worksheet(title, teacher, content, pdf_url, keys_url, owner_id=g.identity['owner_id'])
     except Exception as exc:
         app.logger.warning("Worksheet history could not be saved (%s)", type(exc).__name__)
         warnings.append("PDF готов, но сохранить запись в истории не удалось.")
@@ -289,7 +319,7 @@ def history():
     if not 1 <= limit <= 100:
         return api_error("limit должен быть от 1 до 100.", "invalid_limit", 400)
     try:
-        return jsonify({"history": get_history(limit=limit)})
+        return jsonify({"history": get_history(limit=limit, owner_id=g.identity['owner_id'])})
     except Exception as exc:
         app.logger.warning("History read failed (%s)", type(exc).__name__)
         return api_error("Не удалось прочитать историю.", "history_unavailable", 500)
@@ -297,7 +327,9 @@ def history():
 
 @app.route("/api/generated/<path:filename>")
 def serve_generated(filename):
-    if Path(filename).name != filename or Path(filename).suffix.lower() not in {".pdf", ".tex"}:
+    if Path(filename).name != filename or Path(filename).suffix.lower() not in {".pdf", ".tex", ".zip"}:
+        return api_error("Файл не найден.", "file_not_found", 404)
+    if not workspace_store.owns_file(g.identity['owner_id'], filename):
         return api_error("Файл не найден.", "file_not_found", 404)
     return send_from_directory(str(Path(latex_engine.OUTPUT_DIR).resolve()), filename)
 

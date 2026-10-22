@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), '../templates/default_worksheet.tex')
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '../static/generated')
+OUTPUT_DIR = os.environ.get('LISTOK_GENERATED_DIR') or os.path.join(os.path.dirname(__file__), '../static/generated')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 USE_CLOUD_LATEX = False  # No document uploads, including when local TeX is absent.
 MAX_CONTENT_BYTES = 64 * 1024
@@ -121,7 +121,7 @@ def _diagnostic(output):
     return '\n'.join(lines[-10:])[-900:] or 'Компилятор не сообщил подробностей.'
 
 
-def compile_latex_local(latex_source, filename_base):
+def compile_latex_local(latex_source, filename_base, strict_layout=False):
     """Compile trusted template + validated body in a fresh local directory."""
     if not _safe_filename(filename_base):
         return None, 'Недопустимое имя выходного файла.'
@@ -141,7 +141,8 @@ def compile_latex_local(latex_source, filename_base):
             if 'miktex' in compiler.lower():
                 command.append('--disable-installer')
             command.append('document.tex')
-            environment = os.environ.copy()
+            environment = {key: value for key, value in os.environ.items()
+                           if not key.upper().startswith(('GIGACHAT_', 'MAX_', 'OPENAI_', 'SESSION_', 'ANTHROPIC_'))}
             environment.update({'openin_any': 'p', 'openout_any': 'p', 'shell_escape': 'f'})
             environment['PATH'] = str(Path(compiler).parent) + os.pathsep + environment.get('PATH', '')
             options = {'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}
@@ -157,6 +158,9 @@ def compile_latex_local(latex_source, filename_base):
                               'оформляйте через \\text{...}; проверьте остальные символы и шрифт.')
             if result.returncode != 0:
                 return None, 'Не удалось собрать PDF. ' + _diagnostic(output)
+            if strict_layout and re.search(r'Overfull \\[hv]box', output):
+                return None, ('Условия не помещаются в выбранный макет. Уменьшите число заданий '
+                              'на странице, выберите один столбец или сократите длинную формулу.')
             pdf_path = temp_path / 'document.pdf'
             if not pdf_path.is_file() or pdf_path.stat().st_size < 100:
                 return None, 'Компилятор завершился без PDF.'
@@ -177,11 +181,16 @@ def compile_latex_cloud(latex_source, filename_base):
     return None, 'Облачная сборка отключена. Используйте локальный LaTeX; материалы не отправлены сторонним сервисам.'
 
 
-def _compile_single_doc(content, topic, filename_base, teacher_name, layout='1col'):
+def _compile_single_doc(content, topic, filename_base, teacher_name, layout='1col',
+                        field_style='grid', strict_layout=False, student_fields=True):
     try:
         template = Path(TEMPLATE_PATH).read_text(encoding='utf-8')
     except OSError:
         return None, 'Не найден шаблон рабочего листа.'
+    if field_style == 'blank':
+        template = template.replace(r'\draw[gridgray,densely dotted,step=5mm] (0,0) grid (\W,\H);', '')
+    if not student_fields:
+        template = template.replace('\\FirstPageHeader\nPLACEHOLDER:CONTENT', 'PLACEHOLDER:CONTENT')
     if layout == '2col':
         content = '\\begin{multicols}{2}\n' + content + '\n\\end{multicols}'
     teacher_line = ''
@@ -190,6 +199,8 @@ def _compile_single_doc(content, topic, filename_base, teacher_name, layout='1co
     replacements = {'CONTENT': content, 'TOPIC': _escape_header(topic), 'TEACHER': teacher_line}
     latex_source = re.sub(r'PLACEHOLDER:(CONTENT|TOPIC|TEACHER)',
                           lambda match: replacements[match.group(1)], template)
+    if strict_layout:
+        return compile_latex_local(latex_source, filename_base, strict_layout=True)
     return compile_latex_local(latex_source, filename_base)
 
 

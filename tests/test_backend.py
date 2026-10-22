@@ -22,11 +22,15 @@ class BackendTests(unittest.TestCase):
         source = Path(__file__).resolve().parents[1]
         shutil.copytree(source, cls.repo, ignore=shutil.ignore_patterns(
             ".env", ".local-certs", ".git", "__pycache__", "*.db", "uploads",
-            "generated", ".venv"))
+            "generated", ".venv", "output", "tmp", "node_modules"))
+        from utils import db
+        cls.database = patch.object(db, 'DB_PATH', str(cls.repo / 'app/backend/worksheets.db'))
+        cls.database.start()
         cls.env = patch.dict(os.environ, {
             "GIGACHAT_CREDENTIALS": "dummy-offline-test",
             "GIGACHAT_MODEL": "GigaChat-3-Ultra",
             "GIGACHAT_CA_BUNDLE_FILE": "",
+            "LISTOK_AUTH_MODE": "local",
         })
         cls.env.start()
         cls.network = patch("socket.socket.connect",
@@ -38,10 +42,18 @@ class BackendTests(unittest.TestCase):
         cls.app = launcher.load_application(cls.repo)
         cls.backend = sys.modules["worksheet_local_backend"]
         cls.app.config["TESTING"] = True
+        cls.app.config["LISTOK_ALLOW_SYNC_API"] = True
         cls.client = cls.app.test_client()
+        login = cls.client.post('/api/v2/auth/local')
+        assert login.status_code == 200, login.json
+        cls.client.environ_base['HTTP_X_CSRF_TOKEN'] = login.json['csrf_token']
         cls.generated = Path(cls.backend.latex_engine.OUTPUT_DIR)
         cls.generated.mkdir(parents=True, exist_ok=True)
         (cls.generated / "route-fixture.pdf").write_bytes(b"%PDF-1.4\nfixture")
+        from utils.workspace_store import add_artifact, connection
+        with connection() as conn:
+            owner = conn.execute('SELECT owner_id FROM sessions').fetchone()[0]
+        add_artifact(owner, 'route-fixture.pdf', None, None)
         (cls.generated / "secret.log").write_text("not downloadable")
         cls.png = lambda _: (io.BytesIO(PNG), "photo.png")
 
@@ -49,6 +61,7 @@ class BackendTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.network.stop()
         cls.env.stop()
+        cls.database.stop()
         cls.tmp.cleanup()
 
     def test_01_home(self):

@@ -286,12 +286,12 @@ def process_image_with_gigachat(image_paths, task_count=3, model=None, subject="
             try:
                 for path in image_paths:
                     with open(path, "rb") as source:
-                        uploaded = giga.upload_file(source)
+                        uploaded = giga.upload_file(source, purpose="general")
                     attachment_ids.append(uploaded.id_)
-                response = giga.chat(Chat(messages=[
-                    Messages(role=MessagesRole.SYSTEM, content=rules),
-                    Messages(role=MessagesRole.USER, content=prompt, attachments=attachment_ids)
-                ], temperature=0.1))
+                messages = [Messages(role=MessagesRole.SYSTEM, content=rules)]
+                messages.extend(Messages(role=MessagesRole.USER, content=prompt, attachments=[file_id])
+                                for file_id in attachment_ids)
+                response = giga.chat(Chat(messages=messages, temperature=0.1))
                 return clean_latex(response.choices[0].message.content)
             finally:
                 for file_id in attachment_ids:

@@ -1,0 +1,80 @@
+x-runtime: &runtime
+  image: listok:night3
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: ["/tmp:size=512m,mode=1777"]
+  pids_limit: 128
+  restart: unless-stopped
+  init: true
+  stop_grace_period: 15s
+
+x-data: &data
+  LISTOK_DB_PATH: /app/data/worksheets.db
+  LISTOK_JOBS_DIR: /app/data/jobs
+  LISTOK_GENERATED_DIR: /app/app/backend/static/generated
+  HOME: /tmp
+
+services:
+  listok:
+    <<: *runtime
+    build: .
+    # An HTTPS reverse proxy is required for real MAX sessions.
+    ports: ["127.0.0.1:3005:10000"]
+    env_file: .env
+    environment:
+      <<: *data
+      LISTOK_AUTH_MODE: max
+      GIGACHAT_CA_BUNDLE_FILE: /app/certs/gigachat-ca.pem
+    volumes:
+      - generated:/app/app/backend/static/generated
+      - materials:/app/data
+      - ./.local-certs:/app/certs:ro
+    mem_limit: 512m
+    cpus: 1
+
+  ai-worker:
+    <<: *runtime
+    command: ["python", "scripts/run_worker.py", "--lane", "ai"]
+    env_file: .env
+    environment:
+      <<: *data
+      GIGACHAT_CA_BUNDLE_FILE: /app/certs/gigachat-ca.pem
+    volumes:
+      - generated:/app/app/backend/static/generated
+      - materials:/app/data
+      - ./.local-certs:/app/certs:ro
+    depends_on:
+      listok: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "scripts/worker_health.py", "ai"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    mem_limit: 768m
+    cpus: 1
+
+  compile-worker:
+    <<: *runtime
+    command: ["python", "scripts/run_worker.py", "--lane", "compile"]
+    # No network, env_file, provider certificates or API credentials here.
+    network_mode: none
+    environment: *data
+    volumes:
+      - generated:/app/app/backend/static/generated
+      - materials:/app/data
+    depends_on:
+      listok: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "scripts/worker_health.py", "compile"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    mem_limit: 1536m
+    cpus: 2
+
+volumes:
+  generated:
+  materials:

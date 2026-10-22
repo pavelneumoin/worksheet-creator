@@ -1,75 +1,640 @@
 <!doctype html>
 <html lang="ru">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#211438">
-<meta name="description" content="ЛистОК помогает учителям математики и физики готовить рабочие листы: проверить задания, оформить формулы с LaTeX и собрать PDF.">
-<title>ЛистОК — рабочие листы для математики и физики</title>
-<link rel="stylesheet" href="/style.css"><script src="/script.js" defer></script>
-</head>
-<body>
-<a class="skip-link" href="#workspace">Перейти к редактору</a>
-<div class="hero-shell">
-<header class="site-header page-width">
-<a class="brand" href="/" aria-label="ЛистОК — на главную"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M9 3h11l6 6v20H9a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" fill="currentColor"/><path d="M20 3v7h6M11 19l4 4 8-9" fill="none" stroke="#211438" stroke-width="2.5" stroke-linejoin="round"/></svg></span><span>Лист<span class="brand-ok">ОК</span></span></a>
-<nav aria-label="Основная навигация"><a href="#how-it-works">Как это работает</a><a href="#history">Мои листы</a><a class="nav-action" href="#workspace">Создать лист <span aria-hidden="true">↗</span></a></nav>
-</header>
-<section class="hero page-width" aria-labelledby="hero-title">
-<div class="hero-copy">
-<p class="eyebrow"><span class="status-dot" aria-hidden="true"></span>ДЛЯ УЧИТЕЛЕЙ МАТЕМАТИКИ И ФИЗИКИ</p>
-<h1 id="hero-title">Меньше ручного<br>набора формул —<br><span>больше времени на урок.</span></h1>
-<p class="hero-description">Ваши задания, аккуратные формулы и место для решения. Подготовьте черновик, проверьте содержание — оформление рабочего листа возьмёт на себя LaTeX.</p>
-<div class="hero-actions"><button class="button mint" id="heroDemoBtn" type="button">Открыть пример <span aria-hidden="true">↗</span></button><a class="button hero-secondary" href="#workspace">Загрузить свои задания</a></div>
-<p class="hero-note">Пример без ИИ · Редактируемый LaTeX · Настоящий PDF</p>
-</div>
-<div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span class="formula formula-one">x² + bx + c</span><span class="formula formula-two">F = ma</span><img src="/img/hero.png" alt="" width="1280" height="1280" fetchpriority="high"><div class="art-caption"><span class="caption-icon">✓</span><span>Формулы, задания<br><strong>и пространство для мысли</strong></span></div></div>
-</section>
-<div class="hero-bottom page-width"><span>МАТЕМАТИКА</span><span class="separator">/</span><span>ФИЗИКА</span><span class="hero-bottom-line"></span><span>МАТЕРИАЛ → ПРОВЕРКА → РАБОЧИЙ ЛИСТ</span></div>
-</div>
-<main>
-<section class="workflow page-width" id="how-it-works" aria-label="Как это работает">
-<article><span class="step-number">01</span><div><h2>Возьмите свои задания</h2><p>Загрузите фото или откройте готовый пример.</p></div></article>
-<article><span class="step-number">02</span><div><h2>Проверьте содержание</h2><p>Уточните условия, формулы и ответы в редакторе.</p></div></article>
-<article><span class="step-number">03</span><div><h2>Получите лист A4</h2><p>Соберите PDF для учеников и отдельные ответы.</p></div></article>
-</section>
-<section class="workspace-section page-width" id="workspace" aria-labelledby="workspace-title">
-<div class="section-heading"><div><p class="eyebrow purple">ВАШ СЛЕДУЮЩИЙ УРОК</p><h2 id="workspace-title">Соберите рабочий лист</h2></div><div class="connection-status" id="serverStatus" role="status"><span class="status-dot"></span><span>Проверяем возможности сервера…</span></div></div>
-<div class="workspace-grid">
-<aside class="setup-panel panel" aria-label="Материал и оформление">
-<div class="panel-heading"><span class="section-index">1</span><div><h3>Материал и оформление</h3><p>Настройте лист под своё занятие.</p></div></div>
-<fieldset class="field subject-field"><legend>Предмет</legend><div class="segmented"><input id="subjectMath" type="radio" name="subject" value="math" checked><label for="subjectMath">Математика</label><input id="subjectPhysics" type="radio" name="subject" value="physics"><label for="subjectPhysics">Физика</label></div></fieldset>
-<div class="demo-card"><span class="small-label">БЕЗ ИИ</span><h4>Начните с примера</h4><p id="demoDescription">Задачи по математике с ответами. Можно менять условия и оформление.</p><button id="demoBtn" type="button" class="button small dark">Открыть пример <span aria-hidden="true">↗</span></button></div>
-<div class="divider-label"><span>или свои задания</span></div>
-<input id="fileInput" class="visually-hidden" type="file" accept=".jpg,.jpeg,.png" multiple aria-label="Выберите фотографии заданий">
-<button id="uploadZone" type="button" class="upload-zone" aria-controls="fileInput"><span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 22H5a4 4 0 0 1-1-8 7 7 0 0 1 13-4 6 6 0 1 1 10 12h-3M16 28V15m-5 5 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>Добавить фото заданий</strong><span id="uploadHelp">JPG или PNG · до 10 файлов, всего 20 МБ</span><span class="drop-hint">Можно перетащить сюда</span></button>
-<ul id="fileList" class="file-list" aria-label="Выбранные файлы" hidden></ul><button id="clearFilesBtn" class="text-button" type="button" hidden>Очистить выбор</button>
-<button id="processBtn" class="button primary full-width" type="button" disabled>Подготовить черновик с ИИ</button><p class="field-help" id="aiHint">Проверяем подключение ИИ…</p>
-<div class="form-divider"></div>
-<div class="field"><label for="topicInput">Тема листа</label><input id="topicInput" type="text" maxlength="160" placeholder="Например, квадратные уравнения"></div>
-<div class="field"><label for="teacherNameInput">Имя учителя <span class="optional">необязательно</span></label><input id="teacherNameInput" type="text" maxlength="100" placeholder="Как подписать рабочий лист"></div>
-<div class="field-grid"><div class="field"><label for="taskCount">Задач на странице</label><select id="taskCount"><option value="1">1 задача</option><option value="2">2 задачи</option><option value="3" selected>3 задачи</option><option value="4">4 задачи</option><option value="5">5 задач</option><option value="6">6 задач</option></select></div><div class="field"><label for="layoutSelect">Макет</label><select id="layoutSelect"><option value="1col">1 колонка</option><option value="2col">2 колонки</option></select></div></div>
-<p class="field-help">Количество задач задаёт ориентир для черновика. Перед печатью проверьте размещение в PDF.</p>
-</aside>
-<div class="editor-panel panel">
-<div class="panel-heading"><span class="section-index mint-index">2</span><div><h3>Проверьте и соберите</h3><p>Вы решаете, какие задания попадут к ученикам.</p></div></div>
-<div class="message" id="workspaceMessage" role="status" aria-live="polite" hidden></div>
-<div class="editor-empty" id="editorEmpty"><div class="empty-sheet" aria-hidden="true"><span class="sheet-corner"></span><span class="sheet-small">РАБОЧИЙ ЛИСТ</span><span class="sheet-formula">a² + b² = c²</span><span class="sheet-line"></span><span class="sheet-line short"></span><span class="sheet-grid"></span><span class="sheet-tick">✓</span></div><h4>От задания — к готовому листу</h4><p>Откройте пример слева, чтобы попробовать редактор и сборку PDF. Или добавьте фото своих задач.</p><span class="empty-note">Проверка содержания всегда остаётся за учителем.</span></div>
-<div id="editorContent" hidden>
-<div class="editor-topline"><div class="variant-tabs" role="group" aria-label="Вариант рабочего листа"><button id="variant1Tab" type="button" aria-pressed="true">Вариант 1</button><button id="variant2Tab" type="button" aria-pressed="false" hidden>Вариант 2</button></div><span class="source-badge" id="sourceBadge">Черновик</span></div>
-<div class="editor-title"><label for="latexEditorInput">Задания и ответы · LaTeX</label><button type="button" class="text-button" id="copyLatexBtn">Копировать</button></div>
-<p class="editor-help" id="editorHelp">Это содержимое рабочего листа. Шаблон A4 добавится при сборке PDF.</p>
-<textarea id="latexEditorInput" class="latex-textarea" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="editorHelp reviewHint" placeholder="Здесь появятся задания в LaTeX"></textarea>
-<div class="editor-bottomline"><span id="editorStats">0 символов</span><span id="draftState">Черновик ещё не собран</span></div>
-<label class="review-check"><input id="reviewCheckbox" type="checkbox"><span>Я проверил(а) условия, формулы и ответы</span></label>
-<div class="compile-row"><button id="compilePdfBtn" type="button" class="button primary" disabled>Собрать PDF <span aria-hidden="true">↗</span></button><p class="field-help" id="reviewHint">Отметьте проверку, чтобы собрать этот вариант.</p></div>
-<div id="compileResults" class="compile-results" hidden><div class="result-heading"><span class="result-check" aria-hidden="true">✓</span><div><h4>Рабочий лист готов</h4><p id="resultDescription">Откройте PDF и проверьте оформление перед печатью.</p></div></div><div class="result-links"><a id="worksheetLink" class="button dark small" target="_blank" rel="noopener">Открыть рабочий лист ↗</a><a id="keysLink" class="button subtle small" target="_blank" rel="noopener" hidden>Ответы ↗</a></div><p id="compileWarnings" class="result-warning" hidden></p><details class="pdf-details"><summary>Посмотреть PDF здесь</summary><iframe id="pdfPreview" title="Предпросмотр собранного рабочего листа" loading="lazy"></iframe></details></div>
-<div class="similar-section"><h4>Ещё один вариант</h4><p>ИИ предложит похожие задачи. Вы проверите их в редакторе перед сборкой.</p><div class="similar-actions"><label for="variantDifficulty" class="visually-hidden">Сложность второго варианта</label><select id="variantDifficulty"><option value="same">Такая же сложность</option><option value="easier">Проще</option><option value="harder">Сложнее</option></select><button id="genSimilarBtn" class="button subtle small" type="button" disabled>Подготовить вариант 2</button></div></div>
-</div>
-<div class="editor-footer"><span><span class="mini-dot" id="pdfStatusDot"></span><span id="pdfCapability">Проверяем сборку PDF</span></span><button id="refreshStatusBtn" class="text-button" type="button">Обновить статус</button></div>
-</div>
-</div>
-</section>
-<section class="history-section page-width" id="history" aria-labelledby="history-title"><div class="section-heading"><div><p class="eyebrow purple">ПРОДОЛЖИТЬ РАБОТУ</p><h2 id="history-title">Мои рабочие листы</h2></div><button id="refreshHistoryBtn" class="text-button" type="button">Обновить историю ↻</button></div><div id="historyContainer" class="history-container" aria-live="polite"><p class="history-empty">Загружаем сохранённые листы…</p></div><p class="history-caption">Локальная история этого экземпляра сервиса.</p></section>
-</main>
-<footer class="site-footer"><div class="page-width footer-grid"><div><a class="brand" href="/">Лист<span class="brand-ok">ОК</span></a><p>Меньше ручного набора формул.<br>Больше времени на урок.</p></div><div class="footer-team"><strong>Команда «Код урока»</strong><p>Алексинская Таисия · Мазка Дмитрий<br>Почкина Анастасия · Скоков Максим</p><p>Наставник — Семченков Николай Андреевич<br>11С · ГБОУ «Школа 2200», Москва</p></div><div class="footer-links"><a href="https://github.com/pavelneumoin/worksheet-creator" target="_blank" rel="noopener">Код и инструкция ↗</a><span>Локальный прототип</span><p>Адаптация для MAX находится в разработке.</p></div></div></footer>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#8742ee" />
+    <title>ЛистОК — готовимся к уроку</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
+    <link rel="stylesheet" href="/style.css" />
+    <script defer src="/vendor/katex/katex.min.js"></script>
+    <script defer src="/jobs.js"></script>
+    <script defer src="/script.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/" aria-label="ЛистОК — главная"
+          ><span class="brand-icon" aria-hidden="true">✓</span>Лист<span
+            >ОК</span
+          ></a
+        >
+        <nav aria-label="Основная навигация">
+          <button class="nav-button active" id="createNav">Создать лист</button
+          ><button class="nav-button" id="savedNav">
+            <span class="nav-label">Мои материалы</span>
+            <span id="savedCount">0</span></button
+          ><button class="nav-button" id="libraryNav">Библиотека</button>
+        </nav>
+        <span class="edition" id="accountName">ЛатехТим</span>
+      </div>
+    </header>
+    <main class="page">
+      <div
+        id="notice"
+        class="notice"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
+      <details id="jobsPanel" class="jobs-panel" hidden>
+        <summary>Задачи <span id="jobsSummary" role="status"></span></summary>
+        <p class="quiet">
+          Можно закрыть приложение. Результат сохраним в ваших материалах.
+        </p>
+        <p id="jobsConnection" class="quiet" role="status" hidden></p>
+        <div id="submissionRetry" class="job-retry" hidden>
+          <p>
+            Связь прервалась. Проверяем, принял ли сервер запрос. Повторная
+            отправка этого запроса не создаст вторую задачу.
+          </p>
+          <button id="retrySubmission" class="button secondary">
+            Повторить отправку
+          </button>
+        </div>
+        <div id="jobsList"></div>
+      </details>
+      <section id="loginPanel" class="panel login-panel" hidden>
+        <h1>Ваши листы всегда под рукой</h1>
+        <p>
+          Откройте ЛистОК через MAX. Материалы будут доступны в вашем профиле на
+          разных устройствах.
+        </p>
+        <a id="maxLoginLink" class="button primary" hidden>Открыть в MAX</a>
+        <button id="localLoginBtn" class="button secondary" hidden>
+          Продолжить локально
+        </button>
+        <p id="loginHint" class="quiet">
+          Подключение бота готовит капитан команды.
+        </p>
+      </section>
+      <section id="workspace">
+        <div class="intro">
+          <div>
+            <p class="eyebrow">ВАШ ПОМОЩНИК В ПОДГОТОВКЕ К УРОКУ</p>
+            <h1>
+              <span class="desktop-title"
+                >Хороший урок начинается<br />с одного листа.</span
+              ><span class="mobile-title">Рабочий лист из фото</span>
+            </h1>
+            <p class="lead">
+              Добавьте задания. Проверьте содержание. Получите аккуратный лист и
+              ответы для себя.
+            </p>
+          </div>
+          <div class="intro-note">
+            <span class="note-symbol" aria-hidden="true">↗</span
+            ><strong>Меньше оформления.<br />Больше времени детям.</strong
+            ><span>Математика и физика · A4</span>
+          </div>
+        </div>
+        <ol class="steps" aria-label="Этапы создания листа">
+          <li class="current" data-step="1"><span>1</span>Материал</li>
+          <li data-step="2"><span>2</span>Задания</li>
+          <li data-step="3"><span>3</span>Оформление</li>
+          <li data-step="4"><span>4</span>Готовый лист</li>
+        </ol>
+        <div class="work-layout">
+          <div>
+            <section
+              id="step1"
+              class="panel step-panel"
+              aria-labelledby="inputTitle"
+            >
+              <div class="panel-heading">
+                <span class="section-number">01</span>
+                <div>
+                  <h2 id="inputTitle">С чего начнём?</h2>
+                  <p>
+                    Подойдут фотографии учебника, карточек или ваших заданий.
+                  </p>
+                </div>
+              </div>
+              <fieldset>
+                <legend>Предмет</legend>
+                <div class="segmented">
+                  <label
+                    ><input
+                      type="radio"
+                      name="subject"
+                      value="math"
+                      checked
+                    /><span>𝑥² &nbsp; Математика</span></label
+                  ><label
+                    ><input type="radio" name="subject" value="physics" /><span
+                      >Ω &nbsp; Физика</span
+                    ></label
+                  >
+                </div>
+              </fieldset>
+              <label class="upload-zone" id="dropZone" for="fileInput"
+                ><span class="upload-icon" aria-hidden="true">＋</span
+                ><strong>Добавьте фотографии заданий</strong
+                ><span>Выберите файлы или перетащите их сюда</span
+                ><small>PNG или JPEG · до 10 фото · всего до 20 МБ</small
+                ><input
+                  id="fileInput"
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  multiple
+              /></label>
+              <div id="fileList" class="file-list" aria-live="polite"></div>
+              <details class="text-input">
+                <summary>Или вставьте текст заданий</summary>
+                <label for="sourceText" class="sr-only"
+                  >Текст исходных заданий</label
+                ><textarea
+                  id="sourceText"
+                  rows="5"
+                  maxlength="16000"
+                  placeholder="Например: решите уравнения 2x + 5 = 17 и 3x − 4 = 8."
+                ></textarea>
+              </details>
+              <div class="actions">
+                <button class="button primary" id="recognizeBtn">
+                  Распознать задания →</button
+                ><span class="quiet" id="aiCaption"
+                  >Проверяем подключение…</span
+                >
+              </div>
+              <div class="demo-strip">
+                <div>
+                  <strong>Сначала попробовать?</strong>
+                  <p>
+                    Откройте готовый пример — фотографии и подключение ИИ не
+                    нужны.
+                  </p>
+                </div>
+                <button class="button secondary" id="demoBtn">
+                  Открыть пример
+                </button>
+              </div>
+            </section>
+            <section
+              id="step2"
+              class="panel step-panel"
+              aria-labelledby="tasksTitle"
+              hidden
+            >
+              <div class="panel-heading">
+                <span class="section-number">02</span>
+                <div>
+                  <h2 id="tasksTitle">Проверьте задания</h2>
+                  <p>
+                    Проверьте условия и ответы. Чтобы исправить задание, нажмите
+                    «Изменить».
+                  </p>
+                </div>
+              </div>
+              <label class="field-label" for="titleInput"
+                >Тема рабочего листа</label
+              ><input id="titleInput" maxlength="160" />
+              <p id="sourceLabel" class="source-label"></p>
+              <div id="taskList" class="task-list"></div>
+              <button class="button secondary" id="addTaskBtn">
+                ＋ Добавить своё задание
+              </button>
+              <details class="help-details">
+                <summary>Как исправлять формулы</summary>
+                <p>
+                  Текст и числа можно менять прямо в поле. Формулы между знаками
+                  $ уже оформлены: например, в <code>$x+2=5$</code> можно
+                  заменить числа. В карточке сразу виден результат. Простой
+                  текст вводите без специальных знаков.
+                </p>
+              </details>
+              <div class="actions split">
+                <button class="button ghost" id="backToInput">← Материал</button
+                ><button class="button primary" id="toSettings">
+                  Выбрать оформление →
+                </button>
+              </div>
+              <div class="draft-actions">
+                <button class="button secondary" id="saveDraftBtn">
+                  Сохранить черновик
+                </button>
+                <button class="button ghost" id="saveCopyBtn">
+                  Сохранить копию
+                </button>
+                <span id="saveStatus" class="quiet" role="status"></span>
+              </div>
+            </section>
+            <section
+              id="step3"
+              class="panel step-panel"
+              aria-labelledby="settingsTitle"
+              hidden
+            >
+              <div class="panel-heading">
+                <span class="section-number">03</span>
+                <div>
+                  <h2 id="settingsTitle">Лист под ваш урок</h2>
+                  <p>Оформление применяется сразу ко всем заданиям.</p>
+                </div>
+              </div>
+              <div class="form-grid">
+                <div>
+                  <label class="field-label" for="teacherInput"
+                    >Учитель <span>необязательно</span></label
+                  ><input
+                    id="teacherInput"
+                    maxlength="120"
+                    placeholder="Имя и фамилия"
+                  />
+                </div>
+                <div>
+                  <label class="field-label" for="gradeInput"
+                    >Класс <span>необязательно</span></label
+                  ><input
+                    id="gradeInput"
+                    maxlength="20"
+                    placeholder="Например, 8"
+                  />
+                </div>
+              </div>
+              <fieldset>
+                <legend>Место для решения</legend>
+                <div class="layout-options">
+                  <label
+                    ><input
+                      type="radio"
+                      name="field"
+                      value="grid"
+                      checked
+                    /><span class="layout-icon grid-paper"></span
+                    ><strong>В клетку</strong
+                    ><small>Для вычислений</small></label
+                  ><label
+                    ><input type="radio" name="field" value="blank" /><span
+                      class="layout-icon blank-paper"
+                    ></span
+                    ><strong>Пустое поле</strong
+                    ><small>Для схем и рисунков</small></label
+                  ><label
+                    ><input type="radio" name="field" value="none" /><span
+                      class="layout-icon list-paper"
+                      >—<br />—<br />—</span
+                    ><strong>Список</strong
+                    ><small>Решение в тетради</small></label
+                  >
+                </div>
+              </fieldset>
+              <div class="form-grid">
+                <div>
+                  <label class="field-label" for="columnsSelect">Столбцы</label
+                  ><select id="columnsSelect">
+                    <option value="1">Один столбец</option>
+                    <option value="2">Два столбца</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="field-label" for="countSelect"
+                    >Заданий на странице</label
+                  ><select id="countSelect">
+                    <option>1</option>
+                    <option>2</option>
+                    <option selected>3</option>
+                    <option>4</option>
+                    <option>5</option>
+                    <option>6</option>
+                  </select>
+                </div>
+              </div>
+              <div class="print-summary">
+                <span aria-hidden="true">▤</span>
+                <div>
+                  <strong id="pageSummary">Формат A4</strong>
+                  <p>
+                    Ответы будут в отдельном документе. Если условия не
+                    помещаются, предложим изменить макет.
+                  </p>
+                </div>
+              </div>
+              <label class="review-check"
+                ><input type="checkbox" id="reviewCheckbox" /><span
+                  >Я проверил(а) условия, формулы и ответы.</span
+                ></label
+              >
+              <div class="actions split">
+                <button class="button ghost" id="backToTasks">← Задания</button
+                ><button class="button primary" id="compileBtn">
+                  Собрать PDF →
+                </button>
+              </div>
+            </section>
+            <section
+              id="step4"
+              class="panel step-panel"
+              aria-labelledby="resultTitle"
+              hidden
+            >
+              <div class="panel-heading">
+                <span class="section-number">✓</span>
+                <div>
+                  <h2 id="resultTitle">Можно готовиться к уроку</h2>
+                  <p>Откройте лист и ответы перед печатью.</p>
+                </div>
+              </div>
+              <div class="download-actions">
+                <a
+                  class="button primary"
+                  id="downloadSheet"
+                  target="_blank"
+                  rel="noopener"
+                  >Открыть лист PDF ↗</a
+                ><a
+                  class="button secondary"
+                  id="downloadKeys"
+                  target="_blank"
+                  rel="noopener"
+                  >Ответы для учителя ↗</a
+                >
+              </div>
+              <iframe
+                id="pdfPreview"
+                title="Предпросмотр рабочего листа PDF"
+              ></iframe>
+              <p class="quiet">
+                Если предпросмотр не открылся на телефоне, используйте кнопку
+                «Открыть лист PDF».
+              </p>
+              <div class="variant-panel">
+                <h3>Для другого варианта или уровня</h3>
+                <p>
+                  Исходный лист сохранится. Новый вариант нужно проверить
+                  отдельно.
+                </p>
+                <div class="variant-actions">
+                  <button class="button secondary" data-variant="same">
+                    Другой вариант</button
+                  ><button class="button secondary" data-variant="easier">
+                    Проще</button
+                  ><button class="button secondary" data-variant="harder">
+                    Сложнее
+                  </button>
+                </div>
+              </div>
+              <div class="actions split">
+                <button class="button ghost" id="editAgain">
+                  ← Изменить лист</button
+                ><button class="button primary" id="saveBtn">
+                  Сохранить в мои материалы
+                </button>
+              </div>
+              <details class="help-details">
+                <summary>Исходник для дальнейшей работы</summary>
+                <a id="downloadTex" target="_blank" rel="noopener"
+                  >Скачать полный LaTeX (.tex)</a
+                >
+                <a
+                  id="downloadMarp"
+                  class="marp-download"
+                  target="_blank"
+                  rel="noopener"
+                  hidden
+                  >Скачать Marp: задания, ответы и тема A4 (.zip)</a
+                >
+              </details>
+            </section>
+          </div>
+          <aside class="sidebar">
+            <div class="aside-card">
+              <span class="aside-eyebrow">ПОЛЕЗНО ЗНАТЬ</span>
+              <h3 id="tipTitle">Хорошее фото —<br />точнее результат</h3>
+              <p id="tipText">
+                Снимайте страницу сверху, при хорошем свете. Проверьте, что
+                видны все числа, формулы и края заданий.
+              </p>
+              <div class="aside-rule"></div>
+              <strong>Учитель решает, что попадёт в лист.</strong>
+              <p>Распознанные задания и ответы можно исправить до печати.</p>
+            </div>
+            <div class="status-card">
+              <span id="statusDot" class="status-dot"></span>
+              <div>
+                <strong id="statusTitle">Проверяем возможности</strong>
+                <p id="statusText">Подключаемся к локальному серверу.</p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+      <section id="savedView" hidden>
+        <div class="saved-heading">
+          <div>
+            <p class="eyebrow">ПРОДОЛЖИТЬ РАБОТУ</p>
+            <h1>Мои материалы</h1>
+            <p class="lead">
+              Ваши задания, черновики и готовые листы. Откройте любой, чтобы
+              продолжить.
+            </p>
+          </div>
+          <button class="button primary" id="newSheetBtn">
+            ＋ Создать лист
+          </button>
+        </div>
+        <div class="materials-toolbar">
+          <label for="materialSearch" class="sr-only">Найти материал</label>
+          <input
+            id="materialSearch"
+            type="search"
+            placeholder="Найти по теме или заданию"
+          />
+          <label for="materialSort" class="sr-only">Порядок материалов</label>
+          <select id="materialSort">
+            <option value="updated">Сначала новые</option>
+            <option value="title">По названию</option>
+          </select>
+        </div>
+        <button id="importLocalBtn" class="button secondary" hidden>
+          Перенести старые листы из этого браузера
+        </button>
+        <div id="savedList" class="saved-list" aria-live="polite"></div>
+        <button id="logoutBtn" class="button ghost" hidden>
+          Выйти из профиля
+        </button>
+      </section>
+      <section id="libraryView" hidden>
+        <div id="libraryBrowse">
+          <div class="saved-heading library-heading">
+            <div>
+              <p class="eyebrow">УЧИТЕЛЯ ДЕЛЯТСЯ ОПЫТОМ</p>
+              <h1>Библиотека материалов</h1>
+              <p class="lead">
+                Найдите основу для своего урока. Сохраните к себе, измените под
+                класс и распечатайте.
+              </p>
+            </div>
+            <button id="shareFromSaved" class="button secondary">
+              Поделиться листом
+            </button>
+          </div>
+          <form id="librarySearchForm" class="library-toolbar" role="search">
+            <label for="librarySearch" class="sr-only"
+              >Найти в библиотеке</label
+            >
+            <div class="library-search-row">
+              <input
+                id="librarySearch"
+                type="search"
+                maxlength="160"
+                placeholder="Тема, задание или автор"
+              />
+              <button class="button primary" type="submit">Найти</button>
+            </div>
+            <div class="library-filters">
+              <label
+                >Предмет<select id="librarySubject">
+                  <option value="">Все предметы</option>
+                  <option value="math">Математика</option>
+                  <option value="physics">Физика</option>
+                </select></label
+              >
+              <label
+                >Показывать<select id="librarySort">
+                  <option value="rating">Сначала с высокой оценкой</option>
+                  <option value="new">Сначала новые</option>
+                  <option value="copies">Чаще берут за основу</option>
+                  <option value="mine">Мои публикации</option>
+                </select></label
+              >
+            </div>
+          </form>
+          <p id="libraryCount" class="quiet" role="status"></p>
+          <div id="libraryList" class="saved-list library-list"></div>
+          <button id="libraryMore" class="button secondary library-more" hidden>
+            Показать ещё
+          </button>
+        </div>
+        <div id="libraryDetail" hidden>
+          <button id="libraryBack" class="button ghost back-link">
+            ← К библиотеке
+          </button>
+          <article class="panel library-detail-panel">
+            <p id="detailSubject" class="eyebrow"></p>
+            <h1 id="detailTitle"></h1>
+            <p id="detailAuthor" class="quiet"></p>
+            <p id="detailDescription" class="library-description"></p>
+            <p id="detailOrigin" class="quiet" hidden></p>
+            <div class="detail-actions">
+              <button id="copyPublication" class="button primary">
+                Взять за основу
+              </button>
+              <span class="quiet">Сохраним копию в ваши материалы</span>
+            </div>
+            <div class="rating-panel">
+              <p id="detailRating" class="rating-summary"></p>
+              <p id="ratingHint" class="quiet"></p>
+              <div
+                id="ratingStars"
+                class="rating-stars"
+                role="group"
+                aria-label="Ваша оценка материала"
+              ></div>
+            </div>
+            <h2 class="preview-heading">Задания и ответы</h2>
+            <p class="quiet">
+              Перед уроком сверьте условия и ответы. Оценки отражают мнение
+              коллег.
+            </p>
+            <div id="detailTasks" class="library-tasks"></div>
+            <button id="withdrawPublication" class="button ghost" hidden>
+              Снять с публикации
+            </button>
+            <div
+              id="withdrawConfirm"
+              class="withdraw-confirm"
+              role="group"
+              aria-label="Снять лист с публикации"
+              hidden
+            >
+              <p>
+                Лист исчезнет из библиотеки вместе с оценками. Ваш личный
+                материал и уже сохранённые коллегами копии останутся.
+              </p>
+              <div class="actions">
+                <button id="confirmWithdraw" class="button secondary">
+                  Да, снять публикацию
+                </button>
+                <button id="cancelWithdraw" class="button ghost">
+                  Оставить в библиотеке
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section id="publishView" hidden>
+        <button id="cancelPublish" class="button ghost back-link">
+          ← К моим материалам
+        </button>
+        <form id="publishForm" class="panel publish-panel">
+          <p class="eyebrow">ПОДЕЛИТЬСЯ С КОЛЛЕГАМИ</p>
+          <h1>Опубликовать лист</h1>
+          <p class="lead">
+            В библиотеке появится отдельная копия заданий и ответов. Личный
+            черновик можно будет менять дальше.
+          </p>
+          <h2 id="publishTitle"></h2>
+          <div class="form-grid">
+            <label
+              >Имя автора в библиотеке<input
+                id="publishAuthor"
+                maxlength="80"
+                required
+                placeholder="Например, Николай С."
+                autocomplete="nickname"
+            /></label>
+            <label
+              >Описание для коллег<textarea
+                id="publishDescription"
+                maxlength="600"
+                rows="3"
+                placeholder="Для какого урока и класса подойдёт лист?"
+              ></textarea>
+            </label>
+          </div>
+          <details class="publication-preview">
+            <summary>Проверить задания и ответы</summary>
+            <div id="publishTasks" class="library-tasks"></div>
+          </details>
+          <label class="review-check publication-consent"
+            ><input id="publishReviewed" type="checkbox" required /><span
+              >Я проверил(а) условия и ответы и могу поделиться этим материалом.
+              Другие пользователи смогут сохранить и изменить копию.</span
+            ></label
+          >
+          <p class="quiet">
+            Будут видны выбранное имя автора, тема, класс, задания, ответы и
+            примечания. Исходные фотографии и имя учителя из печатного заголовка
+            не публикуются. Не включайте данные учеников.
+          </p>
+          <button id="publishSubmit" type="submit" class="button primary">
+            Опубликовать в библиотеке
+          </button>
+        </form>
+      </section>
+    </main>
+    <footer class="footer">
+      <span>ЛистОК · команда «ЛатехТим»</span
+      ><span>Сделано для учителей математики и физики</span>
+    </footer>
+    <div
+      id="busyOverlay"
+      class="busy-overlay"
+      hidden
+      role="status"
+      aria-live="polite"
+    >
+      <div class="busy-card">
+        <span class="spinner"></span>
+        <h2 id="busyTitle">Готовим лист</h2>
+        <p>Сохраняем данные. Это займёт несколько секунд.</p>
+      </div>
+    </div>
+  </body>
 </html>

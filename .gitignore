@@ -21,7 +21,9 @@ __pycache__/
 
 # SQLite
 *.db
+*.db-*
 *.sqlite3
+*.sqlite3-*
 worksheets.db
 
 # Flask additions
@@ -31,6 +33,8 @@ instance/
 # Local compilation
 app/backend/static/generated/
 app/backend/uploads/
+app/backend/jobs/
+data/
 bot/tmp_*.jpg
 
 # OS generated files
@@ -48,3 +52,7 @@ Thumbs.db
 *.fls
 *.log
 *.synctex.gz
+output/
+tmp/
+node_modules/
+*.tgz

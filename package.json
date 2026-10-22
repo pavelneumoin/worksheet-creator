@@ -1,0 +1,8 @@
+{
+  "name": "listok-export-checks",
+  "private": true,
+  "description": "Pinned tooling for verifying exported Marp worksheets",
+  "devDependencies": { "@marp-team/marp-core": "4.4.0" },
+  "overrides": { "katex": "0.18.2", "@xmldom/xmldom": "0.9.12" },
+  "scripts": { "check:marp": "node scripts/check_marp.cjs" }
+}

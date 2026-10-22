@@ -1,0 +1,62 @@
+name: Check ListOK build
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Python and TeX image
+        run: docker build -t listok:night3 .
+      - name: Offline regression tests
+        run: docker run --rm --network none listok:night3 python -m unittest discover -s tests -v
+      - name: Real PDFs and durable queue without AI credentials
+        run: |
+          docker run --rm --network none listok:night3 python scripts/smoke_pdf.py
+          docker run --rm --network none listok:night3 python scripts/smoke_queue.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Parse exported Marp with the real renderer
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          docker run --name marp-samples --network none listok:night3 python scripts/prepare_marp_samples.py
+          docker cp marp-samples:/app/output ./output
+          docker rm marp-samples
+          LISTOK_SKIP_MARP_SAMPLES=1 npm run check:marp
+      - name: Start all services with test credentials and persistent volumes
+        run: |
+          cp .env.example .env
+          printf '\nMAX_BOT_TOKEN=ci-only-token\nMAX_APP_URL=https://listok.test\n' >> .env
+          mkdir -p .local-certs
+          docker compose up -d --wait --wait-timeout 120
+          curl --fail http://127.0.0.1:3005/api/status
+          docker compose exec -T listok python scripts/smoke_deployment.py
+          docker compose restart listok
+          docker compose up -d --wait --wait-timeout 120
+          docker compose exec -T listok python scripts/smoke_deployment.py
+      - name: Container diagnostics
+        if: always()
+        run: |
+          docker compose ps
+          docker compose logs --tail 80
+      - name: Export the verified Docker image
+        if: github.event_name != 'pull_request'
+        run: |
+          docker save listok:night3 | gzip > listok-image.tar.gz
+          sha256sum listok-image.tar.gz > listok-image.sha256
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: listok-docker-image
+          path: |
+            listok-image.tar.gz
+            listok-image.sha256
+          compression-level: 0
+          retention-days: 14
+      - name: Stop the CI deployment
+        if: always()
+        run: docker compose down --volumes --remove-orphans

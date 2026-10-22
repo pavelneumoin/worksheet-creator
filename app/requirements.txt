@@ -1,6 +1,2 @@
-flask
-flask-cors
-requests
-gigachat
-gunicorn
-werkzeug
+# Install from the repository root; Dockerfile is now in the root.
+-r ../requirements.txt

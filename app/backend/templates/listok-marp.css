@@ -1,0 +1,33 @@
+/* @theme listok */
+section {
+  width: 210mm;
+  height: 297mm;
+  padding: 15mm 16mm;
+  background: white;
+  color: #25212c;
+  font-family: "Segoe UI", "DejaVu Sans", Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  justify-content: flex-start;
+}
+section::after { font-size: 9pt; color: #766c8b; right: 16mm; bottom: 8mm; }
+h1 { font-size: 19pt; line-height: 1.25; margin: 0 0 4mm; color: #312740; }
+h2 { font-size: 13pt; margin: 0 0 4mm; }
+p { margin: 0 0 3mm; }
+.meta { font-size: 9pt; color: #766c8b; margin-bottom: 5mm; }
+.student { font-size: 10pt; padding: 3mm 0; margin-bottom: 5mm; border-bottom: 0.3mm solid #ddd; }
+.task-grid { display: grid; grid-template-columns: 1fr; gap: 5mm; align-items: start; }
+section.columns-2 .task-grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); column-gap: 7mm; }
+.task { min-width: 0; overflow-wrap: anywhere; }
+.task p { margin: 0 0 3mm; }
+.answer-space { height: var(--field-height); margin-top: 3mm; }
+section.field-grid .answer-space {
+  background-image: linear-gradient(#d7d8df 0.2mm, transparent 0.2mm), linear-gradient(90deg, #d7d8df 0.2mm, transparent 0.2mm);
+  background-size: 5mm 5mm;
+  border-right: 0.2mm solid #d7d8df;
+  border-bottom: 0.2mm solid #d7d8df;
+}
+section.field-blank .answer-space { border-bottom: 0.2mm solid #d7d8df; }
+section.field-none .answer-space { display: none; }
+.katex { font-size: 1.1em; }
+.attribution { font-size: 8pt; color: #766c8b; margin-top: 4mm; }
