@@ -268,5 +268,82 @@ class ReviewTests(unittest.TestCase):
         self.assertTrue(all(answer['score'] is None for answer in r['answers']))
         self.assertFalse(job_store.complete(claim, {'answers': [], 'photos': ['page_1.jpg']}))
 
+    def test_each_photo_is_recognized_separately_and_later_page_is_merged(self):
+        from utils import grading_ai
+        tasks = [{'id': 'a'}, {'id': 'b'}, {'id': 'missing'}]
+        page1 = {'answers': review_store.validate_recognition({'answers': [{'task_id': 'a', 'text': '1/2', 'state': 'readable'}]}, tasks)}
+        page2 = {'answers': review_store.validate_recognition({'answers': [{'task_id': 'b', 'text': '6', 'state': 'readable'}]}, tasks)}
+        with patch.object(grading_ai, '_recognize_single', side_effect=[page1, page2]) as transport:
+            result = grading_ai.recognize(tasks, ['one.jpg', 'two.jpg'])
+        self.assertEqual([call.args[1] for call in transport.call_args_list], [['one.jpg'], ['two.jpg']])
+        self.assertEqual([a['text'] for a in result['answers']], ['1/2', '6', ''])
+        self.assertEqual(result['answers'][2]['state'], 'unclear')
+
+    def test_conflicting_answers_on_different_photos_are_not_silently_overwritten(self):
+        from utils import grading_ai
+        tasks = [{'id': 'a'}]
+        pages = [{'answers': [{'task_id': 'a', 'text': text, 'state': 'readable'}]} for text in ['5', '6']]
+        result = grading_ai.merge_pages(tasks, pages)
+        self.assertEqual(result['answers'], [{'task_id': 'a', 'text': '', 'state': 'unclear'}])
+        self.assertEqual(result['conflict_task_ids'], ['a'])
+        result = grading_ai.merge_pages(tasks, [pages[0], pages[0]])
+        self.assertEqual(result['answers'][0]['text'], '5'); self.assertEqual(result['conflict_task_ids'], [])
+
+    def test_later_photo_code_and_answer_conflict_are_visible_to_teacher(self):
+        _, _, a, _ = self.assignment()
+        payload = {'assignment_id': a['id'], 'student_id': a['students'][0]['id']}
+        job, _ = job_store.submit('max:11', 'grade', uuid.uuid4().hex, payload, [self.photo(), self.photo('blue')], require_worker=False)
+        claim = job_store.claim_next('ai')
+        directory = job_store.job_directory(job['id']) / 'pages'; directory.mkdir()
+        for index in (1, 2): Image.new('RGB', (150, 150), 'white').save(directory / f'page_{index}.jpg')
+        output = {'answers': [], 'photos': ['page_1.jpg', 'page_2.jpg'], 'page_codes': [
+            {'edition_code': a['code'], 'student_code': a['students'][0]['code']},
+            {'edition_code': 'ANOTHER', 'student_code': 'У-0000000000'}], 'conflict_task_ids': [a['worksheet']['tasks'][0]['id']]}
+        self.assertTrue(job_store.complete(claim, output))
+        r = review_store.get_review('max:11', job['id'])
+        self.assertTrue(any('фото 2' in w and 'ANOTHER' in w for w in r['warnings']))
+        self.assertTrue(any('расходятся' in w for w in r['warnings']))
+        self.assertTrue(all(a['score'] is None for a in r['answers']))
+
+    def test_missing_normalized_photo_cannot_be_committed_as_complete(self):
+        _, _, a, _ = self.assignment()
+        payload = {'assignment_id': a['id'], 'student_id': a['students'][0]['id']}
+        job, _ = job_store.submit('max:11', 'grade', uuid.uuid4().hex, payload, [self.photo(), self.photo('blue')], require_worker=False)
+        claim = job_store.claim_next('ai')
+        with self.assertRaises(AIServiceError): job_store.complete(claim, {'answers': [], 'photos': ['page_1.jpg']})
+        self.assertEqual(review_store.get_review('max:11', job['id'])['status'], 'processing')
+
+    def test_reordered_duplicate_pages_cannot_be_assigned_to_another_pupil(self):
+        _, _, a, _ = self.assignment()
+        payload = {'assignment_id': a['id'], 'student_id': a['students'][0]['id']}
+        files = [self.photo(), self.photo('blue')]
+        job_store.submit('max:11', 'grade', uuid.uuid4().hex, payload, files, require_worker=False)
+        claim = job_store.claim_next('ai'); job_store.fail(claim['id'], claim['claim'], 'test', 'test'); job_store.maintain()
+        payload['student_id'] = a['students'][1]['id']
+        with self.assertRaises(AIServiceError) as raised:
+            job_store.submit('max:11', 'grade', uuid.uuid4().hex, payload, list(reversed(files)), require_worker=False)
+        self.assertEqual(raised.exception.code, 'duplicate_submission')
+
+    def test_duplicate_photo_inside_one_upload_is_rejected_before_ai(self):
+        _, _, a, _ = self.assignment()
+        payload = {'assignment_id': a['id'], 'student_id': a['students'][0]['id']}
+        photo = self.photo()
+        with self.assertRaises(AIServiceError) as raised:
+            job_store.submit('max:11', 'grade', uuid.uuid4().hex, payload, [photo, photo], require_worker=False)
+        self.assertEqual(raised.exception.code, 'duplicate_photo')
+        with workspace_store.connection() as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM reviews').fetchone()[0], 0)
+
+    def test_ai_response_cannot_set_worker_photo_or_conflict_control_fields(self):
+        from utils import grading_ai
+        raw = {'answers': [{'task_id': 'a', 'text': '6', 'state': 'readable'}],
+               'photos': ['outside.jpg'], 'page_codes': [], 'conflict_task_ids': ['a'], 'error': 'override'}
+        client = Mock()
+        client.chat.return_value = SimpleNamespace(choices=[SimpleNamespace(finish_reason='stop', message=SimpleNamespace(content=json.dumps(raw)))])
+        factory = Mock(); factory.__enter__ = Mock(return_value=client); factory.__exit__ = Mock(return_value=False)
+        with patch.object(grading_ai, '_create_client', return_value=factory):
+            result = grading_ai.recognize([{'id': 'a'}], [])
+        self.assertEqual(set(result), {'answers', 'edition_code', 'student_code'})
+
 
 if __name__ == '__main__': unittest.main()

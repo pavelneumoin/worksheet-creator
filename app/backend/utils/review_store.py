@@ -93,16 +93,26 @@ def complete(conn, owner, review_id, output, paths):
     assignment = context(conn, owner, row['assignment_id'], row['student_id'])
     answers = validate_recognition(output, assignment['worksheet']['tasks'])
     warnings = []
-    for name, expected, title in [('edition_code', assignment['code'], 'версии листа'),
-                                  ('student_code', class_store.student_code(row['student_id']), 'ученика')]:
-        seen = output.get(name, '')
-        if not isinstance(seen, str) or len(seen) > 80:
-            fail('Неверный ответ распознавания.', 'invalid_recognition', 502)
-        normalized_code = seen.upper().replace(' ', '')
-        if name == 'student_code':
-            normalized_code = re.sub(r'^[YУ]-', 'У-', normalized_code)
-        if seen and normalized_code != expected.upper():
-            warnings.append(f'На фото прочитан другой код {title}: {seen}. Сверьте оригинал перед подтверждением.')
+    page_codes = output.get('page_codes', [output])
+    if not isinstance(page_codes, list) or len(page_codes) != len(paths) or any(not isinstance(p, dict) for p in page_codes):
+        fail('Не удалось сопоставить страницы ответов.', 'invalid_recognition', 502)
+    for page_index, codes in enumerate(page_codes, 1):
+        for name, expected, title in [('edition_code', assignment['code'], 'версии листа'),
+                                      ('student_code', class_store.student_code(row['student_id']), 'ученика')]:
+            seen = codes.get(name, '')
+            if not isinstance(seen, str) or len(seen) > 80 or '\x00' in seen:
+                fail('Неверный ответ распознавания.', 'invalid_recognition', 502)
+            normalized_code = seen.upper().replace(' ', '')
+            if name == 'student_code':
+                normalized_code = re.sub(r'^[YУ]-', 'У-', normalized_code)
+            if seen and normalized_code != expected.upper():
+                warnings.append(f'На фото {page_index} прочитан другой код {title}: {seen}. Сверьте оригинал перед подтверждением.')
+    conflicts = output.get('conflict_task_ids', [])
+    task_numbers = {task['id']: str(i) for i, task in enumerate(assignment['worksheet']['tasks'], 1)}
+    if not isinstance(conflicts, list) or len(conflicts) > len(answers) or any(not isinstance(i, str) or i not in task_numbers for i in conflicts):
+        fail('Не удалось сопоставить ответы на страницах.', 'invalid_recognition', 502)
+    if conflicts:
+        warnings.append('На разных фото расходятся ответы на задания ' + ', '.join(task_numbers[i] for i in dict.fromkeys(conflicts)) + '. Сверьте страницы; вариант ответа не выбран автоматически.')
     if any(a['state'] == 'unclear' for a in answers):
         warnings.append('Есть неразборчивые ответы или отсутствующие номера. Проверьте полноту страниц.')
     for answer, task in zip(answers, assignment['worksheet']['tasks']):

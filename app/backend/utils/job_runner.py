@@ -100,7 +100,8 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
     environment['LISTOK_SKIP_DOTENV'] = '1'
     command = [sys.executable, str(ROOT / 'scripts/run_worker.py'), '--execute', job['id']]
     count = json.loads(job['payload']).get('variant_count', 1)
-    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'grade': 900}[job['kind']]
+    payload = json.loads(job['payload'])
+    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'grade': 30 + 300 * len(payload.get('images', []))}[job['kind']]
     process = None
     succeeded = False
     try:

@@ -46,12 +46,19 @@ def remove_inputs(job_id):
 
 def fingerprint(kind, payload, image_paths=()):
     digest = hashlib.sha256(json.dumps([kind, payload], sort_keys=True, ensure_ascii=False).encode())
+    images = []
     for path in image_paths:
         file_digest = hashlib.sha256()
         with Path(path).open('rb') as stream:
             for chunk in iter(lambda: stream.read(1024 * 1024), b''):
                 file_digest.update(chunk)
-        digest.update(file_digest.digest())
+        images.append(file_digest.digest())
+    if kind == 'review_photo':
+        if len(set(images)) != len(images):
+            raise AIServiceError('Одно и то же фото добавлено несколько раз. Уберите повтор.', 'duplicate_photo', 400)
+        images.sort()
+    for image_digest in images:
+        digest.update(image_digest)
     return digest.hexdigest()
 
 
@@ -217,7 +224,7 @@ def complete(job, output, active_connection=None):
             from utils import review_store
             directory = job_directory(job_id) / 'pages'
             names = output.get('photos', [])
-            if not isinstance(names, list) or not 1 <= len(names) <= 5 or any(not isinstance(n, str) or not re.fullmatch(r'page_[1-5]\.jpg', n) for n in names) or len(set(names)) != len(names):
+            if not isinstance(names, list) or not 1 <= len(names) <= 5 or len(names) != len(payload.get('images', [])) or any(not isinstance(n, str) or not re.fullmatch(r'page_[1-5]\.jpg', n) for n in names) or len(set(names)) != len(names):
                 raise AIServiceError('Не найдены обработанные фотографии.', 'invalid_recognition', 502)
             result = review_store.complete(conn, owner, job_id, output, [directory / n for n in names])
         else:
