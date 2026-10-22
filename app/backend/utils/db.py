@@ -55,6 +55,33 @@ def init_db():
             created_at TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS editions_material ON editions(owner_id,material_id,created_at);
+        CREATE TABLE IF NOT EXISTS classrooms (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
+            name TEXT NOT NULL, archived INTEGER NOT NULL DEFAULT 0,
+            revision INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS classrooms_owner ON classrooms(owner_id,updated_at);
+        CREATE TABLE IF NOT EXISTS students (
+            id TEXT PRIMARY KEY, class_id TEXT NOT NULL REFERENCES classrooms(id),
+            name TEXT NOT NULL, archived INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS students_class ON students(class_id,archived);
+        CREATE TABLE IF NOT EXISTS assignments (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
+            class_id TEXT NOT NULL REFERENCES classrooms(id),
+            edition_id TEXT NOT NULL REFERENCES editions(id) ON DELETE RESTRICT,
+            class_name TEXT NOT NULL, title TEXT NOT NULL, due_date TEXT NOT NULL,
+            instructions TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active',
+            revision INTEGER NOT NULL DEFAULT 1, request_key TEXT NOT NULL,
+            fingerprint TEXT NOT NULL, created_at TEXT NOT NULL,
+            UNIQUE(owner_id,request_key)
+        );
+        CREATE INDEX IF NOT EXISTS assignments_class ON assignments(owner_id,class_id,created_at);
+        CREATE TABLE IF NOT EXISTS assignment_students (
+            assignment_id TEXT NOT NULL REFERENCES assignments(id),
+            student_id TEXT NOT NULL REFERENCES students(id),
+            name TEXT NOT NULL, PRIMARY KEY(assignment_id,student_id)
+        );
         CREATE TABLE IF NOT EXISTS download_tickets (
             token_hash TEXT PRIMARY KEY,
             session_hash TEXT NOT NULL REFERENCES sessions(token_hash) ON DELETE CASCADE,

@@ -37,9 +37,14 @@ def main():
             print('MAX: заполните MAX_BOT_TOKEN в .env.'); failed = True
         else:
             try:
-                response = requests.get('https://platform-api2.max.ru/me', headers={'Authorization': token}, timeout=20)
+                ca = os.environ.get('MAX_CA_BUNDLE_FILE', '').strip()
+                response = requests.get('https://platform-api2.max.ru/me', headers={'Authorization': token}, timeout=20, verify=ca or True)
                 response.raise_for_status()
-                print('MAX: токен принят API. Открытие мини-приложения ещё нужно проверить в MAX.')
+                data = response.json()
+                expected = os.environ.get('MAX_BOT_USERNAME', '').strip()
+                if not data.get('is_bot') or (expected and data.get('username') != expected):
+                    raise ValueError('Bot identity mismatch')
+                print('MAX: токен и имя бота подтверждены API. Открытие мини-приложения ещё нужно проверить в MAX.')
             except Exception as exc:
                 print('MAX: проверка не пройдена (' + type(exc).__name__ + ').'); failed = True
     if not (args.max or args.gigachat):

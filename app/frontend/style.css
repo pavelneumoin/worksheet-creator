@@ -1823,3 +1823,266 @@ select {
     min-height: 44px;
   }
 }
+
+/* Classes share the teacher cabinet; forms remain readable on narrow phones. */
+#classesView {
+  max-width: 900px;
+  margin-inline: auto;
+}
+#classesView h1 {
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  margin: 8px 0 12px;
+}
+#classesView h2 {
+  font-size: 21px;
+  margin-top: 0;
+}
+#classesView label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
+}
+#classesView label .quiet {
+  font-weight: 400;
+}
+#classesView input,
+#classesView textarea,
+#classesView select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 46px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: white;
+  color: var(--ink);
+}
+#classesView textarea {
+  resize: vertical;
+}
+#classesView .button,
+#classesView summary {
+  min-height: 44px;
+}
+#classesView .actions {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+#classesView summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 11px 0;
+}
+#classesView .panel {
+  margin-bottom: 20px;
+}
+#classesView .quiet {
+  font-size: 14px;
+}
+#classesView .back-link {
+  margin: 0 0 12px;
+  padding-left: 0;
+}
+.class-create {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  margin-top: 24px;
+}
+.class-create label {
+  flex: 1;
+  min-width: 0;
+}
+.class-filter {
+  max-width: 250px;
+  margin: 20px 0;
+}
+.class-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 10px 0 24px;
+}
+.class-heading > div {
+  min-width: 0;
+}
+.class-heading .button {
+  flex-shrink: 0;
+}
+#classesView .class-settings {
+  padding: 8px 20px;
+  background: transparent;
+  box-shadow: none;
+}
+.class-settings form {
+  padding: 8px 0;
+}
+.class-settings .actions {
+  margin-top: 14px;
+}
+.class-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.class-tabs .button:last-child {
+  margin-left: auto;
+}
+.roster-add .button {
+  margin-top: 4px;
+}
+.roster-list {
+  margin-top: 14px;
+}
+.student-row {
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  column-gap: 14px;
+  padding: 10px 0;
+}
+.student-name {
+  flex: 1;
+  overflow-wrap: anywhere;
+  min-width: 100px;
+}
+.student-edit {
+  max-width: 100%;
+}
+.student-edit[open] {
+  flex-basis: 100%;
+}
+.student-edit form {
+  padding: 8px 0 14px;
+}
+.student-edit .actions {
+  margin-top: 12px;
+}
+.roster-archive {
+  border-top: 1px solid var(--border);
+  margin: 14px 0;
+}
+.assignment-status {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  background: var(--light);
+  color: var(--accent);
+}
+.assignment-form fieldset {
+  display: grid;
+  gap: 18px;
+  padding: 0;
+  margin: 24px 0;
+  min-width: 0;
+}
+.assignment-form label > .quiet {
+  display: inline;
+}
+.assignment-preview {
+  padding: 16px;
+  background: var(--paper);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+.assignment-preview p {
+  margin: 6px 0;
+}
+.assignment-preview .katex-display,
+.assignment-task .katex-display {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.assignment-detail .actions {
+  margin: 22px 0 18px;
+}
+.assignment-instructions {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.assignment-members,
+.assignment-tasks {
+  border-top: 1px solid var(--border);
+  padding: 6px 0;
+}
+.assignment-members li {
+  padding: 4px 0;
+  overflow-wrap: anywhere;
+}
+.assignment-task {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.assignment-detail > .button {
+  margin-top: 18px;
+}
+.assignment-meta {
+  font-weight: 600;
+}
+@media (max-width: 700px) {
+  .topbar nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .nav-button {
+    font-size: 13px;
+    min-height: 44px;
+  }
+  #classesView .panel {
+    padding: 20px 16px;
+  }
+  #classesView h1 {
+    font-size: 28px;
+  }
+  #classesView .class-settings {
+    padding: 4px 16px;
+  }
+  .class-create,
+  .class-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .class-filter {
+    max-width: none;
+  }
+  .class-tabs {
+    gap: 5px;
+  }
+  .class-tabs .button {
+    padding-inline: 11px;
+    font-size: 14px;
+  }
+  .class-heading {
+    margin-bottom: 18px;
+  }
+  #classesView .assignment-form > .button,
+  .class-create .button,
+  .roster-add .button {
+    width: 100%;
+  }
+  .assignment-detail .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .assignment-form input,
+  .assignment-form select,
+  #classesView textarea,
+  #classesView input,
+  #classesView select {
+    font-size: 16px;
+  }
+  .student-row .actions .button {
+    flex: 1;
+  }
+}

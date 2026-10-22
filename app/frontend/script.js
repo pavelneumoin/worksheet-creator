@@ -126,11 +126,14 @@ function showView(view, refresh = true) {
     saved: "savedView",
     library: "libraryView",
     publish: "publishView",
+    classes: "classesView",
   }))
     $(id).hidden = view !== name;
   $("createNav").classList.toggle("active", view === "workspace");
   $("savedNav").classList.toggle("active", ["saved", "publish"].includes(view));
   $("libraryNav").classList.toggle("active", view === "library");
+  $("classesNav").classList.toggle("active", view === "classes");
+  if (view === "classes" && refresh) busy("Загружаем классы", refreshClasses);
   if (view === "saved" && refresh)
     busy("Загружаем ваши материалы", refreshMaterials);
   if (view === "library" && refresh) {
@@ -611,6 +614,13 @@ function renderSaved() {
   }
 }
 function appendCabinetTools(card, item) {
+  if (item.edition_count) {
+    const assign = node("button", "Назначить классу", "button secondary");
+    assign.addEventListener("click", () =>
+      busy("Выбираем класс", () => openAssignmentForm(null, item.id)),
+    );
+    card.append(assign);
+  }
   const details = node("details", undefined, "cabinet-tools");
   details.append(
     node(
@@ -742,6 +752,13 @@ function appendCabinetTools(card, item) {
           }),
         );
         links.append(copy);
+        const assign = node("button", "Назначить классу", "button secondary");
+        assign.addEventListener("click", () =>
+          busy("Выбираем класс", () =>
+            openAssignmentForm(null, item.id, edition.id),
+          ),
+        );
+        links.append(assign);
         row.append(links);
         versions.append(row);
       }
@@ -1045,7 +1062,9 @@ async function prepareMax() {
       state.auth = await request("/api/v2/auth/local", { method: "POST" });
   }
   window.WebApp?.BackButton?.onClick(() => {
-    if (state.view === "library" && !$("libraryDetail").hidden) backToLibrary();
+    if (state.view === "classes") backFromClass();
+    else if (state.view === "library" && !$("libraryDetail").hidden)
+      backToLibrary();
     else if (state.view === "publish") showView("saved");
     else if (state.view !== "workspace") showView("workspace");
     else if (state.step > 1) {
@@ -1066,9 +1085,11 @@ function renderAccount() {
   $("savedView").hidden = true;
   $("libraryView").hidden = true;
   $("publishView").hidden = true;
+  $("classesView").hidden = true;
   $("createNav").disabled = !loggedIn;
   $("savedNav").disabled = !loggedIn;
   $("libraryNav").disabled = !loggedIn;
+  $("classesNav").disabled = !loggedIn;
   $("localLoginBtn").hidden = !state.auth?.local_available;
   $("maxLoginLink").hidden = !state.auth?.max_url;
   if (state.auth?.max_url) $("maxLoginLink").href = state.auth.max_url;
@@ -1372,6 +1393,7 @@ $("workspace").hidden = true;
 $("createNav").disabled = true;
 $("savedNav").disabled = true;
 $("libraryNav").disabled = true;
+$("classesNav").disabled = true;
 updateCount();
 refreshStatus();
 busy("Открываем ваш профиль", async () => {

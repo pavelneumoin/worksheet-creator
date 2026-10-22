@@ -125,6 +125,10 @@ def delete_material(owner, material_id, revision):
             missing()
         if type(revision) is not int or revision != row['revision']:
             raise AIServiceError('Лист был изменён. Обновите список перед удалением.', 'revision_conflict', 409)
+        if conn.execute('''SELECT 1 FROM assignments a JOIN editions e ON e.id=a.edition_id
+                           WHERE e.material_id=? AND a.owner_id=? LIMIT 1''', (material_id, owner)).fetchone():
+            raise AIServiceError('Этот лист назначен классу. Перенесите его в архив: версии и ответы нужны для истории работ.',
+                                 'material_assigned', 409)
         ids = [r[0] for r in conn.execute('SELECT id FROM editions WHERE material_id=? AND owner_id=?', (material_id, owner))]
         files = list(conn.execute('SELECT pdf,answers,tex,marp FROM artifacts WHERE material_id=? AND owner_id=?', (material_id, owner)))
         for artifact_id in ids:

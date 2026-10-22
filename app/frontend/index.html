@@ -14,6 +14,7 @@
     <script defer src="/vendor/katex/katex.min.js"></script>
     <script defer src="/jobs.js"></script>
     <script defer src="/script.js"></script>
+    <script defer src="/classes.js"></script>
   </head>
   <body>
     <header class="topbar">
@@ -29,6 +30,7 @@
             <span class="nav-label">Мои материалы</span>
             <span id="savedCount">0</span></button
           ><button class="nav-button" id="libraryNav">Библиотека</button>
+          <button class="nav-button" id="classesNav">Классы</button>
         </nav>
         <span class="edition" id="accountName">ЛатехТим</span>
       </div>
@@ -71,6 +73,93 @@
         <p id="loginHint" class="quiet">
           Подключение бота готовит капитан команды.
         </p>
+      </section>
+      <section id="classesView" hidden aria-label="Классы и назначенные работы">
+        <div id="classesHome">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">КАБИНЕТ УЧИТЕЛЯ</p>
+              <h1>Мои классы</h1>
+              <p class="quiet">
+                Ученики, рабочие листы и сроки — в одном месте.
+              </p>
+            </div>
+          </div>
+          <form id="newClassForm" class="panel class-create">
+            <label for="newClassName"
+              >Название класса<input
+                id="newClassName"
+                maxlength="60"
+                placeholder="Например, 8А · 2026/27"
+                required
+            /></label>
+            <button class="button primary" type="submit">Создать класс</button>
+          </form>
+          <label class="class-filter"
+            >Показывать<select id="classArchiveFilter">
+              <option value="active">Мои классы</option>
+              <option value="archived">Архив классов</option>
+            </select></label
+          >
+          <div id="classesList" class="saved-list"></div>
+        </div>
+        <div id="classDetail" hidden></div>
+        <div id="assignmentView" hidden></div>
+        <div id="assignmentCreate" hidden>
+          <button
+            id="cancelAssignment"
+            class="button ghost back-link"
+            type="button"
+          >
+            ← Назад
+          </button>
+          <form id="assignmentForm" class="panel assignment-form">
+            <p class="eyebrow">ГОТОВЫЙ ЛИСТ ДЛЯ КЛАССА</p>
+            <h1>Назначить работу</h1>
+            <fieldset id="assignmentFields">
+              <label>Класс<select id="assignClass" required></select></label>
+              <p id="assignRosterSummary" class="quiet"></p>
+              <label
+                >Сохранённый лист<select id="assignMaterial" required></select
+              ></label>
+              <label
+                >Версия для печати<select id="assignEdition" required></select
+              ></label>
+              <div id="assignPreview" class="assignment-preview"></div>
+              <label
+                >Название работы<input
+                  id="assignTitle"
+                  maxlength="160"
+                  required
+              /></label>
+              <label
+                >Сдать до <span class="quiet">· необязательно</span
+                ><input id="assignDue" type="date"
+              /></label>
+              <label
+                >Комментарий к работе <span class="quiet">· необязательно</span
+                ><textarea
+                  id="assignInstructions"
+                  rows="3"
+                  maxlength="2000"
+                  placeholder="Например, решить задания 1–4, записать ход решения."
+                ></textarea>
+              </label>
+            </fieldset>
+            <p class="quiet">
+              Сохраним эту версию листа, ответы и текущий список учеников.
+              Назначение появится в вашем кабинете. Сообщения ученикам пока не
+              отправляются.
+            </p>
+            <p id="assignmentRetryHint" class="notice" hidden>
+              Запрос ещё не подтверждён. Повторите его: вторая работа не
+              появится. Поля сохранены до подтверждения.
+            </p>
+            <button id="assignSubmit" class="button primary" type="submit">
+              Назначить работу
+            </button>
+          </form>
+        </div>
       </section>
       <section id="workspace">
         <div class="intro">

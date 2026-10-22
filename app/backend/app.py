@@ -34,6 +34,8 @@ from workspace_api import api as workspace_api
 app.register_blueprint(workspace_api)
 from job_api import api as job_api
 app.register_blueprint(job_api)
+from class_api import api as class_api
+app.register_blueprint(class_api)
 
 
 @app.before_request
