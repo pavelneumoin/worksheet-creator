@@ -180,16 +180,38 @@ async function request(url, options = {}) {
     state.auth?.csrf_token
   )
     headers.set("X-CSRF-Token", state.auth.csrf_token);
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: "same-origin",
-  });
-  let body;
+  // Bound both upload and response reading. A timeout is an unknown outcome:
+  // callers keep the original idempotency key instead of creating another job.
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (options.signal?.aborted) abort();
+  else options.signal?.addEventListener("abort", abort, { once: true });
+  const timeout = setTimeout(
+    abort,
+    options.body instanceof FormData ? 120000 : 30000,
+  );
+  let response, body;
   try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+      credentials: "same-origin",
+    });
     body = await response.json();
-  } catch {
+  } catch (error) {
+    if (error.name === "AbortError" || controller.signal.aborted)
+      throw new Error(
+        "Сервер не ответил вовремя. Проверьте связь и повторите отправку.",
+      );
+    if (error instanceof TypeError)
+      throw new Error(
+        "Нет связи с сервером. Проверьте подключение и повторите.",
+      );
     throw new Error("Сервер не ответил. Проверьте подключение и повторите.");
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener("abort", abort);
   }
   if (!response.ok) {
     if (response.status === 401) {
