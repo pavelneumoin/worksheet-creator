@@ -35,6 +35,9 @@ for saved_class in call('get','/api/v2/classes').json['classes']:
     assert previous_work['student_count']==2
     previous_report=call('get','/api/v2/assignments/'+previous_work['id']+'/report').json['report']
     assert previous_report['summary']['not_submitted']==2 and previous_report['summary']['average'] is None
+    previous_overview=call('get','/api/v2/classes/'+saved_class['id']+'/report').json['report']
+    assert previous_overview['totals']['total']==2 and previous_overview['totals']['works']==1
+    assert 'average' not in previous_overview['totals']
     response=call('get',previous_work['result']['pdf_url']); response.close()
 sheet=demo_worksheet('physics')
 material=call('post','/api/v2/materials',json={'worksheet':sheet,'source':'manual_demo'}).json['material']
@@ -70,4 +73,7 @@ assert report['summary']['total']==2 and report['summary']['not_submitted']==2 a
 assert report['summary']['average'] is None and all(s['score'] is None for s in report['students'])
 csv=call('get','/api/v2/assignments/'+assignment['id']+'/report.csv')
 assert csv.mimetype=='text/csv' and 'Не сдал' in csv.get_data(as_text=True)
+assert 'Задание 1' in csv.get_data(as_text=True)
+overview_csv=call('get',base+'/report.csv?subject=physics')
+assert overview_csv.mimetype=='text/csv' and 'CI fixed worksheet' in overview_csv.get_data(as_text=True)
 print('PASS: signed MAX fixture, CSRF, separate compiler, four downloads, classes, fixed roster, private class report, CSV, retry and restart persistence')

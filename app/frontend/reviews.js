@@ -156,11 +156,21 @@ async function openClassReport(id) {
         data.edition_code +
         (data.scheduled_date
           ? " · " + assignmentDate(data.scheduled_date)
-          : ""),
+          : " · Без даты проведения") +
+        (data.due_date
+          ? " · Сдать до " + assignmentDate(data.due_date)
+          : " · Без срока сдачи"),
       "quiet",
     ),
   );
   heading.append(text);
+  text.append(
+    node(
+      "p",
+      "Отчёт на " + new Date(data.generated_at).toLocaleString("ru-RU"),
+      "quiet report-snapshot",
+    ),
+  );
   target.append(heading);
   const summary = node("div", undefined, "report-summary");
   for (const [label, value] of [
@@ -182,7 +192,7 @@ async function openClassReport(id) {
       "p",
       data.summary.average === null
         ? "Подтверждённых баллов пока нет."
-        : `Средний балл: ${data.summary.average} из ${data.summary.maximum} · Выполнение: ${data.summary.percent}%`,
+        : `Средний балл: ${data.summary.average.toLocaleString("ru-RU")} из ${data.summary.maximum} · Выполнение: ${data.summary.percent.toLocaleString("ru-RU")}%`,
     ),
     node(
       "p",
@@ -213,6 +223,9 @@ async function openClassReport(id) {
   csv.download = "Отчёт по классу.csv";
   controls.append(
     csv,
+    reviewButton("Подготовить PDF", () =>
+      enqueueJob("report_pdf", { assignment_id: id }),
+    ),
     classButton("Печать отчёта", () => {
       document.body.dataset.printReport = "true";
       window.print();
@@ -270,6 +283,34 @@ async function openClassReport(id) {
   target.append(roster);
   renderReviewUpload(target, data);
   classFocus(target);
+}
+function showReportDownload(result) {
+  const panel = node(
+    "section",
+    undefined,
+    "panel report-controls report-export-result",
+  );
+  const download = editionDownload(
+    result.artifact_id,
+    result.edition_code,
+    result,
+    "pdf_url",
+    "Скачать PDF отчёта",
+  );
+  download.download = "Отчёт класса · " + result.edition_code + ".pdf";
+  panel.append(
+    node("h2", "PDF отчёта готов"),
+    node(
+      "p",
+      "Снимок результатов на " +
+        new Date(result.generated_at).toLocaleString("ru-RU") +
+        ". Новые проверки и исправления в этот файл не попадут - для них подготовьте свежий PDF.",
+      "quiet",
+    ),
+    download,
+  );
+  $("classReport").querySelector(".class-heading").after(panel);
+  panel.scrollIntoView({ block: "start" });
 }
 function renderReviewUpload(target, report) {
   const available = report.students.filter((s) => s.status === "not_submitted");

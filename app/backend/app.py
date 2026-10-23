@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import os
 from pathlib import Path
 import tempfile
@@ -335,6 +336,14 @@ def serve_generated(filename):
         return api_error("Файл не найден.", "file_not_found", 404)
     if not workspace_store.owns_file(g.identity['owner_id'], filename):
         return api_error("Файл не найден.", "file_not_found", 404)
+    with workspace_store.connection() as conn:
+        report_job = conn.execute("""SELECT j.result FROM artifacts a JOIN jobs j ON j.id=a.id
+                                    WHERE a.owner_id=? AND a.pdf=? AND j.kind='report_pdf' AND j.status='succeeded'""",
+                                  (g.identity['owner_id'], filename)).fetchone()
+    if report_job:
+        code = json.loads(report_job['result'])['edition_code']
+        return send_from_directory(str(Path(latex_engine.OUTPUT_DIR).resolve()), filename,
+                                   as_attachment=True, download_name=f'Отчёт класса {code}.pdf')
     return send_from_directory(str(Path(latex_engine.OUTPUT_DIR).resolve()), filename)
 
 

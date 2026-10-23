@@ -1,6 +1,5 @@
 """Teacher-reviewed final answers, immutable assigned keys and class aggregates."""
-import csv
-import io
+from contextlib import nullcontext
 import json
 from pathlib import Path
 import re
@@ -287,8 +286,10 @@ def summarize(students, maximum):
                 percent=round(100 * sum(scores) / (len(scores) * maximum), 1) if scores else None, maximum=maximum)
 
 
-def report(owner, assignment_id):
-    with connection() as conn:
+def report(owner, assignment_id, active_connection=None):
+    with (nullcontext(active_connection) if active_connection is not None else connection()) as conn:
+        if not conn.in_transaction:
+            conn.execute('BEGIN')
         assignment = class_store.assignment_detail(conn, owner, assignment_id)
         reviews = {r['student_id']: r for r in conn.execute('SELECT * FROM reviews WHERE owner_id=? AND assignment_id=?', (owner, assignment_id))}
         draft_ids = {r[0] for r in conn.execute('SELECT d.review_id FROM review_drafts d JOIN reviews r ON r.id=d.review_id WHERE r.owner_id=? AND r.assignment_id=?', (owner, assignment_id))}
@@ -296,9 +297,11 @@ def report(owner, assignment_id):
         students, confirmed = [], []
         for student in assignment['students']:
             row = reviews.get(student['id'])
-            score = sum(a['score'] for a in json.loads(row['answers'])) if row and row['status'] == 'confirmed' else None
+            answers = json.loads(row['answers']) if row and row['status'] == 'confirmed' else None
+            score = sum(a['score'] for a in answers) if answers is not None else None
             students.append(dict(student, review_id=row['id'] if row else None, status=row['status'] if row else 'not_submitted',
                                  score=score, maximum=len(tasks), confirmed_at=row['confirmed_at'] if row else None,
+                                 task_scores=[a['score'] for a in answers] if answers is not None else [None] * len(tasks),
                                  has_draft=bool(row and row['id'] in draft_ids)))
             if score is not None:
                 confirmed.append(json.loads(row['answers']))
@@ -315,21 +318,12 @@ def report(owner, assignment_id):
                           'Во всех заданиях не менее 60% верных ответов среди подтверждённых работ. Просмотрите индивидуальные ошибки.')
         return {'assignment_id': assignment['id'], 'class_id': assignment['class_id'], 'class_name': assignment['class_name'],
                 'title': assignment['title'], 'edition_code': assignment['code'], 'scheduled_date': assignment['scheduled_date'],
-                'due_date': assignment['due_date'], 'summary': summary, 'students': students, 'tasks': breakdown, 'recommendation': recommendation}
+                'due_date': assignment['due_date'], 'generated_at': timestamp(), 'summary': summary, 'students': students, 'tasks': breakdown, 'recommendation': recommendation}
 
 
 def csv_report(owner, assignment_id):
-    data = report(owner, assignment_id)
-    stream = io.StringIO(newline='')
-    writer = csv.writer(stream, delimiter=';')
-    def safe(value):
-        value = '' if value is None else str(value)
-        return "'" + value if value.startswith(('=', '+', '-', '@', '\t', '\r', '\n')) else value
-    labels = {'not_submitted': 'Не сдал', 'processing': 'Распознаётся', 'needs_review': 'Нужен учитель', 'failed': 'Ошибка распознавания', 'confirmed': 'Подтверждено'}
-    writer.writerow(['Класс', 'Работа', 'Версия', 'Код ученика', 'Статус', 'Баллы', 'Максимум', 'Подтверждено'])
-    for s in data['students']:
-        writer.writerow([safe(v) for v in (data['class_name'], data['title'], data['edition_code'], s['code'], labels[s['status']], s['score'], s['maximum'], s['confirmed_at'])])
-    return '\ufeff' + stream.getvalue()
+    from utils.report_export import assignment_csv
+    return assignment_csv(report(owner, assignment_id))
 
 
 def maintain(conn):

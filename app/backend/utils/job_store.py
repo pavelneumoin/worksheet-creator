@@ -9,15 +9,15 @@ import shutil
 import time
 import uuid
 
-from utils import db
+from utils import db, latex
 from utils.gigachat_client import AIServiceError
 from utils.worksheet import validate_worksheet
 from utils.workspace_store import connection, result_links, timestamp, record_edition
 
 ACTIVE = ('queued', 'running')
 TERMINAL = ('succeeded', 'failed', 'cancelled')
-LANES = {'recognize': 'ai', 'variant': 'ai', 'compile': 'compile', 'grade': 'ai'}
-LABELS = {'recognize': 'Распознаём задания и готовим ответы', 'variant': 'Готовим новый вариант', 'compile': 'Собираем лист, ответы и Marp', 'grade': 'Распознаём ответы ученика'}
+LANES = {'recognize': 'ai', 'variant': 'ai', 'compile': 'compile', 'grade': 'ai', 'report_pdf': 'compile'}
+LABELS = {'recognize': 'Распознаём задания и готовим ответы', 'variant': 'Готовим новый вариант', 'compile': 'Собираем лист, ответы и Marp', 'grade': 'Распознаём ответы ученика', 'report_pdf': 'Готовим PDF отчёта класса'}
 LEASE_SECONDS = 45
 RETENTION_SECONDS = 7 * 86400
 
@@ -148,6 +148,9 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
             directory.mkdir()
             created = True
             stored = dict(payload)
+            if kind == 'report_pdf':
+                from utils import review_store
+                stored['report'] = review_store.report(owner, payload.get('assignment_id'), conn)
             if kind == 'grade':
                 from utils import review_store
                 assignment = review_store.enqueue(conn, owner, job_id, payload, fingerprint('review_photo', {}, image_paths))
@@ -219,6 +222,19 @@ def complete(job, output, active_connection=None):
                 conn.execute('UPDATE materials SET updated_at=? WHERE id=?', (now, material['id']))
             result = {'worksheet': payload['worksheet'], 'source': payload.get('source', 'manual'),
                       'material_id': material['id'] if attached else None, 'attached': attached,
+                      **result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone())}
+        elif current['kind'] == 'report_pdf':
+            base = 'job_' + job_id
+            path = Path(latex.OUTPUT_DIR) / (base + '.pdf')
+            if not path.is_file() or not path.with_suffix('.tex').is_file():
+                raise AIServiceError('PDF отчёта не найден.', 'report_missing', 500)
+            with path.open('rb') as stream:
+                if stream.read(5) != b'%PDF-':
+                    raise AIServiceError('PDF отчёта повреждён.', 'report_missing', 500)
+            conn.execute('INSERT INTO artifacts (id,owner_id,pdf,tex,created_at) VALUES (?,?,?,?,?)',
+                         (job_id, owner, base + '.pdf', base + '.tex', now))
+            result = {'assignment_id': payload['assignment_id'], 'generated_at': payload['report']['generated_at'],
+                      'edition_code': payload['report']['edition_code'],
                       **result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone())}
         elif current['kind'] == 'grade':
             from utils import review_store

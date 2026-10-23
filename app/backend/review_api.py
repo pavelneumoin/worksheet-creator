@@ -6,7 +6,7 @@ import uuid
 from flask import Blueprint, Response, g, jsonify, request, send_file
 
 from class_api import body
-from utils import job_store, review_store, class_report
+from utils import job_store, review_store, class_report, report_export
 from utils.gigachat_client import AIServiceError, get_ai_status
 from utils.workspace_store import connection
 
@@ -108,3 +108,10 @@ def overview(class_id):
 def export(assignment_id):
     return Response(review_store.csv_report(g.identity['owner_id'], assignment_id), content_type='text/csv; charset=utf-8',
                     headers={'Content-Disposition': 'attachment; filename="class-report.csv"'})
+
+
+@api.get('/classes/<class_id>/report.csv')
+def overview_csv(class_id):
+    data = class_report.overview(g.identity['owner_id'], class_id, request.args)
+    return Response(report_export.overview_csv(data), content_type='text/csv; charset=utf-8',
+                    headers={'Content-Disposition': 'attachment; filename="class-overview.csv"'})

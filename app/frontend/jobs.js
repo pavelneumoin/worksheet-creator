@@ -93,7 +93,7 @@ function renderJobs() {
     $("jobsList").append(
       node(
         "p",
-        "Показаны последние 8 задач. Готовые листы доступны в «Моих материалах».",
+        "Показаны последние 8 задач. Листы доступны в материалах, проверки и отчёты - в классах.",
         "quiet",
       ),
     );
@@ -174,7 +174,11 @@ async function sendPendingJob() {
     ];
     renderJobs();
     $("jobsPanel").open = true;
-    notice("Задача принята. Результат появится здесь и в ваших материалах.");
+    notice(
+      submission.kind === "report_pdf"
+        ? "PDF отчёта готовится. Снимок результатов сохранён; файл появится в блоке «Задачи»."
+        : "Задача принята. Результат появится здесь и в ваших материалах.",
+    );
     $("jobsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
     pollJobs();
   } catch (error) {
@@ -205,6 +209,11 @@ async function openJobResult(job, chosenMaterial = null) {
   if (state.dirty && state.sheet) await saveCurrent();
   const fresh = (await request("/api/v2/jobs/" + job.id)).job;
   if (fresh.status !== "succeeded") throw new Error("Результат ещё не готов.");
+  if (fresh.kind === "report_pdf") {
+    await openClassReport(fresh.result.assignment_id);
+    showReportDownload(fresh.result);
+    return;
+  }
   if (fresh.kind === "grade") {
     await openReview(fresh.result.review_id);
     await request("/api/v2/jobs/" + job.id + "/acknowledge", {

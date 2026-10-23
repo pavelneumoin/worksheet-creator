@@ -9,6 +9,9 @@ from flask import Blueprint, g, jsonify, request
 from utils import job_store
 from utils.gigachat_client import AIServiceError, get_ai_status
 from utils.worksheet import validate_worksheet
+from class_api import body
+from utils import class_store
+from utils.workspace_store import connection
 
 api = Blueprint('jobs', __name__, url_prefix='/api/v2/jobs')
 
@@ -39,6 +42,16 @@ def cancel(job_id):
 def accepted(kind, payload, images=()):
     result, created = job_store.submit(g.identity['owner_id'], kind, request.headers.get('Idempotency-Key'), payload, images)
     return jsonify(job=result, reused=not created), 202 if result['status'] in job_store.ACTIVE else 200
+
+
+@api.post('/report_pdf')
+def report_pdf():
+    data = body()
+    if set(data) != {'assignment_id'} or not isinstance(data['assignment_id'], str):
+        raise AIServiceError('Выберите назначенную работу для отчёта.', 'invalid_report', 400)
+    with connection() as conn:
+        class_store.assignment_detail(conn, g.identity['owner_id'], data['assignment_id'])
+    return accepted('report_pdf', data)
 
 
 @api.post('/recognize')

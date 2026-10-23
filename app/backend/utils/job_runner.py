@@ -62,6 +62,10 @@ def execute(job_id):
             compile_worksheet(payload['worksheet'], base)
             export_bundle(payload['worksheet'], Path(latex.OUTPUT_DIR) / (base + '_marp.zip'), payload.get('origin'))
             result = {'ok': True}
+        elif job['kind'] == 'report_pdf':
+            from utils.report_export import compile_report
+            compile_report(payload['report'], 'job_' + job_id)
+            result = {'ok': True}
         elif job['kind'] == 'grade':
             from utils import grading_ai
             paths = source_pages.prepare([directory / name for name in payload['images']], directory / 'pages')
@@ -101,7 +105,7 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
     command = [sys.executable, str(ROOT / 'scripts/run_worker.py'), '--execute', job['id']]
     count = json.loads(job['payload']).get('variant_count', 1)
     payload = json.loads(job['payload'])
-    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'grade': 30 + 300 * len(payload.get('images', []))}[job['kind']]
+    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', []))}[job['kind']]
     process = None
     succeeded = False
     try:
@@ -154,7 +158,7 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
 def complete_checkpoint(job, directory):
     """Only a still-running claim can commit. Failed/cancelled jobs stay fenced."""
     path = directory / 'result.json'
-    if job['kind'] == 'compile' or not path.is_file() or path.stat().st_size > 2 * 1024 * 1024:
+    if job['kind'] in ('compile', 'report_pdf') or not path.is_file() or path.stat().st_size > 2 * 1024 * 1024:
         return False
     try:
         result = json.loads(path.read_text(encoding='utf-8'))

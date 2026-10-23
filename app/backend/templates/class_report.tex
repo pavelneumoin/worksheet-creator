@@ -1,0 +1,57 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{fontspec}
+\setmainfont{cmun}[Path=fonts/,Extension=.otf,UprightFont=*rm,BoldFont=*bx,ItalicFont=*ti,BoldItalicFont=*bi]
+\usepackage[russian]{babel}
+\usepackage[a4paper,left=18mm,right=18mm,top=24mm,bottom=22mm,headheight=16pt,footskip=10mm]{geometry}
+\usepackage{longtable,array,xcolor,fancyhdr,lastpage}
+\definecolor{quiet}{HTML}{555555}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+\setlength{\LTpre}{8pt}
+\setlength{\LTpost}{10pt}
+\renewcommand{\arraystretch}{1.25}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{quiet}ЛистОК / Отчёт учителя}
+\fancyhead[R]{\small\color{quiet}Версия PLACEHOLDER:CODE}
+\fancyfoot[L]{\scriptsize\color{quiet}Снимок на PLACEHOLDER:CREATED}
+\fancyfoot[R]{\scriptsize\color{quiet}\thepage\ /\ \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\raggedbottom
+\begin{document}
+{\small\color{quiet}КЛАСС PLACEHOLDER:CLASS}\par\vspace{3mm}
+{\LARGE\bfseries PLACEHOLDER:TITLE}\par\vspace{3mm}
+Проведение: PLACEHOLDER:SCHEDULED. Срок сдачи: PLACEHOLDER:DUE.\par
+{\small\color{quiet}Сформирован: PLACEHOLDER:CREATED. Только для учителя.}\par
+\section*{Результаты класса}
+PLACEHOLDER:COUNTS\par\smallskip
+PLACEHOLDER:PENDING\par\medskip
+{\bfseries PLACEHOLDER:SCORE}\par\smallskip
+{\small PLACEHOLDER:DENOMINATOR}\par\medskip
+PLACEHOLDER:RECOMMENDATION\par
+\section*{Задания для повторения}
+{\small Номера соответствуют назначенной версии листа. В таблице только подтверждённые проверки.}\par
+\begin{longtable}{@{}p{32mm}r r r@{}}
+\hline
+\textbf{Задание} & \textbf{Верно} & \textbf{Проверено} & \textbf{Доля верных} \\
+\hline\endfirsthead
+\hline
+\textbf{Задание} & \textbf{Верно} & \textbf{Проверено} & \textbf{Доля верных} \\
+\hline\endhead
+\hline\endfoot
+PLACEHOLDER:TASKS
+\end{longtable}
+\section*{Работы учеников}
+{\small Прочерк означает отсутствие подтверждённой оценки, а не ноль. Знак * отмечает черновик правок. Если результат уже подтверждён, учтён прежний балл.}\par
+\begin{longtable}{@{}p{39mm}p{72mm}r r@{}}
+\hline
+\textbf{Код ученика} & \textbf{Состояние} & \textbf{Баллы} & \textbf{Макс.} \\
+\hline\endfirsthead
+\hline
+\textbf{Код ученика} & \textbf{Состояние} & \textbf{Баллы} & \textbf{Макс.} \\
+\hline\endhead
+\hline\endfoot
+PLACEHOLDER:ROSTER
+\end{longtable}
+{\small\color{quiet}ФИО, фотографии, прочитанные ответы и комментарии в этот отчёт не включены. После новых проверок сформируйте свежий отчёт.}
+\end{document}

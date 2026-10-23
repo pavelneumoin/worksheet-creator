@@ -196,6 +196,10 @@ function renderClassOverview(target, c) {
       "quiet",
     ),
   );
+  const csv = node("a", "Скачать CSV обзора", "button secondary");
+  csv.href = `/api/v2/classes/${c.id}/report.csv?${new URLSearchParams(data.filters)}`;
+  csv.download = "Обзор работ класса.csv";
+  summary.append(csv);
   if (data.selected_student)
     summary.append(
       node(
