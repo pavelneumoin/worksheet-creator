@@ -149,6 +149,11 @@ def init_db():
             revision INTEGER NOT NULL, action TEXT NOT NULL, snapshot TEXT NOT NULL,
             created_at TEXT NOT NULL, PRIMARY KEY(review_id,revision)
         );
+        CREATE TABLE IF NOT EXISTS review_drafts (
+            review_id TEXT PRIMARY KEY REFERENCES reviews(id) ON DELETE CASCADE,
+            base_revision INTEGER NOT NULL, revision TEXT NOT NULL,
+            payload TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
     ''')
     if 'owner_id' not in {row[1] for row in c.execute('PRAGMA table_info(history)')}:
         c.execute('ALTER TABLE history ADD COLUMN owner_id TEXT')

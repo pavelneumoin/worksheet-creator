@@ -21,7 +21,7 @@ class BackendTests(unittest.TestCase):
         cls.repo = Path(cls.tmp.name) / "repo"
         source = Path(__file__).resolve().parents[1]
         shutil.copytree(source, cls.repo, ignore=shutil.ignore_patterns(
-            ".env", ".local-certs", ".git", "__pycache__", "*.db", "uploads",
+            ".env", ".local-certs", ".git", "__pycache__", "*.db", "*.db-*", "uploads",
             "generated", ".venv", "output", "tmp", "node_modules"))
         from utils import db
         cls.database = patch.object(db, 'DB_PATH', str(cls.repo / 'app/backend/worksheets.db'))

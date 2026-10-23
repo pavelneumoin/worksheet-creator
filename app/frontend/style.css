@@ -2465,6 +2465,18 @@ select {
 .review-confirmation .actions {
   margin-top: 18px;
 }
+.review-save-status,
+.review-history-entry {
+  overflow-wrap: anywhere;
+}
+.review-history-entry {
+  padding: 14px 0;
+  border-top: 1px solid var(--border, #e4e7eb);
+}
+.review-history-entry h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
 @media (max-width: 720px) {
   .report-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));

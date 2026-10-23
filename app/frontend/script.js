@@ -65,11 +65,16 @@ function updateCount() {
 }
 function markDirty(value) {
   state.dirty = value;
-  const method = value
-    ? "enableClosingConfirmation"
-    : "disableClosingConfirmation";
-  window.WebApp?.[method]?.();
+  syncClosingConfirmation();
   $("saveStatus").textContent = value ? "Есть несохранённые изменения" : "";
+}
+function syncClosingConfirmation() {
+  const method =
+    state.dirty ||
+    (typeof hasUnsavedReview === "function" && hasUnsavedReview())
+      ? "enableClosingConfirmation"
+      : "disableClosingConfirmation";
+  window.WebApp?.[method]?.();
 }
 function invalidate() {
   markDirty(true);
@@ -120,6 +125,13 @@ function step(number) {
     $("step" + number).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function showView(view, refresh = true) {
+  if (
+    typeof guardReviewNavigation === "function" &&
+    !guardReviewNavigation(() => showView(view, refresh))
+  )
+    return;
+  if (view !== "classes" && typeof resetReviewEditor === "function")
+    resetReviewEditor();
   const changedView = state.view !== view;
   state.view = view;
   $("resumeSheet").hidden = !(
@@ -1411,6 +1423,7 @@ $("localLoginBtn").addEventListener("click", () =>
 $("logoutBtn").addEventListener("click", () => {
   if (state.dirty && !window.confirm("Выйти без сохранения изменений?")) return;
   busy("Выходим из профиля", async () => {
+    if (typeof flushReviewDraft === "function") await flushReviewDraft();
     await request("/api/v2/auth/logout", { method: "POST" });
     markDirty(false);
     location.reload();
@@ -1443,7 +1456,10 @@ $("importLocalBtn").addEventListener("click", () => {
   });
 });
 window.addEventListener("beforeunload", (e) => {
-  if (state.dirty) {
+  if (
+    state.dirty ||
+    (typeof hasUnsavedReview === "function" && hasUnsavedReview())
+  ) {
     e.preventDefault();
     e.returnValue = "";
   }

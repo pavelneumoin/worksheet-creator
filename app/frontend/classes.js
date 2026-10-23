@@ -22,6 +22,13 @@ function classButton(text, action, kind = "secondary") {
   return button;
 }
 function classScreen(id) {
+  if (
+    typeof guardReviewNavigation === "function" &&
+    !guardReviewNavigation(() => classScreen(id))
+  )
+    return false;
+  if (id !== "reviewView" && typeof resetReviewEditor === "function")
+    resetReviewEditor();
   for (const name of [
     "classesHome",
     "classDetail",
@@ -33,6 +40,7 @@ function classScreen(id) {
     $(name).hidden = name !== id;
   showView("classes", false);
   window.scrollTo({ top: 0 });
+  return true;
 }
 function classFocus(container) {
   const heading = container.querySelector("h1");

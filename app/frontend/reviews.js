@@ -6,6 +6,8 @@ const reviewState = {
   assignmentId: null,
   pending: null,
   timer: null,
+  editor: null,
+  navigation: null,
 };
 const reviewLabels = {
   not_submitted: "Не сдал",
@@ -18,11 +20,108 @@ const reviewLabels = {
 function reviewButton(text, action, cls = "secondary") {
   return classButton(text, () => busy(text, action), cls);
 }
+function hasUnsavedReview() {
+  const e = reviewState.editor;
+  return !!(e && (e.changed !== e.saved || e.saving));
+}
+function resetReviewEditor() {
+  clearTimeout(reviewState.editor?.timer);
+  reviewState.editor = null;
+  syncClosingConfirmation();
+}
+function editReviewDraft() {
+  const e = reviewState.editor;
+  if (!e) return;
+  e.changed++;
+  e.status.textContent = "Сохраняем правки в вашем кабинете…";
+  e.status.classList.remove("review-warning");
+  clearTimeout(e.timer);
+  e.timer = setTimeout(() => flushReviewDraft().catch(() => {}), 800);
+  syncClosingConfirmation();
+}
+async function flushReviewDraft() {
+  const e = reviewState.editor;
+  if (!e) return;
+  clearTimeout(e.timer);
+  if (e.saving) return e.saving;
+  if (e.changed === e.saved) return;
+  e.saving = (async () => {
+    try {
+      while (e.changed !== e.saved) {
+        const sequence = e.changed;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        let result;
+        try {
+          result = await request(`/api/v2/reviews/${e.id}/draft`, {
+            ...classJson("PUT", {
+              ...e.body(),
+              draft_revision: e.draftRevision,
+            }),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
+        e.draftRevision = result.draft.revision;
+        e.saved = sequence;
+      }
+      e.status.textContent =
+        "Правки сохранены в кабинете · " +
+        new Date().toLocaleTimeString("ru-RU", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }) +
+        ". Баллы попадут в отчёт после подтверждения.";
+      e.status.classList.remove("review-warning");
+    } catch (error) {
+      const message =
+        error.name === "AbortError" || error instanceof TypeError
+          ? "Нет ответа от сервера. Проверьте подключение."
+          : error.message;
+      e.status.textContent =
+        "Правки пока не сохранены. " +
+        message +
+        " Можно повторить сохранение или скачать свои правки ниже.";
+      e.status.classList.add("review-warning");
+      throw new Error(message);
+    } finally {
+      e.saving = null;
+      syncClosingConfirmation();
+    }
+  })();
+  syncClosingConfirmation();
+  return e.saving;
+}
+function guardReviewNavigation(action) {
+  if (!hasUnsavedReview()) return true;
+  reviewState.navigation = action;
+  if (!reviewState.leaving) {
+    reviewState.leaving = true;
+    flushReviewDraft()
+      .then(() => {
+        const next = reviewState.navigation;
+        reviewState.navigation = null;
+        next?.();
+      })
+      .catch((error) =>
+        notice(error.message + " Правки остаются на экране.", true),
+      )
+      .finally(() => {
+        reviewState.leaving = false;
+      });
+  }
+  return false;
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && hasUnsavedReview()) flushReviewDraft().catch(() => {});
+});
 function clearReviewFiles() {
   for (const f of reviewState.files) URL.revokeObjectURL(f.url);
   reviewState.files = [];
 }
 async function openClassReport(id) {
+  await flushReviewDraft();
   if (reviewState.pending && reviewState.pending.assignmentId !== id)
     throw new Error(
       "Сначала повторите отправку фото в предыдущей работе, чтобы узнать результат.",
@@ -87,6 +186,14 @@ async function openClassReport(id) {
     ),
     node("p", data.recommendation),
   );
+  if (data.summary.pending_corrections)
+    average.append(
+      node(
+        "p",
+        `Черновики исправлений: ${data.summary.pending_corrections}. Для этих работ в расчёте остаются прежние подтверждённые баллы.`,
+        "review-warning",
+      ),
+    );
   if (data.summary.processing || data.summary.failed)
     average.append(
       node(
@@ -144,6 +251,8 @@ async function openClassReport(id) {
       ),
     );
     row.append(info);
+    if (student.has_draft)
+      info.append(node("p", "Есть сохранённые правки", "quiet"));
     if (student.review_id)
       row.append(
         reviewButton(
@@ -319,9 +428,11 @@ function renderReviewUpload(target, report) {
   target.append(panel);
   draw();
 }
-async function openReview(id) {
+async function openReview(id, ready = null) {
+  await flushReviewDraft();
   clearTimeout(reviewState.timer);
-  const r = (await request("/api/v2/reviews/" + id)).review;
+  const r = ready || (await request("/api/v2/reviews/" + id)).review;
+  resetReviewEditor();
   reviewState.current = r;
   classScreen("reviewView");
   const target = $("reviewView");
@@ -412,10 +523,15 @@ async function openReview(id) {
           return;
         }
         busy("Удаляем черновик", async () => {
+          await flushReviewDraft();
           await request(
             "/api/v2/reviews/" + id,
-            classJson("DELETE", { revision: r.revision }),
+            classJson("DELETE", {
+              revision: r.revision,
+              draft_revision: reviewState.editor?.draftRevision ?? null,
+            }),
           );
+          resetReviewEditor();
           await openClassReport(r.assignment_id);
           notice("Черновик удалён. Можно загрузить фото заново.");
         });
@@ -429,11 +545,22 @@ async function openReview(id) {
 function renderReviewForm(target, r) {
   const form = node("form", undefined, "review-form"),
     fields = [];
+  const draft = r.draft;
+  if (draft)
+    form.append(
+      node(
+        "p",
+        r.status === "confirmed"
+          ? "Открыт сохранённый черновик исправлений. В отчёте пока прежние подтверждённые баллы. Для применения сверьте работу и подтвердите исправления."
+          : "Ваши сохранённые правки восстановлены. Сверьте ответы и подтвердите результат, когда закончите.",
+        "review-warning",
+      ),
+    );
   form.append(
     node(
       "h2",
       r.status === "confirmed"
-        ? "Подтверждённый результат"
+        ? "Проверка и исправления"
         : "Проверьте ответы и баллы",
     ),
     node(
@@ -459,7 +586,7 @@ function renderReviewForm(target, r) {
     confirm.disabled = !reviewed.checked || done.length !== r.tasks.length;
   };
   for (const [i, task] of r.tasks.entries()) {
-    const answer = r.answers[i],
+    const answer = (draft?.answers || r.answers)[i],
       card = node("section", undefined, "panel review-answer");
     card.append(node("h3", "Задание " + (i + 1)));
     const question = node("p"),
@@ -511,10 +638,17 @@ function renderReviewForm(target, r) {
       reviewed.checked = false;
       caption.textContent = "Ответ изменён. Укажите баллы после проверки.";
       refreshTotal();
+      editReviewDraft();
     });
     score.addEventListener("change", () => {
       reviewed.checked = false;
       refreshTotal();
+      editReviewDraft();
+    });
+    note.addEventListener("input", () => {
+      reviewed.checked = false;
+      refreshTotal();
+      editReviewDraft();
     });
     fields.push({ id: task.id, text, score, note });
     card.append(question, expected, caption, textLabel, scoreLabel, noteLabel);
@@ -523,10 +657,15 @@ function renderReviewForm(target, r) {
   const controls = node("section", undefined, "panel review-confirmation"),
     commentLabel = node("label", "Комментарий к работе"),
     comment = node("textarea");
-  comment.value = r.comment;
+  comment.value = draft?.comment ?? r.comment;
   comment.maxLength = 2000;
   comment.rows = 3;
   commentLabel.append(comment);
+  comment.addEventListener("input", () => {
+    reviewed.checked = false;
+    refreshTotal();
+    editReviewDraft();
+  });
   const check = node("label", undefined, "review-attestation");
   check.append(
     reviewed,
@@ -538,6 +677,7 @@ function renderReviewForm(target, r) {
   reviewed.addEventListener("change", refreshTotal);
   const body = (action) => ({
     revision: r.revision,
+    draft_revision: reviewState.editor?.draftRevision ?? null,
     action,
     reviewed: reviewed.checked,
     comment: comment.value,
@@ -548,30 +688,149 @@ function renderReviewForm(target, r) {
       comment: f.note.value,
     })),
   });
+  const saveStatus = node(
+    "p",
+    draft
+      ? "Правки восстановлены из вашего кабинета. Подтверждение сверки нужно поставить заново."
+      : "Правки сохраняются автоматически. Итоговые баллы нужно подтвердить.",
+    "quiet review-save-status",
+  );
+  saveStatus.setAttribute("role", "status");
+  reviewState.editor = {
+    id: r.id,
+    body,
+    status: saveStatus,
+    draftRevision: draft?.revision ?? null,
+    changed: 0,
+    saved: 0,
+    saving: null,
+    timer: null,
+  };
   const actions = node("div", undefined, "actions");
-  if (r.status !== "confirmed")
-    actions.append(
-      reviewButton("Сохранить черновик", async () => {
+  actions.append(
+    reviewButton("Сохранить черновик", async () => {
+      await flushReviewDraft();
+      if (r.status !== "confirmed") {
         await request(
           "/api/v2/reviews/" + r.id,
           classJson("PUT", body("save")),
         );
+        resetReviewEditor();
         await openReview(r.id);
-        notice("Черновик сохранён. В итоговой статистике его пока нет.");
-      }),
-    );
+      }
+      notice(
+        r.status === "confirmed"
+          ? "Правки сохранены. Прежние баллы остаются в отчёте до нового подтверждения."
+          : "Черновик сохранён. В итоговой статистике его пока нет.",
+      );
+    }),
+  );
   actions.append(confirm);
-  controls.append(commentLabel, total, check, actions);
+  const otherActions = node("details", undefined, "review-recovery");
+  otherActions.append(node("summary", "Другие действия с правками"));
+  const recovery = node("div", undefined, "actions");
+  recovery.append(
+    classButton(
+      "Скачать мои правки",
+      () => {
+        const value = body();
+        const lines = [
+          r.class_name,
+          r.title,
+          "Ученик: " + r.student_code,
+          "Версия листа: " + r.edition_code,
+          "Это черновик, а не подтверждённый результат.",
+          ...value.answers.flatMap((a, i) => [
+            "",
+            "Задание " + (i + 1),
+            "Ответ: " + (a.text || "(пусто)"),
+            "Баллы: " + (a.score === null ? "не выбраны" : a.score),
+            "Комментарий: " + a.comment,
+          ]),
+          "",
+          "Комментарий к работе: " + value.comment,
+        ];
+        const url = URL.createObjectURL(
+          new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }),
+        );
+        const link = node("a");
+        link.href = url;
+        link.download = "Мои правки · " + r.student_code + ".txt";
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      "ghost",
+    ),
+  );
+  let discardAsked = false;
+  const discard = classButton(
+    "Отменить мои правки",
+    () => {
+      if (!discardAsked) {
+        discardAsked = true;
+        discard.textContent = "Да, вернуть сохранённый результат";
+        return;
+      }
+      busy("Отменяем правки", async () => {
+        await flushReviewDraft();
+        await request(
+          `/api/v2/reviews/${r.id}/draft`,
+          classJson("DELETE", {
+            revision: r.revision,
+            draft_revision: reviewState.editor.draftRevision,
+          }),
+        );
+        resetReviewEditor();
+        await openReview(r.id);
+        notice("Черновик правок удалён. Сохранённый результат восстановлен.");
+      });
+    },
+    "ghost",
+  );
+  recovery.append(discard);
+  let reopenAsked = false;
+  const reopen = classButton(
+    "Открыть сохранённую версию",
+    () => {
+      if (hasUnsavedReview() && !reopenAsked) {
+        reopenAsked = true;
+        reopen.textContent = "Да, открыть без несохранённых правок";
+        notice(
+          "Перед открытием можно скачать текущие правки. Сохранённый в кабинете черновик останется.",
+        );
+        return;
+      }
+      busy("Открываем сохранённую проверку", async () => {
+        // Read first: a network error must leave the current form intact.
+        const fresh = (await request(`/api/v2/reviews/${r.id}`)).review;
+        resetReviewEditor();
+        await openReview(r.id, fresh);
+      });
+    },
+    "ghost",
+  );
+  recovery.append(reopen);
+  otherActions.append(recovery);
+  controls.append(
+    commentLabel,
+    total,
+    saveStatus,
+    check,
+    actions,
+    otherActions,
+  );
   form.append(controls);
   target.append(form);
   refreshTotal();
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     busy("Подтверждаем результат", async () => {
+      await flushReviewDraft();
       await request(
         "/api/v2/reviews/" + r.id,
         classJson("PUT", body("confirm")),
       );
+      resetReviewEditor();
       await openClassReport(r.assignment_id);
       notice("Результат подтверждён и учтён в отчёте класса.");
     });
@@ -582,14 +841,57 @@ function renderReviewForm(target, r) {
     if (!history.open || history.dataset.loaded) return;
     try {
       const data = (await request(`/api/v2/reviews/${r.id}/history`)).history;
-      for (const h of data)
-        history.append(
+      for (const h of data) {
+        const entry = node("section", undefined, "review-history-entry");
+        entry.append(
           node(
             "p",
             `Версия ${h.revision} · ${{ recognized: "Распознано", save: "Сохранён черновик", confirm: "Подтверждено учителем" }[h.action]} · ${new Date(h.created_at).toLocaleString("ru-RU")}`,
             "quiet",
           ),
         );
+        const show = (value) =>
+          value === null
+            ? "не оценено"
+            : value === ""
+              ? "(пусто)"
+              : String(value);
+        for (const change of h.changes) {
+          entry.append(node("h3", "Задание " + change.number));
+          for (const [key, values] of Object.entries(change.fields))
+            entry.append(
+              node(
+                "p",
+                { text: "Ответ", score: "Баллы", comment: "Комментарий" }[key] +
+                  ": " +
+                  show(values.before) +
+                  " → " +
+                  show(values.after),
+              ),
+            );
+        }
+        if (h.comment_change)
+          entry.append(
+            node(
+              "p",
+              "Комментарий к работе: " +
+                show(h.comment_change.before) +
+                " → " +
+                show(h.comment_change.after),
+            ),
+          );
+        if (!h.changes.length && !h.comment_change)
+          entry.append(
+            node(
+              "p",
+              h.action === "recognized"
+                ? "Получена исходная расшифровка ответов."
+                : "Ответы, баллы и комментарии не менялись.",
+              "quiet",
+            ),
+          );
+        history.append(entry);
+      }
       history.dataset.loaded = "true";
     } catch (error) {
       notice(error.message, true);

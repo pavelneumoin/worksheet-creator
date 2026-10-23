@@ -60,7 +60,19 @@ def update(review_id):
 
 @api.delete('/reviews/<review_id>')
 def remove(review_id):
-    review_store.remove(g.identity['owner_id'], review_id, body().get('revision'))
+    value = body()
+    review_store.remove(g.identity['owner_id'], review_id, value.get('revision'), value.get('draft_revision'))
+    return jsonify(deleted=True)
+
+
+@api.put('/reviews/<review_id>/draft')
+def save_draft(review_id):
+    return jsonify(draft=review_store.save_draft(g.identity['owner_id'], review_id, body()))
+
+
+@api.delete('/reviews/<review_id>/draft')
+def discard_draft(review_id):
+    review_store.discard_draft(g.identity['owner_id'], review_id, body())
     return jsonify(deleted=True)
 
 

@@ -1,5 +1,6 @@
 """Photo review boundary: keys, isolation, confirmation, zero/missing and recovery."""
 import io
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -81,6 +82,104 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 'revision_conflict')
         with self.assertRaises(AIServiceError):
             review_store.update('max:11', r['id'], self.body(r, action='save'))
+
+    def test_autosaved_correction_never_changes_confirmed_score_or_history(self):
+        a, r = self.recognized()
+        r = review_store.update('max:11', r['id'], self.body(r))
+        payload = self.body(r, score=0)
+        payload['answers'][0]['text'] = 'Teacher correction'
+        draft = review_store.save_draft('max:11', r['id'], payload)
+        restored = review_store.get_review('max:11', r['id'])
+        self.assertEqual(restored['revision'], r['revision'])
+        self.assertEqual(restored['answers'], r['answers'])
+        self.assertEqual(restored['draft'], draft)
+        self.assertEqual(draft['answers'][0]['score'], 0)
+        self.assertEqual(len(review_store.history('max:11', r['id'])), 2)
+        report = review_store.report('max:11', a['id'])
+        self.assertEqual(report['summary']['average'], 3)
+        self.assertEqual(report['summary']['pending_corrections'], 1)
+        self.assertTrue(next(s for s in report['students'] if s['review_id'] == r['id'])['has_draft'])
+        payload['draft_revision'] = draft['revision']
+        confirmed = review_store.update('max:11', r['id'], payload)
+        self.assertIsNone(confirmed['draft'])
+        self.assertEqual(review_store.report('max:11', a['id'])['summary']['average'], 0)
+
+    def test_draft_conflicts_prevent_another_tab_from_overwriting_or_confirming(self):
+        _, r = self.recognized()
+        payload = self.body(r, action='save', score=None)
+        draft = review_store.save_draft('max:11', r['id'], payload)
+        for operation in (review_store.save_draft, review_store.discard_draft, review_store.update):
+            with self.subTest(operation=operation.__name__), self.assertRaises(AIServiceError) as raised:
+                operation('max:11', r['id'], payload)
+            self.assertEqual(raised.exception.code, 'draft_conflict')
+        payload['draft_revision'] = draft['revision']
+        review_store.discard_draft('max:11', r['id'], payload)
+        self.assertIsNone(review_store.get_review('max:11', r['id'])['draft'])
+        fresh = review_store.save_draft('max:11', r['id'], self.body(r, action='save'))
+        self.assertNotEqual(fresh['revision'], draft['revision'])
+        # A deleted and recreated draft must not resurrect an old tab's write token.
+        with self.assertRaises(AIServiceError): review_store.save_draft('max:11', r['id'], payload)
+        with self.assertRaises(AIServiceError): review_store.remove('max:11', r['id'], r['revision'])
+        review_store.remove('max:11', r['id'], r['revision'], fresh['revision'])
+        with workspace_store.connection() as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM review_drafts').fetchone()[0], 0)
+
+    def test_drafts_allow_ungraded_answers_but_confirmation_still_requires_teacher(self):
+        _, r = self.recognized()
+        payload = self.body(r, score=None)
+        draft = review_store.save_draft('max:11', r['id'], payload)
+        payload['draft_revision'] = draft['revision']
+        with self.assertRaises(AIServiceError) as raised: review_store.update('max:11', r['id'], payload)
+        self.assertEqual(raised.exception.code, 'scores_incomplete')
+        payload['answers'] = self.body(r)['answers']; payload['reviewed'] = False
+        with self.assertRaises(AIServiceError) as raised: review_store.update('max:11', r['id'], payload)
+        self.assertEqual(raised.exception.code, 'review_required')
+        self.assertEqual(review_store.get_review('max:11', r['id'])['draft']['revision'], draft['revision'])
+
+    def test_draft_routes_are_private_csrf_protected_and_strictly_validated(self):
+        _, r = self.recognized()
+        url = '/api/v2/reviews/' + r['id'] + '/draft'
+        payload = self.body(r)
+        for client, status in ((self.other, 404), (self.anon, 401)):
+            for method in ('put', 'delete'):
+                self.assertEqual(self.call(client, method, url, json=payload).status_code, status)
+        self.assertEqual(self.call(self.client, 'put', url, json=payload, headers={'X-CSRF-Token': 'wrong'}).status_code, 403)
+        for score in (True, '1', 2):
+            self.assertEqual(self.call(self.client, 'put', url, json=self.body(r, score=score)).status_code, 400)
+        saved = self.call(self.client, 'put', url, json=payload)
+        self.assertEqual(saved.status_code, 200, saved.json)
+        payload['draft_revision'] = saved.json['draft']['revision']
+        self.assertEqual(self.call(self.client, 'delete', url, json=payload).status_code, 200)
+
+    def test_history_explains_zero_ungraded_text_and_comments_without_false_changes(self):
+        _, r = self.recognized()
+        payload = self.body(r, action='save', score=None)
+        payload['answers'][0].update(text='6', comment='Check this')
+        payload['comment'] = 'Whole work'
+        r = review_store.update('max:11', r['id'], payload)
+        changes = review_store.history('max:11', r['id'])[0]
+        self.assertIsNone(changes['changes'][0]['fields']['score']['after'])
+        self.assertEqual(changes['comment_change']['after'], 'Whole work')
+        payload = self.body(r, score=0)
+        r = review_store.update('max:11', r['id'], payload)
+        changes = review_store.history('max:11', r['id'])[0]
+        self.assertEqual(changes['changes'][0]['fields']['score'], {'before': None, 'after': 0})
+        r = review_store.update('max:11', r['id'], self.body(r, score=0))
+        self.assertEqual(review_store.history('max:11', r['id'])[0]['changes'], [])
+        self.assertIsNone(review_store.history('max:11', r['id'])[0]['comment_change'])
+
+    def test_backup_includes_editing_draft_without_applying_it(self):
+        _, r = self.recognized()
+        r = review_store.update('max:11', r['id'], self.body(r))
+        draft = review_store.save_draft('max:11', r['id'], self.body(r, score=0))
+        archive = Path(self.temp.name, 'drafts.zip'); target = Path(self.temp.name, 'restored-drafts')
+        backup.create_backup(archive); backup.restore_backup(archive, target)
+        with closing(sqlite3.connect(target / 'worksheets.db')) as conn:
+            self.assertEqual(json.loads(conn.execute('SELECT answers FROM reviews').fetchone()[0])[0]['score'], 1)
+            restored = conn.execute('SELECT revision,payload FROM review_drafts').fetchone()
+            self.assertEqual(restored[0], draft['revision'])
+            self.assertEqual(json.loads(restored[1])['answers'][0]['score'], 0)
+            self.assertEqual(conn.execute('PRAGMA foreign_key_check').fetchall(), [])
 
     def test_unreadable_blank_and_omitted_numbers_are_not_automatic_zero(self):
         _, r = self.recognized(states=['unclear', 'blank', 'readable'])

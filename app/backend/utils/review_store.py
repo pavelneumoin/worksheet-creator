@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import shutil
 import time
+import uuid
 
 from utils import db, class_store
 from utils.answer_check import hint
@@ -141,6 +142,9 @@ def detail(conn, owner, review_id):
                   tasks=assignment['worksheet']['tasks'], photo_expires=row['photo_expires'],
                   photos=[f'/api/v2/reviews/{review_id}/photos/{i}' for i in range(row['photo_count'])] if row['photo_expires'] > time.time() else [],
                   job_status=job['status'] if job else None, error=job['error'] if job else None)
+    draft = conn.execute('SELECT * FROM review_drafts WHERE review_id=?', (review_id,)).fetchone()
+    result['draft'] = (dict(json.loads(draft['payload']), revision=draft['revision'], base_revision=draft['base_revision'],
+                            updated_at=draft['updated_at'], stale=draft['base_revision'] != row['revision']) if draft else None)
     return result
 
 
@@ -149,57 +153,99 @@ def get_review(owner, review_id):
         return detail(conn, owner, review_id)
 
 
+def editable(conn, owner, row, value, confirm=False):
+    """Validate teacher input without applying it to the official result."""
+    assignment = context(conn, owner, row['assignment_id'], row['student_id'])
+    tasks, incoming = assignment['worksheet']['tasks'], value.get('answers')
+    if not isinstance(incoming, list) or len(incoming) != len(tasks):
+        fail('Проверьте ответы всех заданий.')
+    previous = {a['task_id']: a for a in json.loads(row['answers'])}
+    answers = []
+    for task, item in zip(tasks, incoming):
+        if not isinstance(item, dict) or item.get('task_id') != task['id']:
+            fail('Порядок заданий изменён. Откройте проверку заново.')
+        text, comment, score = item.get('text'), item.get('comment', ''), item.get('score')
+        if not isinstance(text, str) or len(text) > 2000 or '\x00' in text or not isinstance(comment, str) or len(comment) > 500 or '\x00' in comment:
+            fail('Ответ — до 2000 символов, комментарий — до 500.')
+        if score is not None and (type(score) is not int or score not in (0, 1)):
+            fail('За каждое задание можно поставить 0 или 1 балл.')
+        if confirm and score is None:
+            fail('Укажите баллы за каждое задание. Пропуск не равен нулю.', 'scores_incomplete', 400)
+        answer = dict(previous[task['id']], text=text.strip(), comment=comment.strip(), score=score)
+        answer['teacher_edited'] = bool(answer.get('teacher_edited')) or answer['text'] != previous[task['id']]['text']
+        comparison_state = ('readable' if answer['text'] else 'blank') if answer['teacher_edited'] else answer['state']
+        answer.update(hint(task['answer'], answer['text'], comparison_state))
+        answers.append(answer)
+    comment = value.get('comment', '')
+    if not isinstance(comment, str) or len(comment) > 2000 or '\x00' in comment:
+        fail('Комментарий к работе — до 2000 символов.')
+    return {'answers': answers, 'comment': comment.strip()}
+
+
+def check_revision(row, value):
+    if type(value.get('revision')) is not int or value['revision'] != row['revision']:
+        fail('Проверка изменена на другом устройстве. Откройте свежий результат.', 'revision_conflict', 409)
+    if row['status'] not in ('needs_review', 'confirmed'):
+        fail('Сначала дождитесь распознавания.', 'review_not_ready', 409)
+
+
+def check_draft(conn, row, value):
+    draft = conn.execute('SELECT * FROM review_drafts WHERE review_id=?', (row['id'],)).fetchone()
+    expected = value.get('draft_revision')
+    if expected != (draft['revision'] if draft else None) or (draft and draft['base_revision'] != row['revision']):
+        fail('Черновик изменён в другой вкладке. Скачайте свои правки и откройте проверку заново.', 'draft_conflict', 409)
+    return draft
+
+
+def save_draft(owner, review_id, value):
+    with connection() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        row = owned(conn, owner, review_id)
+        check_revision(row, value)
+        check_draft(conn, row, value)
+        payload = editable(conn, owner, row, value)
+        conn.execute('INSERT OR REPLACE INTO review_drafts VALUES(?,?,?,?,?)',
+                     (review_id, row['revision'], uuid.uuid4().hex, json.dumps(payload, ensure_ascii=False), timestamp()))
+        return detail(conn, owner, review_id)['draft']
+
+
+def discard_draft(owner, review_id, value):
+    with connection() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        row = owned(conn, owner, review_id)
+        check_revision(row, value)
+        check_draft(conn, row, value)
+        conn.execute('DELETE FROM review_drafts WHERE review_id=?', (review_id,))
+
+
 def update(owner, review_id, value):
     with connection() as conn:
         conn.execute('BEGIN IMMEDIATE')
         row = owned(conn, owner, review_id)
-        if type(value.get('revision')) is not int or value['revision'] != row['revision']:
-            fail('Проверка изменена на другом устройстве. Откройте свежий результат.', 'revision_conflict', 409)
-        if row['status'] not in ('needs_review', 'confirmed'):
-            fail('Сначала дождитесь распознавания.', 'review_not_ready', 409)
+        check_revision(row, value)
+        check_draft(conn, row, value)
         action = value.get('action')
         if action not in ('save', 'confirm') or (row['status'] == 'confirmed' and action != 'confirm'):
             fail('Исправление подтверждённого результата нужно подтвердить заново.')
         if action == 'confirm' and value.get('reviewed') is not True:
             fail('Сверьте фото, код ученика, версию и баллы перед подтверждением.', 'review_required', 400)
-        assignment = context(conn, owner, row['assignment_id'], row['student_id'])
-        tasks, incoming = assignment['worksheet']['tasks'], value.get('answers')
-        if not isinstance(incoming, list) or len(incoming) != len(tasks):
-            fail('Проверьте ответы всех заданий.')
-        previous = {a['task_id']: a for a in json.loads(row['answers'])}
-        answers = []
-        for task, item in zip(tasks, incoming):
-            if not isinstance(item, dict) or item.get('task_id') != task['id']:
-                fail('Порядок заданий изменён. Откройте проверку заново.')
-            text, comment, score = item.get('text'), item.get('comment', ''), item.get('score')
-            if not isinstance(text, str) or len(text) > 2000 or '\x00' in text or not isinstance(comment, str) or len(comment) > 500 or '\x00' in comment:
-                fail('Ответ — до 2000 символов, комментарий — до 500.')
-            if score is not None and (type(score) is not int or score not in (0, 1)):
-                fail('За каждое задание можно поставить 0 или 1 балл.')
-            if action == 'confirm' and score is None:
-                fail('Укажите баллы за каждое задание. Пропуск не равен нулю.', 'scores_incomplete', 400)
-            answer = dict(previous[task['id']], text=text.strip(), comment=comment.strip(), score=score)
-            answer['teacher_edited'] = bool(answer.get('teacher_edited')) or answer['text'] != previous[task['id']]['text']
-            comparison_state = ('readable' if answer['text'] else 'blank') if answer['teacher_edited'] else answer['state']
-            answer.update(hint(task['answer'], answer['text'], comparison_state))
-            answers.append(answer)
-        comment = value.get('comment', '')
-        if not isinstance(comment, str) or len(comment) > 2000 or '\x00' in comment:
-            fail('Комментарий к работе — до 2000 символов.')
+        payload = editable(conn, owner, row, value, confirm=action == 'confirm')
         now = timestamp()
         conn.execute('UPDATE reviews SET status=?,answers=?,comment=?,revision=revision+1,updated_at=?,confirmed_at=? WHERE id=?',
-                     ('confirmed' if action == 'confirm' else 'needs_review', json.dumps(answers, ensure_ascii=False), comment.strip(), now,
+                     ('confirmed' if action == 'confirm' else 'needs_review', json.dumps(payload['answers'], ensure_ascii=False), payload['comment'], now,
                       now if action == 'confirm' else None, review_id))
         audit(conn, owned(conn, owner, review_id), action)
+        conn.execute('DELETE FROM review_drafts WHERE review_id=?', (review_id,))
         return detail(conn, owner, review_id)
 
 
-def remove(owner, review_id, revision):
+def remove(owner, review_id, revision, draft_revision=None):
     with connection() as conn:
         conn.execute('BEGIN IMMEDIATE')
         row = owned(conn, owner, review_id)
         if type(revision) is not int or row['revision'] != revision:
             fail('Проверка изменена. Обновите страницу.', 'revision_conflict', 409)
+        check_draft(conn, row, {'draft_revision': draft_revision})
         if row['status'] in ('confirmed', 'processing'):
             fail('Подтверждённую или выполняющуюся проверку удалить нельзя.', 'review_locked', 409)
         conn.execute('DELETE FROM reviews WHERE id=?', (review_id,))
@@ -211,21 +257,37 @@ def remove(owner, review_id, revision):
 def history(owner, review_id):
     with connection() as conn:
         owned(conn, owner, review_id)
-        return [{'revision': r['revision'], 'action': r['action'], 'created_at': r['created_at'],
-                 'snapshot': json.loads(r['snapshot'])} for r in conn.execute('SELECT * FROM review_history WHERE review_id=? ORDER BY revision DESC', (review_id,))]
+        result, previous = [], None
+        for row in conn.execute('SELECT * FROM review_history WHERE review_id=? ORDER BY revision', (review_id,)):
+            snapshot = json.loads(row['snapshot'])
+            changes = []
+            if previous:
+                before = {a['task_id']: a for a in json.loads(previous['answers'])}
+                for number, answer in enumerate(json.loads(snapshot['answers']), 1):
+                    fields = {key: {'before': before[answer['task_id']].get(key), 'after': answer.get(key)}
+                              for key in ('text', 'score', 'comment') if before[answer['task_id']].get(key) != answer.get(key)}
+                    if fields:
+                        changes.append({'number': number, 'fields': fields})
+            result.append({'revision': row['revision'], 'action': row['action'], 'created_at': row['created_at'], 'snapshot': snapshot,
+                           'changes': changes, 'comment_change': ({'before': previous['comment'], 'after': snapshot['comment']}
+                                                                 if previous and previous['comment'] != snapshot['comment'] else None)})
+            previous = snapshot
+        return result[::-1]
 
 
 def report(owner, assignment_id):
     with connection() as conn:
         assignment = class_store.assignment_detail(conn, owner, assignment_id)
         reviews = {r['student_id']: r for r in conn.execute('SELECT * FROM reviews WHERE owner_id=? AND assignment_id=?', (owner, assignment_id))}
+        draft_ids = {r[0] for r in conn.execute('SELECT d.review_id FROM review_drafts d JOIN reviews r ON r.id=d.review_id WHERE r.owner_id=? AND r.assignment_id=?', (owner, assignment_id))}
         tasks = assignment['worksheet']['tasks']
         students, confirmed = [], []
         for student in assignment['students']:
             row = reviews.get(student['id'])
             score = sum(a['score'] for a in json.loads(row['answers'])) if row and row['status'] == 'confirmed' else None
             students.append(dict(student, review_id=row['id'] if row else None, status=row['status'] if row else 'not_submitted',
-                                 score=score, maximum=len(tasks), confirmed_at=row['confirmed_at'] if row else None))
+                                 score=score, maximum=len(tasks), confirmed_at=row['confirmed_at'] if row else None,
+                                 has_draft=bool(row and row['id'] in draft_ids)))
             if score is not None:
                 confirmed.append(json.loads(row['answers']))
         breakdown = []
@@ -236,6 +298,7 @@ def report(owner, assignment_id):
         scores = [s['score'] for s in students if s['score'] is not None]
         total = len(students)
         summary = {'total': total, 'submitted': len(reviews), 'not_submitted': total - len(reviews), 'confirmed': len(confirmed),
+                   'pending_corrections': sum(s['status'] == 'confirmed' and s['has_draft'] for s in students),
                    'needs_review': sum(s['status'] == 'needs_review' for s in students),
                    'processing': sum(s['status'] == 'processing' for s in students), 'failed': sum(s['status'] == 'failed' for s in students),
                    'average': round(sum(scores) / len(scores), 2) if scores else None,
