@@ -6,7 +6,7 @@ import uuid
 from flask import Blueprint, Response, g, jsonify, request, send_file
 
 from class_api import body
-from utils import job_store, review_store
+from utils import job_store, review_store, class_report
 from utils.gigachat_client import AIServiceError, get_ai_status
 from utils.workspace_store import connection
 
@@ -96,6 +96,12 @@ def photo(review_id, index):
 def report(assignment_id):
     job_store.maintain()
     return jsonify(report=review_store.report(g.identity['owner_id'], assignment_id))
+
+
+@api.get('/classes/<class_id>/report')
+def overview(class_id):
+    job_store.maintain()
+    return jsonify(report=class_report.overview(g.identity['owner_id'], class_id, request.args))
 
 
 @api.get('/assignments/<assignment_id>/report.csv')

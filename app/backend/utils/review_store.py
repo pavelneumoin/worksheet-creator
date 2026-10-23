@@ -275,6 +275,18 @@ def history(owner, review_id):
         return result[::-1]
 
 
+def summarize(students, maximum):
+    """Official scores only; a missing or unconfirmed score is never zero."""
+    scores = [s['score'] for s in students if s['status'] == 'confirmed' and s['score'] is not None]
+    total = len(students)
+    counts = {status: sum(s['status'] == status for s in students)
+              for status in ('not_submitted', 'needs_review', 'processing', 'failed')}
+    return dict(counts, total=total, submitted=total - counts['not_submitted'], confirmed=len(scores),
+                pending_corrections=sum(s['status'] == 'confirmed' and s.get('has_draft', False) for s in students),
+                average=round(sum(scores) / len(scores), 2) if scores else None,
+                percent=round(100 * sum(scores) / (len(scores) * maximum), 1) if scores else None, maximum=maximum)
+
+
 def report(owner, assignment_id):
     with connection() as conn:
         assignment = class_store.assignment_detail(conn, owner, assignment_id)
@@ -296,13 +308,7 @@ def report(owner, assignment_id):
             breakdown.append({'task_id': task['id'], 'question': task['question'], 'correct': correct, 'total': len(confirmed),
                               'percent': round(100 * correct / len(confirmed), 1) if confirmed else None})
         scores = [s['score'] for s in students if s['score'] is not None]
-        total = len(students)
-        summary = {'total': total, 'submitted': len(reviews), 'not_submitted': total - len(reviews), 'confirmed': len(confirmed),
-                   'pending_corrections': sum(s['status'] == 'confirmed' and s['has_draft'] for s in students),
-                   'needs_review': sum(s['status'] == 'needs_review' for s in students),
-                   'processing': sum(s['status'] == 'processing' for s in students), 'failed': sum(s['status'] == 'failed' for s in students),
-                   'average': round(sum(scores) / len(scores), 2) if scores else None,
-                   'percent': round(100 * sum(scores) / (len(scores) * len(tasks)), 1) if scores else None, 'maximum': len(tasks)}
+        summary = summarize(students, len(tasks))
         difficult = [i + 1 for i, t in enumerate(breakdown) if t['percent'] is not None and t['percent'] < 60]
         recommendation = ('Пока нет подтверждённых результатов. Завершите проверку, чтобы увидеть выводы.' if not scores else
                           'Повторите задания ' + ', '.join(map(str, difficult)) + ': менее 60% верных ответов среди подтверждённых работ.' if difficult else

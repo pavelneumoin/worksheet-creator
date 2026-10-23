@@ -133,10 +133,15 @@ async function openClassReport(id) {
   classScreen("classReport");
   const target = $("classReport");
   target.className = "review-report";
+  const origin =
+    reviewState.reportOrigin?.assignmentId === id
+      ? reviewState.reportOrigin
+      : null;
   target.replaceChildren(
     reviewButton(
-      "← К назначенной работе",
-      () => openAssignment(id),
+      origin ? "← К обзору работ" : "← К назначенной работе",
+      () =>
+        origin ? openClass(origin.classId, "reports") : openAssignment(id),
       "ghost back-link report-controls",
     ),
   );

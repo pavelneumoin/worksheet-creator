@@ -101,11 +101,13 @@ function renderClasses() {
 }
 async function openClass(id, tab = classState.tab) {
   classState.current = (await request("/api/v2/classes/" + id)).classroom;
+  if (tab === "reports") await loadClassOverview(id);
   classState.tab = tab;
   classState.assignment = null;
   classScreen("classDetail");
   renderClass();
-  classFocus($("classDetail"));
+  if (tab === "reports") focusClassOverview(true);
+  else classFocus($("classDetail"));
 }
 function renderClass() {
   const c = classState.current,
@@ -197,10 +199,20 @@ function renderClass() {
   for (const [key, title] of [
     ["students", "Ученики"],
     ["assignments", "Работы"],
+    ["reports", "Отчёты"],
   ]) {
     const button = classButton(
       title,
       () => {
+        if (key === "reports") {
+          busy("Загружаем отчёты класса", async () => {
+            await loadClassOverview(c.id);
+            classState.tab = key;
+            renderClass();
+            focusClassOverview();
+          });
+          return;
+        }
         classState.tab = key;
         renderClass();
       },
@@ -218,6 +230,7 @@ function renderClass() {
   );
   target.append(tabs);
   if (classState.tab === "students") renderRoster(target, c);
+  else if (classState.tab === "reports") renderClassOverview(target, c);
   else renderAssignments(target, c);
 }
 function renderRoster(target, c) {
@@ -692,9 +705,15 @@ function backFromClass() {
       openClassReport(reviewState.current.assignment_id),
     );
   } else if (!$("classReport").hidden) {
-    busy("Открываем работу", () =>
-      openAssignment(reviewState.report.assignment_id),
-    );
+    const origin = reviewState.reportOrigin;
+    if (origin?.assignmentId === reviewState.report.assignment_id)
+      busy("Открываем обзор класса", () =>
+        openClass(origin.classId, "reports"),
+      );
+    else
+      busy("Открываем работу", () =>
+        openAssignment(reviewState.report.assignment_id),
+      );
   } else if (!$("assignmentCreate").hidden) {
     if (classState.attempt) {
       notice(

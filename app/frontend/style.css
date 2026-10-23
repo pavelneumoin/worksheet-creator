@@ -1928,6 +1928,7 @@ select {
 }
 .class-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 20px;
 }
@@ -2479,6 +2480,51 @@ select {
 .review-history-entry h3 {
   font-size: 1rem;
   margin-bottom: 8px;
+}
+.class-overview-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 12px 0;
+}
+.class-overview-filters form > label {
+  margin: 18px 0 10px;
+}
+.class-overview-filters .actions {
+  margin-top: 16px;
+}
+.class-overview-card {
+  overflow-wrap: anywhere;
+}
+.class-overview-card h3 {
+  font-size: 21px;
+  margin: 8px 0 12px;
+}
+.class-overview-score,
+.class-overview-individual {
+  font-weight: 600;
+}
+.class-overview-individual {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f4f1fc;
+}
+@media (max-width: 480px) {
+  .class-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .class-tabs .button:last-child {
+    margin-left: 0;
+  }
+  .class-overview-fields {
+    grid-template-columns: 1fr;
+  }
+  .class-overview-filters .actions,
+  .class-overview-card .button {
+    width: 100%;
+  }
 }
 @media (max-width: 720px) {
   .report-summary {
