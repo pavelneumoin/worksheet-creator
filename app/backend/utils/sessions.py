@@ -10,13 +10,15 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from utils.gigachat_client import AIServiceError
 from utils.max_auth import validate_init_data
+from utils import bot_login
 from utils.workspace_store import connection
 
 auth = Blueprint('auth', __name__, url_prefix='/api/v2/auth')
 COOKIE = 'listok_session'
 TTL = 7 * 24 * 3600
 PUBLIC_ENDPOINTS = {'index', 'static', 'status', 'readiness', 'demo', 'workspace.demo',
-                    'auth.me', 'auth.login_max', 'auth.login_local', 'workspace.max_launch', 'workspace.download_file'}
+                    'auth.me', 'auth.login_max', 'auth.login_local', 'auth.preview_bot', 'auth.login_bot',
+                    'max_bot.webhook', 'workspace.max_launch', 'workspace.download_file'}
 
 
 def local_mode():
@@ -90,7 +92,27 @@ def me():
         return jsonify(session_json(g.identity))
     username = os.environ.get('MAX_BOT_USERNAME', '').lstrip('@')
     return jsonify(authenticated=False, local_available=local_allowed(),
-                   max_url=f'https://max.ru/{username}?startapp' if username and username.replace('_', '').isalnum() else None)
+                   max_url=(f'https://max.ru/{username}' + ('' if bot_login.enabled() else '?startapp'))
+                   if username and username.replace('_', '').isalnum() else None,
+                   bot_login_available=bot_login.enabled())
+
+
+@auth.post('/bot/preview')
+def preview_bot():
+    origin_check()
+    data = request.get_json(silent=True)
+    row = bot_login.lookup(data.get('token') if isinstance(data, dict) else None)
+    return jsonify(first_name=row['first_name'])
+
+
+@auth.post('/bot')
+def login_bot():
+    origin_check()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or data.get('confirm') is not True:
+        raise AIServiceError('Подтвердите вход в показанный профиль MAX.', 'confirmation_required', 400)
+    row = bot_login.lookup(data.get('token'), consume=True)
+    return issue_session(row['owner_id'], row['first_name'], 'max')
 
 
 @auth.post('/max')

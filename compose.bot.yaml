@@ -1,0 +1,38 @@
+# Add alongside compose.yaml (and compose.https.yaml on a public server).
+services:
+  listok:
+    environment:
+      LISTOK_BOT_LOGIN_ENABLED: "1"
+      MAX_WEBHOOK_SECRET: ${MAX_WEBHOOK_SECRET:?Set a random webhook secret}
+
+  bot-worker:
+    image: listok:night7
+    command: ["python", "scripts/run_bot.py"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    pids_limit: 32
+    mem_limit: 192m
+    cpus: 0.25
+    environment:
+      LISTOK_DB_PATH: /app/data/worksheets.db
+      LISTOK_BOT_LOGIN_ENABLED: "1"
+      MAX_BOT_TOKEN: ${MAX_BOT_TOKEN:?Set the contest bot token}
+      MAX_BOT_USERNAME: ${MAX_BOT_USERNAME:?Set the contest bot username}
+      MAX_APP_URL: ${MAX_APP_URL:?Set the HTTPS origin}
+      MAX_WEBHOOK_SECRET: ${MAX_WEBHOOK_SECRET:?Set a random webhook secret}
+      MAX_CA_BUNDLE_FILE: /app/certs/gigachat-ca.pem
+    volumes:
+      - materials:/app/data
+      - ./.local-certs:/app/certs:ro
+    depends_on:
+      listok: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "scripts/worker_health.py", "bot"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

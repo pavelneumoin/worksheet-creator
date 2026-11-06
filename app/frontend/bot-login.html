@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Вход в ЛистОК</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/bot-login.js"></script>
+</head>
+<body>
+  <header class="topbar"><div class="topbar-inner"><a class="brand" href="/" aria-label="ЛистОК — главная"><span class="brand-icon" aria-hidden="true">✓</span>Лист<span>ОК</span></a></div></header>
+  <main class="page"><section class="panel login-panel">
+    <p class="eyebrow">ЛИЧНЫЙ КАБИНЕТ УЧИТЕЛЯ</p>
+    <h1>Вход через MAX</h1>
+    <p id="loginStatus" role="status" aria-live="polite">Проверяем ссылку из бота…</p>
+    <p id="loginConfirmHint" hidden>Продолжайте, если это ваш профиль и вы сами запросили ссылку в боте ЛистОК.</p>
+    <button class="button primary" id="confirmLogin" hidden>Войти в свой кабинет</button>
+    <a class="button secondary" id="newBotLink" hidden>Получить новую ссылку в MAX</a>
+    <p class="quiet">Ссылка действует 5 минут. После входа материалы сохраняются в вашем профиле.</p>
+  </section></main>
+</body>
+</html>

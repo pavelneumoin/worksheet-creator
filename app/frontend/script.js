@@ -1115,6 +1115,10 @@ function renderAccount() {
   $("localLoginBtn").hidden = !state.auth?.local_available;
   $("maxLoginLink").hidden = !state.auth?.max_url;
   if (state.auth?.max_url) $("maxLoginLink").href = state.auth.max_url;
+  $("maxLoginLink").textContent = state.auth?.bot_login_available ? "Получить вход в боте MAX" : "Открыть в MAX";
+  $("loginHint").textContent = state.auth?.bot_login_available
+    ? "Нажмите «Начать» или отправьте /start. Бот выдаст личную ссылку на 5 минут."
+    : "Откройте приложение из своего бота MAX.";
   const local = state.auth?.user?.kind === "local";
   $("accountName").textContent = loggedIn
     ? local

@@ -39,6 +39,8 @@ from class_api import api as class_api
 app.register_blueprint(class_api)
 from review_api import api as review_api
 app.register_blueprint(review_api)
+from bot_api import api as bot_api
+app.register_blueprint(bot_api)
 
 
 @app.before_request
@@ -56,6 +58,12 @@ def response_headers(response):
     response.headers["Referrer-Policy"] = "no-referrer"
     if request.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
+    if request.path == '/bot-login.html':
+        response.headers['Cache-Control'] = 'no-store'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+            "frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
     return response
 
 MAX_FILES = 10
@@ -206,6 +214,8 @@ def readiness():
         checks = {'ai_worker': workers_ready('ai'),
                   'compile_worker': workers_ready('compile'),
                   'compiler': bool(_compiler())}
+        if os.environ.get('LISTOK_BOT_LOGIN_ENABLED') == '1':
+            checks['bot_worker'] = workers_ready('bot')
     except Exception:
         return jsonify(ready=False), 503
     ready = all(checks.values())

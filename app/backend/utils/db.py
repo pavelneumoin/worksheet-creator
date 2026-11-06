@@ -30,6 +30,17 @@ def init_db():
             csrf TEXT NOT NULL, expires_at INTEGER NOT NULL
         );
         CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
+        CREATE TABLE IF NOT EXISTS bot_login_tokens (
+            token_hash TEXT PRIMARY KEY, owner_id TEXT NOT NULL,
+            first_name TEXT NOT NULL, expires_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS bot_login_expiry ON bot_login_tokens(expires_at);
+        CREATE TABLE IF NOT EXISTS bot_inbox (
+            id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, first_name TEXT NOT NULL,
+            action TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued',
+            created_at REAL NOT NULL, updated_at REAL NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS bot_inbox_queue ON bot_inbox(status,created_at);
         CREATE TABLE IF NOT EXISTS materials (
             id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
             worksheet TEXT NOT NULL, source TEXT NOT NULL,
