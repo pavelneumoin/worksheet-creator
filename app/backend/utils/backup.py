@@ -19,7 +19,8 @@ def digest(path):
 
 
 def artifact_names(conn):
-    return {name for row in conn.execute('SELECT pdf,answers,tex,marp FROM artifacts') for name in row if name} | legacy_names(conn)
+    columns='pdf,answers,tex,marp'+(',teacher' if 'teacher' in {r[1] for r in conn.execute('PRAGMA table_info(artifacts)')} else '')
+    return {name for row in conn.execute('SELECT '+columns+' FROM artifacts') for name in row if name} | legacy_names(conn)
 
 
 def legacy_names(conn):
@@ -37,7 +38,10 @@ def review_photo_names(conn):
     # Older backups predate photo reviews and remain restorable.
     if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='reviews'").fetchone():
         return set()
-    return {f"review_photos/{row[0]}/{i}.jpg" for row in conn.execute('SELECT id,photo_count FROM reviews') for i in range(row[1])}
+    names = {f"review_photos/{row[0]}/{i}.jpg" for row in conn.execute('SELECT id,photo_count FROM reviews') for i in range(row[1])}
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='review_batches'").fetchone():
+        names |= {f"batch_photos/{row[0]}/{i}.jpg" for row in conn.execute('SELECT id,photo_count FROM review_batches') for i in range(row[1])}
+    return names
 
 
 def fail_restored_reviews(conn):
@@ -47,7 +51,7 @@ def fail_restored_reviews(conn):
 
 def revoke_bot_state(conn):
     # Older archives predate bot login. Never restore login links or replay replies.
-    for table in ('bot_login_tokens', 'bot_inbox'):
+    for table in ('bot_login_tokens', 'bot_inbox', 'bot_runs', 'bot_drafts', 'school_invites'):
         if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
             conn.execute('DELETE FROM ' + table)
 
@@ -90,7 +94,7 @@ def create_backup(destination):
                     raise ValueError('В базе есть отсутствующий файл. Сначала восстановите целостность хранилища.')
                 shutil.copyfile(source_path, stage / 'generated' / name)
             for name in sorted(photos):
-                if not re.fullmatch(r'review_photos/[a-f0-9]{32}/[0-9]\.jpg', name):
+                if not re.fullmatch(r'(?:review_photos|batch_photos)/[a-f0-9]{32}/[0-9]{1,2}\.jpg', name):
                     raise ValueError('Небезопасное имя фотографии в базе.')
                 source_path = Path(db.DB_PATH).resolve().parent.joinpath(*PurePosixPath(name).parts)
                 if source_path.is_symlink() or not source_path.is_file():
@@ -127,7 +131,7 @@ def restore_backup(archive_path, destination):
             if len(names) != len(set(names)) or len(names) > 100000 or sum(i.file_size for i in entries) > 5 * 1024**3:
                 raise ValueError('Некорректный или слишком большой архив.')
             for name in names:
-                if name not in ('manifest.json', 'worksheets.db') and not re.fullmatch(r'generated/[A-Za-z0-9_-]+\.(pdf|tex|zip)|review_photos/[a-f0-9]{32}/[0-9]\.jpg', name):
+                if name not in ('manifest.json', 'worksheets.db') and not re.fullmatch(r'generated/[A-Za-z0-9_-]+\.(pdf|tex|zip)|(?:review_photos|batch_photos)/[a-f0-9]{32}/[0-9]{1,2}\.jpg', name):
                     raise ValueError('Недопустимый путь в архиве.')
             if 'manifest.json' not in names or archive.getinfo('manifest.json').file_size > 20_000_000:
                 raise ValueError('Нет корректного манифеста.')
@@ -148,7 +152,7 @@ def restore_backup(archive_path, destination):
                 raise ValueError('Проверка базы не пройдена.')
             if {f'generated/{n}' for n in artifact_names(conn)} != {n for n in expected if n.startswith('generated/')}:
                 raise ValueError('Состав файлов не соответствует базе.')
-            if review_photo_names(conn) != {n for n in expected if n.startswith('review_photos/')}:
+            if review_photo_names(conn) != {n for n in expected if n.startswith(('review_photos/','batch_photos/'))}:
                 raise ValueError('Состав фотографий не соответствует базе.')
             fail_restored_reviews(conn)
             conn.execute('DELETE FROM download_tickets'); conn.execute('DELETE FROM sessions'); conn.execute('DELETE FROM workers')

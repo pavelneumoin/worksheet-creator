@@ -39,7 +39,7 @@ def stop_process(process):
 
 def remove_outputs(job_id):
     base = 'job_' + job_id
-    for suffix in ('.pdf', '.tex', '.log', '_keys.pdf', '_keys.tex', '_keys.log', '_marp.zip'):
+    for suffix in ('.pdf', '.tex', '.log', '_keys.pdf', '_keys.tex', '_keys.log', '_marp.zip','_teacher.pdf'):
         (Path(latex.OUTPUT_DIR) / (base + suffix)).unlink(missing_ok=True)
 
 
@@ -60,12 +60,27 @@ def execute(job_id):
         if job['kind'] == 'compile':
             base = 'job_' + job_id
             compile_worksheet(payload['worksheet'], base)
+            from pypdf import PdfWriter
+            writer=PdfWriter()
+            for suffix in ('.pdf','_keys.pdf'):writer.append(Path(latex.OUTPUT_DIR)/(base+suffix))
+            writer.write(Path(latex.OUTPUT_DIR)/(base+'_teacher.pdf'))
             export_bundle(payload['worksheet'], Path(latex.OUTPUT_DIR) / (base + '_marp.zip'), payload.get('origin'))
             result = {'ok': True}
+        elif job['kind'] == 'analytics_pdf':
+            from utils.analytics_export import compile_report
+            compile_report(payload['report'],'job_'+job_id)
+            result={'ok':True}
+        elif job['kind'] == 'analytics_insight':
+            from utils.analytics_ai import generate
+            result={'insight':generate(payload['report'])}
         elif job['kind'] == 'report_pdf':
             from utils.report_export import compile_report
             compile_report(payload['report'], 'job_' + job_id)
             result = {'ok': True}
+        elif job['kind'] == 'batch_grade':
+            from utils import batch_review
+            paths=source_pages.prepare([directory/name for name in payload['images']],directory/'pages',max_pages=batch_review.MAX_PAGES)
+            result=batch_review.recognize(payload['tasks'],paths,directory)
         elif job['kind'] == 'grade':
             from utils import grading_ai
             paths = source_pages.prepare([directory / name for name in payload['images']], directory / 'pages')
@@ -105,7 +120,7 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
     command = [sys.executable, str(ROOT / 'scripts/run_worker.py'), '--execute', job['id']]
     count = json.loads(job['payload']).get('variant_count', 1)
     payload = json.loads(job['payload'])
-    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', []))}[job['kind']]
+    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', [])), 'batch_grade':12300,'analytics_pdf':180,'analytics_insight':300}[job['kind']]
     process = None
     succeeded = False
     try:
@@ -162,7 +177,7 @@ def complete_checkpoint(job, directory):
         return False
     try:
         result = json.loads(path.read_text(encoding='utf-8'))
-        usable = bool(result.get('worksheets')) or (job['kind'] == 'grade' and isinstance(result.get('answers'), list) and bool(result.get('photos')))
+        usable = bool(result.get('worksheets')) or (job['kind'] == 'grade' and isinstance(result.get('answers'), list) and bool(result.get('photos'))) or (job['kind']=='batch_grade' and bool(result.get('batch_pages')))
         return usable and job_store.complete(job, result)
     except (ValueError, AIServiceError):
         return False

@@ -209,6 +209,17 @@ async function openJobResult(job, chosenMaterial = null) {
   if (state.dirty && state.sheet) await saveCurrent();
   const fresh = (await request("/api/v2/jobs/" + job.id)).job;
   if (fresh.status !== "succeeded") throw new Error("Результат ещё не готов.");
+  if (["analytics_pdf","analytics_insight"].includes(fresh.kind)) {
+    await openAnalytics(fresh.result.filters);
+    if(fresh.kind==="analytics_insight")showAnalyticsInsight(fresh.result);
+    else showAnalyticsDownload(fresh.result);
+    return;
+  }
+  if (fresh.kind === "batch_grade") {
+    await openBatch(fresh.result.batch_id);
+    await request("/api/v2/jobs/"+job.id+"/acknowledge",{method:"POST"});
+    await refreshJobs();return;
+  }
   if (fresh.kind === "report_pdf") {
     await openClassReport(fresh.result.assignment_id);
     showReportDownload(fresh.result);

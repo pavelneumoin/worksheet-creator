@@ -104,7 +104,7 @@ def complete(conn, owner, review_id, output, paths):
                 fail('Неверный ответ распознавания.', 'invalid_recognition', 502)
             normalized_code = seen.upper().replace(' ', '')
             if name == 'student_code':
-                normalized_code = re.sub(r'^[YУ]-', 'У-', normalized_code)
+                normalized_code = class_store.normalize_student_code(seen)
             if seen and normalized_code != expected.upper():
                 warnings.append(f'На фото {page_index} прочитан другой код {title}: {seen}. Сверьте оригинал перед подтверждением.')
     conflicts = output.get('conflict_task_ids', [])

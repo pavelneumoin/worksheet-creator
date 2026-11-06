@@ -47,7 +47,7 @@ def overview(owner, class_id, value):
                 continue
             if selected['to_date'] and (not row['scheduled_date'] or row['scheduled_date'] > selected['to_date']):
                 continue
-            if selected['q'].casefold() not in (row['title'] + ' ' + worksheet['title']).casefold():
+            if selected['q'].casefold() not in (row['title'] + ' ' + (row['topic'] or worksheet['title'])).casefold():
                 continue
             chosen.append((row, worksheet))
         chosen.sort(key=lambda item: (bool(item[0]['scheduled_date']), item[0]['scheduled_date'], item[0]['created_at'], item[0]['id']), reverse=True)
@@ -79,7 +79,7 @@ def overview(owner, class_id, value):
                               'score': result['score'] if result else None,
                               'review_id': result['id'] if result else None,
                               'has_draft': bool(result and result['has_draft'])}
-            works.append({'assignment_id': row['id'], 'title': row['title'], 'topic': worksheet['title'],
+            works.append({'assignment_id': row['id'], 'title': row['title'], 'topic': row['topic'] or worksheet['title'],
                           'subject': worksheet['subject'], 'edition_code': row['code'], 'status': row['status'],
                           'scheduled_date': row['scheduled_date'], 'due_date': row['due_date'],
                           'summary': summary, 'student_result': individual})

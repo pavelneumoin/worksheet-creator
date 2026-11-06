@@ -18,14 +18,16 @@ MAX_EDGE = 2200
 MAX_IMAGE_PIXELS = 40_000_000
 
 
-def prepare(paths, directory):
+def prepare(paths, directory, max_pages=MAX_PAGES):
+    if type(max_pages) is not int or not 1 <= max_pages <= 40:
+        raise ValueError('Invalid page limit')
     directory = Path(directory)
     directory.mkdir(exist_ok=True)
     result = []
 
     def save(image):
-        if len(result) >= MAX_PAGES:
-            raise AIServiceError('Загрузите не более 10 страниц за один раз.', 'page_limit', 400)
+        if len(result) >= max_pages:
+            raise AIServiceError(f'Загрузите не более {max_pages} страниц за один раз.', 'page_limit', 400)
         with image.convert('RGB') as rgb:
             rgb.thumbnail((MAX_EDGE, MAX_EDGE), Image.Resampling.LANCZOS)
             target = directory / f'page_{len(result) + 1}.jpg'
@@ -38,8 +40,8 @@ def prepare(paths, directory):
         if path.suffix.lower() == '.pdf':
             try:
                 with pdfium.PdfDocument(path) as document:
-                    if not 1 <= len(document) <= MAX_PAGES - len(result):
-                        raise AIServiceError('В PDF должно быть от 1 до 10 страниц. Сохраните нужный фрагмент отдельным файлом.', 'page_limit', 400)
+                    if not 1 <= len(document) <= max_pages - len(result):
+                        raise AIServiceError(f'В PDF должно быть от 1 до {max_pages} страниц. Сохраните нужный фрагмент отдельным файлом.', 'page_limit', 400)
                     for index in range(len(document)):
                         with closing(document[index]) as page:
                             width, height = page.get_size()

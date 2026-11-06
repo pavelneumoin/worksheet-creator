@@ -63,6 +63,9 @@ def validate_worksheet(value):
     field = settings.get("field", "grid")
     if field not in ("grid", "blank", "none"):
         invalid("Выберите клетку, пустое поле или список.")
+    field_height = settings.get('field_height_mm', 0)
+    if type(field_height) is not int or (field_height != 0 and not 5 <= field_height <= 100):
+        invalid('Высота поля: автоматически или от 5 до 100 мм.')
     template = settings.get('template', 'cards')
     if template not in ('list', 'cards', 'guided', 'check'):
         invalid('Выберите шаблон рабочего листа.')
@@ -85,7 +88,8 @@ def validate_worksheet(value):
             "tasks": tasks,
             "settings": {"columns": columns, "tasks_per_page": per_page, "field": field,
                          "template": template, "print_sides": print_sides,
-                         "variant": variant, "lesson_date": lesson_date}}
+                         "variant": variant, "lesson_date": lesson_date,
+                         **({'field_height_mm': field_height} if field_height else {})}}
 
 
 def edition_code(value):
@@ -144,7 +148,7 @@ def worksheet_tex(data):
     count, columns = settings["tasks_per_page"], settings["columns"]
     # Conservative spacing leaves room for conditions. Overflow is rejected by compiler.
     rows = (count + columns - 1) // columns
-    height = {1: 100, 2: 49, 3: 27, 4: 15, 5: 8, 6: 5}[rows]
+    height = settings.get('field_height_mm') or {1: 100, 2: 49, 3: 27, 4: 15, 5: 8, 6: 5}[rows]
     template = settings.get('template', 'cards')
     command = {'list': 'ListTask', 'cards': 'CardTask', 'guided': 'GuidedTask', 'check': 'CheckTask'}[template]
     field = rf'\WriteField{{{height}mm}}' if settings['field'] != 'none' else r'\vspace{2mm}'

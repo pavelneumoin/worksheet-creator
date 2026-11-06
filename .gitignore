@@ -35,6 +35,7 @@ app/backend/static/generated/
 app/backend/uploads/
 app/backend/jobs/
 app/backend/review_photos/
+app/backend/batch_photos/
 data/
 bot/tmp_*.jpg
 

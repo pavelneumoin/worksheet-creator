@@ -247,6 +247,7 @@ function renderRoster(target, c) {
     info.append(classButton("Скачать таблицу кодов", () => downloadCodes(c)));
   target.append(info);
   if (!c.archived) {
+    renderLocalRosterImport(target,c);
     const form = node("form", undefined, "panel roster-add");
     const label = node("label", "Сколько учеников добавить"),
       input = node("input");
@@ -486,6 +487,7 @@ async function openAssignment(id, loaded = null) {
         "Ответы для учителя",
       ),
     );
+  if(a.result.teacher_url)downloads.append(editionDownload(a.edition_id,a.code,a.result,"teacher_url","Комплект учителя"));
   panel.append(
     downloads,
     node(

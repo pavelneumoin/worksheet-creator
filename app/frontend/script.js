@@ -15,7 +15,7 @@ const state = {
   materials: [],
   auth: null,
   dirty: false,
-  view: "home",
+  view: "workspace",
   origin: null,
   library: [],
   libraryPage: 1,
@@ -125,6 +125,7 @@ function step(number) {
     $("step" + number).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function showView(view, refresh = true) {
+  if (view === "home") view = "workspace";
   if (
     typeof guardReviewNavigation === "function" &&
     !guardReviewNavigation(() => showView(view, refresh))
@@ -147,8 +148,12 @@ function showView(view, refresh = true) {
     library: "libraryView",
     publish: "publishView",
     classes: "classesView",
+    batch: "batchView",
+    analytics: "analyticsView",
+    school: "schoolView",
   }))
-    $(id).hidden = view !== name;
+    if ($(id)) $(id).hidden = view !== name;
+  for (const name of ["batch","analytics","school"]) $(name+"Nav")?.classList.toggle("active",view===name);
   $("createNav").classList.toggle(
     "active",
     ["workspace", "home"].includes(view),
@@ -167,7 +172,7 @@ function showView(view, refresh = true) {
     busy("Загружаем библиотеку", () => refreshLibrary());
   }
   if (window.WebApp?.BackButton) {
-    if (view !== "home") window.WebApp.BackButton.show();
+    if (view !== "workspace" || state.step > 1) window.WebApp.BackButton.show();
     else window.WebApp.BackButton.hide();
   }
   if (changedView) window.scrollTo({ top: 0 });
@@ -394,6 +399,8 @@ function renderSettings() {
   $("variantInput").value = state.sheet.settings.variant || "";
   $("lessonDateInput").value = state.sheet.settings.lesson_date || "";
   $("printSides").value = state.sheet.settings.print_sides || "single";
+  if ($("fieldHeight")) $("fieldHeight").value = state.sheet.settings.field_height_mm || "0";
+  if (typeof renderStudioPreview === "function") renderStudioPreview();
   templateHint();
   $("compileBtn").disabled =
     !$("reviewCheckbox").checked || !state.status?.latex_ready;
@@ -418,9 +425,10 @@ function readSettings() {
     variant: $("variantInput").value,
     lesson_date: $("lessonDateInput").value,
     print_sides: $("printSides").value,
+    ...(Number($("fieldHeight")?.value) ? {field_height_mm:Number($("fieldHeight").value)} : {}),
   };
   const changed = teacher !== state.sheet.teacher_name || grade !== state.sheet.grade ||
-    Object.keys(settings).some((key) => settings[key] !== state.sheet.settings[key]);
+    [...new Set([...Object.keys(settings), ...Object.keys(state.sheet.settings)])].some((key) => settings[key] !== state.sheet.settings[key]);
   state.sheet.teacher_name = teacher;
   state.sheet.grade = grade;
   state.sheet.settings = settings;
@@ -479,12 +487,15 @@ async function renderResult() {
   $("downloadTex").href = state.result.tex_url;
   $("downloadMarp").hidden = !state.result.marp_url;
   if (state.result.marp_url) $("downloadMarp").href = state.result.marp_url;
+  $("downloadTeacher").hidden=!state.result.teacher_url;
+  if(state.result.teacher_url)$("downloadTeacher").href=state.result.teacher_url;
   $("pdfPreview").src = state.result.pdf_url + "#toolbar=0";
   for (const [id, key, name] of [
     ["downloadSheet", "pdf_url", "Рабочий лист.pdf"],
     ["downloadKeys", "keys_url", "Ответы.pdf"],
     ["downloadTex", "tex_url", "Рабочий лист.tex"],
     ["downloadMarp", "marp_url", "ЛистОК Marp.zip"],
+    ["downloadTeacher","teacher_url","Комплект учителя.pdf"],
   ]) {
     bindArtifactDownload($(id), state.result.artifact_id, key, name);
   }
@@ -748,13 +759,14 @@ function appendCabinetTools(card, item) {
         for (const [text, url] of [
           ["Лист", edition.result.pdf_url],
           ["Ответы", edition.result.keys_url],
+          ["Комплект учителя",edition.result.teacher_url],
         ]) {
           if (!url) continue;
           const a = node("a", text, "button secondary");
           a.href = url;
           a.target = "_blank";
           a.rel = "noopener";
-          bindArtifactDownload(a, edition.id, text === "Лист" ? "pdf_url" : "keys_url",
+          bindArtifactDownload(a, edition.id, text === "Лист" ? "pdf_url" : text === "Ответы" ? "keys_url" : "teacher_url",
             text + " " + edition.code + ".pdf");
           links.append(a);
         }
@@ -1140,9 +1152,9 @@ function renderAccount() {
   const loggedIn = !!state.auth?.authenticated;
   $("loginPanel").hidden = loggedIn;
   $("workspace").hidden = true;
-  $("homeView").hidden = !loggedIn;
+  $("homeView").hidden = true;
   $("scheduleView").hidden = true;
-  if (loggedIn) showView("home", false);
+  if (loggedIn) showView("workspace", false);
   $("savedView").hidden = true;
   $("libraryView").hidden = true;
   $("publishView").hidden = true;
@@ -1422,6 +1434,7 @@ function initialSettings() {
     field: $("setupField").value,
     columns: Number($("setupColumns").value),
     tasks_per_page: Number($("setupCount").value),
+    ...(Number($("setupHeight")?.value) ? {field_height_mm:Number($("setupHeight").value)} : {}),
   };
 }
 function initialSummary() {

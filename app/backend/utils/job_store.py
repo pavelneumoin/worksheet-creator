@@ -16,8 +16,10 @@ from utils.workspace_store import connection, result_links, timestamp, record_ed
 
 ACTIVE = ('queued', 'running')
 TERMINAL = ('succeeded', 'failed', 'cancelled')
-LANES = {'recognize': 'ai', 'variant': 'ai', 'compile': 'compile', 'grade': 'ai', 'report_pdf': 'compile'}
-LABELS = {'recognize': 'Распознаём задания и готовим ответы', 'variant': 'Готовим новый вариант', 'compile': 'Собираем лист, ответы и Marp', 'grade': 'Распознаём ответы ученика', 'report_pdf': 'Готовим PDF отчёта класса'}
+LANES = {'recognize': 'ai', 'variant': 'ai', 'compile': 'compile', 'grade': 'ai', 'report_pdf': 'compile', 'batch_grade':'ai'}
+LABELS = {'recognize': 'Распознаём задания и готовим ответы', 'variant': 'Готовим новый вариант', 'compile': 'Собираем лист, ответы и Marp', 'grade': 'Распознаём ответы ученика', 'report_pdf': 'Готовим PDF отчёта класса','batch_grade':'Проверяем пачку сканов класса'}
+LANES.update(analytics_pdf='compile',analytics_insight='ai')
+LABELS.update(analytics_pdf='Собираем подробный отчёт',analytics_insight='Готовим рекомендации по статистике')
 LEASE_SECONDS = 45
 RETENTION_SECONDS = 7 * 86400
 
@@ -148,12 +150,26 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
             directory.mkdir()
             created = True
             stored = dict(payload)
+            if kind in ('analytics_pdf','analytics_insight'):
+                from utils import analytics,analytics_ai
+                stored['report']=analytics.overview(owner,payload.get('filters',{}),conn)
+                if not stored['report']['totals']['confirmed']:
+                    raise AIServiceError('Сначала подтвердите хотя бы одну проверку работы.','no_confirmed_scores',409)
+                if kind=='analytics_pdf' and payload.get('insight_id'):
+                    insight=conn.execute('SELECT * FROM analytics_insights WHERE id=? AND owner_id=?',(payload['insight_id'],owner)).fetchone()
+                    if not insight or insight['snapshot_hash']!=analytics_ai.digest(stored['report']):
+                        raise AIServiceError('Статистика изменилась. Обновите рекомендации или сформируйте PDF без них.','insight_stale',409)
+                    stored['report']['insight']=json.loads(insight['content'])
             if kind == 'report_pdf':
                 from utils import review_store
                 stored['report'] = review_store.report(owner, payload.get('assignment_id'), conn)
             if kind == 'grade':
                 from utils import review_store
                 assignment = review_store.enqueue(conn, owner, job_id, payload, fingerprint('review_photo', {}, image_paths))
+                stored['tasks'] = assignment['worksheet']['tasks']
+            if kind == 'batch_grade':
+                from utils import batch_review
+                assignment = batch_review.enqueue(conn,owner,job_id,payload,fingerprint('batch_pdf',{},image_paths))
                 stored['tasks'] = assignment['worksheet']['tasks']
             if material_id:
                 stored['source'] = material['source']
@@ -169,6 +185,8 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
                             VALUES (?,?,?,?,?,?,?,'queued',?,?)''',
                          (job_id, owner, kind, LANES[kind], request_key, signature, json.dumps(stored, ensure_ascii=False), now, now))
             result = _public(_owned(conn, owner, job_id), conn)
+            if payload.get('_bot_user') and owner==f"max:{payload['_bot_user']}":
+                conn.execute('INSERT INTO bot_runs(job_id,user_id,created_at) VALUES(?,?,?)',(job_id,payload['_bot_user'],now))
         return result, True
     except BaseException:
         if created:
@@ -213,6 +231,8 @@ def complete(job, output, active_connection=None):
             base = 'job_' + job_id
             conn.execute('INSERT INTO artifacts (id,owner_id,pdf,answers,tex,created_at,marp) VALUES (?,?,?,?,?,?,?)',
                          (job_id, owner, base + '.pdf', base + '_keys.pdf', base + '.tex', now, base + '_marp.zip'))
+            if (Path(latex.OUTPUT_DIR)/(base+'_teacher.pdf')).is_file():
+                conn.execute('UPDATE artifacts SET teacher=? WHERE id=?',(base+'_teacher.pdf',job_id))
             material = conn.execute('SELECT * FROM materials WHERE id=? AND owner_id=?', (payload['material_id'], owner)).fetchone()
             record_edition(conn, job_id, owner, material['id'] if material else None, payload['worksheet'], payload['revision'])
             attached = material is not None and material['revision'] == payload['revision']
@@ -223,7 +243,14 @@ def complete(job, output, active_connection=None):
             result = {'worksheet': payload['worksheet'], 'source': payload.get('source', 'manual'),
                       'material_id': material['id'] if attached else None, 'attached': attached,
                       **result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone())}
-        elif current['kind'] == 'report_pdf':
+        elif current['kind'] == 'analytics_insight':
+            from utils import analytics_ai
+            content=output.get('insight')
+            if not isinstance(content,dict) or any(not isinstance(content.get(k),list) or not 1<=len(content[k])<=5 or any(not isinstance(x,str) or len(x)>600 for x in content[k]) for k in ('observations','actions')):
+                raise AIServiceError('Некорректные рекомендации.','insight_invalid',502)
+            conn.execute('INSERT INTO analytics_insights VALUES(?,?,?,?,?)',(job_id,owner,analytics_ai.digest(payload['report']),json.dumps(content,ensure_ascii=False),now))
+            result={'insight_id':job_id,'insight':content,'generated_at':payload['report']['generated_at'],'filters':payload['filters']}
+        elif current['kind'] in ('report_pdf','analytics_pdf'):
             base = 'job_' + job_id
             path = Path(latex.OUTPUT_DIR) / (base + '.pdf')
             if not path.is_file() or not path.with_suffix('.tex').is_file():
@@ -233,9 +260,12 @@ def complete(job, output, active_connection=None):
                     raise AIServiceError('PDF отчёта повреждён.', 'report_missing', 500)
             conn.execute('INSERT INTO artifacts (id,owner_id,pdf,tex,created_at) VALUES (?,?,?,?,?)',
                          (job_id, owner, base + '.pdf', base + '.tex', now))
-            result = {'assignment_id': payload['assignment_id'], 'generated_at': payload['report']['generated_at'],
-                      'edition_code': payload['report']['edition_code'],
+            result = {**({'assignment_id':payload['assignment_id'],'edition_code':payload['report']['edition_code']} if current['kind']=='report_pdf' else {'filters':payload['filters']}),
+                      'generated_at': payload['report']['generated_at'],
                       **result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone())}
+        elif current['kind'] == 'batch_grade':
+            from utils import batch_review
+            result = batch_review.complete(conn,owner,job_id,output,job_directory(job_id)/'pages')
         elif current['kind'] == 'grade':
             from utils import review_store
             directory = job_directory(job_id) / 'pages'
@@ -301,7 +331,7 @@ def maintain():
             try:
                 if path.is_file() and path.stat().st_size <= 2 * 1024 * 1024:
                     output = json.loads(path.read_text(encoding='utf-8'))
-                    if output.get('worksheets') or (row['kind'] == 'grade' and isinstance(output.get('answers'), list) and output.get('photos')):
+                    if output.get('worksheets') or (row['kind'] == 'grade' and isinstance(output.get('answers'), list) and output.get('photos')) or (row['kind']=='batch_grade' and output.get('batch_pages')):
                         complete(dict(row), output, conn)
             except (ValueError, AIServiceError, OSError):
                 pass
@@ -312,6 +342,8 @@ def maintain():
         terminal = [r['id'] for r in conn.execute("SELECT id FROM jobs WHERE status IN ('succeeded','failed','cancelled')")]
         from utils import review_store
         review_store.maintain(conn)
+        from utils import batch_review
+        batch_review.maintain(conn)
         conn.execute("DELETE FROM jobs WHERE finished_at<?", (now - RETENTION_SECONDS,))
         conn.execute('DELETE FROM workers WHERE heartbeat<?', (now - 86400,))
     for job_id in terminal:

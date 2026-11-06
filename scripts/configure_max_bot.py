@@ -29,6 +29,11 @@ def main():
         client.call('PATCH', '/me/commands', json={'commands': [
             {'name': 'start', 'description': 'Открыть личный кабинет ЛистОК'},
             {'name': 'login', 'description': 'Получить новую ссылку для входа'},
+            {'name': 'quick', 'description': 'Создать лист прямо в чате'},
+            {'name': 'today', 'description': 'PDF для сегодняшних уроков'},
+            {'name': 'draft', 'description': 'Посмотреть последний черновик'},
+            {'name': 'pdf', 'description': 'Подтвердить задания и собрать PDF'},
+            {'name': 'files', 'description': 'Повторить готовые PDF'},
             {'name': 'help', 'description': 'Как подготовить лист и отчёт'}]})
         check = client.call('GET', '/subscriptions').get('subscriptions', [])
         if not any(item.get('url') == url for item in check):

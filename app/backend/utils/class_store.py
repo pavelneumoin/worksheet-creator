@@ -18,6 +18,12 @@ def student_code(student_id):
     return 'У-' + student_id[:10].upper()
 
 
+def normalize_student_code(value):
+    value=re.sub(r'\s+','',value.upper())
+    match=re.fullmatch(r'[УY][-–—]?([A-F0-9]{10})',value)
+    return 'У-'+match.group(1) if match else value
+
+
 def student_row(row):
     return {'id': row['id'], 'code': student_code(row['id']),
             **({'archived': bool(row['archived'])} if 'archived' in row.keys() else {})}
@@ -158,6 +164,7 @@ def update_student(owner, class_id, student_id, value):
 def assignment_row(conn, row, detail=False):
     result = {k: row[k] for k in ('id', 'class_id', 'class_name', 'edition_id', 'title', 'due_date', 'scheduled_date', 'instructions', 'status', 'revision', 'created_at', 'code')}
     result['student_count'] = conn.execute('SELECT COUNT(*) FROM assignment_students WHERE assignment_id=?', (row['id'],)).fetchone()[0]
+    result['topic'] = row['topic']
     if detail:
         result['worksheet'] = json.loads(row['worksheet'])
         result['result'] = result_links(dict(row, id=row['edition_id']))
@@ -167,7 +174,7 @@ def assignment_row(conn, row, detail=False):
 
 
 def assignment_detail(conn, owner, assignment_id):
-    row = conn.execute('''SELECT a.*,e.code,e.worksheet,f.pdf,f.answers,f.tex,f.marp
+    row = conn.execute('''SELECT a.*,e.code,e.worksheet,f.pdf,f.answers,f.tex,f.marp,f.teacher
                           FROM assignments a JOIN editions e ON e.id=a.edition_id JOIN artifacts f ON f.id=e.id
                           WHERE a.id=? AND a.owner_id=?''', (assignment_id, owner)).fetchone()
     if row is None:

@@ -36,7 +36,8 @@ def result_links(row):
     return {'artifact_id': row['id'], 'pdf_url': '/api/generated/' + row['pdf'],
             'keys_url': '/api/generated/' + row['answers'] if row['answers'] else None,
             'tex_url': '/api/generated/' + row['tex'] if row['tex'] else None,
-            'marp_url': '/api/generated/' + row['marp'] if row['marp'] else None}
+            'marp_url': '/api/generated/' + row['marp'] if row['marp'] else None,
+            'teacher_url': '/api/generated/'+row['teacher'] if 'teacher' in row.keys() and row['teacher'] else None}
 
 
 def material_row(conn, owner, row):
@@ -130,9 +131,9 @@ def delete_material(owner, material_id, revision):
             raise AIServiceError('Этот лист назначен классу. Перенесите его в архив: версии и ответы нужны для истории работ.',
                                  'material_assigned', 409)
         ids = [r[0] for r in conn.execute('SELECT id FROM editions WHERE material_id=? AND owner_id=?', (material_id, owner))]
-        files = list(conn.execute('SELECT pdf,answers,tex,marp FROM artifacts WHERE material_id=? AND owner_id=?', (material_id, owner)))
+        files = list(conn.execute('SELECT pdf,answers,tex,marp,teacher FROM artifacts WHERE material_id=? AND owner_id=?', (material_id, owner)))
         for artifact_id in ids:
-            files.extend(conn.execute('SELECT pdf,answers,tex,marp FROM artifacts WHERE id=? AND owner_id=?', (artifact_id, owner)))
+            files.extend(conn.execute('SELECT pdf,answers,tex,marp,teacher FROM artifacts WHERE id=? AND owner_id=?', (artifact_id, owner)))
             conn.execute('DELETE FROM artifacts WHERE id=? AND owner_id=?', (artifact_id, owner))
         conn.execute('DELETE FROM materials WHERE id=? AND owner_id=?', (material_id, owner))
         return list({name for row in files for name in row if name})
@@ -161,7 +162,7 @@ def list_editions(owner, material_id):
     with connection() as conn:
         if not conn.execute('SELECT 1 FROM materials WHERE id=? AND owner_id=?', (material_id, owner)).fetchone():
             missing()
-        rows = conn.execute('SELECT e.*,a.pdf,a.answers,a.tex,a.marp FROM editions e JOIN artifacts a ON a.id=e.id WHERE e.owner_id=? AND e.material_id=? ORDER BY e.created_at DESC',
+        rows = conn.execute('SELECT e.*,a.pdf,a.answers,a.tex,a.marp,a.teacher FROM editions e JOIN artifacts a ON a.id=e.id WHERE e.owner_id=? AND e.material_id=? ORDER BY e.created_at DESC',
                             (owner, material_id)).fetchall()
         return [{'id': r['id'], 'code': r['code'], 'revision': r['revision'], 'created': r['created_at'],
                  'worksheet': json.loads(r['worksheet']), 'result': result_links(r)} for r in rows]
@@ -177,5 +178,5 @@ def add_artifact(owner, pdf, answers, tex, marp=None):
 
 def owns_file(owner, filename):
     with connection() as conn:
-        return conn.execute('SELECT 1 FROM artifacts WHERE owner_id=? AND (pdf=? OR answers=? OR tex=? OR marp=?)',
-                            (owner, filename, filename, filename, filename)).fetchone() is not None
+        return conn.execute('SELECT 1 FROM artifacts WHERE owner_id=? AND (pdf=? OR answers=? OR tex=? OR marp=? OR teacher=?)',
+                            (owner, filename, filename, filename, filename,filename)).fetchone() is not None

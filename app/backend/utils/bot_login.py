@@ -1,5 +1,6 @@
 """Short-lived login links issued only for authenticated private MAX events."""
 import hashlib
+import json
 import os
 import re
 import secrets
@@ -63,6 +64,7 @@ def event_request(update, now=None):
     if type(stamp) is not int or not -60 <= now - stamp / 1000 <= 600:
         return None
     kind = update.get('update_type')
+    payload = {}
     if kind == 'bot_started':
         user = update.get('user')
         source = f'start:{stamp}'
@@ -75,12 +77,25 @@ def event_request(update, now=None):
             return None
         user = message.get('sender')
         body = message.get('body')
-        if not isinstance(body, dict) or not isinstance(body.get('text'), str):
+        if not isinstance(body, dict):
             return None
-        command = body['text'].strip().lower()
-        if command not in ('/start', '/login', '/help', 'начать', 'войти'):
-            return None
-        action = 'help' if command == '/help' else 'login'
+        text = body.get('text') or ''
+        if not isinstance(text,str) or len(text)>16000:return None
+        command = text.strip().lower()
+        commands={'/start':'login','/login':'login','начать':'login','войти':'login','/help':'help',
+                  '/today':'today','сегодня':'today','/quick':'quick_help','быстрый лист':'quick_help',
+                  '/draft':'draft','/pdf':'compile','проверил, собрать pdf':'compile','/files':'files'}
+        if command in commands:action=commands[command]
+        else:
+            attachments=body.get('attachments') or []
+            if not isinstance(attachments,list) or len(attachments)>10:return None
+            media=[a for a in attachments if isinstance(a,dict) and a.get('type') in ('image','file')]
+            if not media and not command.startswith('/лист '):return None
+            action='recognize';payload={'text':text[6:].strip() if command.startswith('/лист ') else text,'media':[]}
+            for a in media:
+                p=a.get('payload')
+                if not isinstance(p,dict) or not isinstance(p.get('url'),str) or len(p['url'])>6000:return None
+                payload['media'].append({'url':p['url'],'type':a['type']})
         mid = body.get('mid')
         if not isinstance(mid, str) or not 1 <= len(mid) <= 200:
             return None
@@ -91,7 +106,7 @@ def event_request(update, now=None):
             or user['user_id'] <= 0 or user.get('is_bot') is not False):
         return None
     return {'id': digest(f"{user['user_id']}:{source}"), 'user_id': user['user_id'],
-            'first_name': str(user.get('first_name') or 'Учитель')[:100], 'action': action}
+            'first_name': str(user.get('first_name') or 'Учитель')[:100], 'action': action, 'payload':payload}
 
 
 def enqueue(update):
@@ -103,11 +118,11 @@ def enqueue(update):
         conn.execute('BEGIN IMMEDIATE')
         conn.execute('DELETE FROM bot_inbox WHERE created_at<?', (now - 86400,))
         # Protect a double tap and duplicate deliveries without a second response.
-        recent = conn.execute('SELECT 1 FROM bot_inbox WHERE user_id=? AND created_at>?',
-                              (item['user_id'], now - 5)).fetchone()
+        recent = conn.execute('SELECT 1 FROM bot_inbox WHERE user_id=? AND action=? AND created_at>?',
+                              (item['user_id'],item['action'], now - 2)).fetchone()
         if not recent:
-            conn.execute('INSERT OR IGNORE INTO bot_inbox(id,user_id,first_name,action,created_at,updated_at) VALUES (?,?,?,?,?,?)',
-                         (item['id'], item['user_id'], item['first_name'], item['action'], now, now))
+            conn.execute('INSERT OR IGNORE INTO bot_inbox(id,user_id,first_name,action,created_at,updated_at,payload) VALUES (?,?,?,?,?,?,?)',
+                         (item['id'], item['user_id'], item['first_name'], item['action'], now, now,json.dumps(item['payload'],ensure_ascii=False)))
 
 
 def claim():

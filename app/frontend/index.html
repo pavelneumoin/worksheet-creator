@@ -11,14 +11,19 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
     <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/studio.css" />
     <script defer src="/vendor/katex/katex.min.js"></script>
     <script defer src="/jobs.js"></script>
     <script defer src="/script.js"></script>
     <script defer src="/downloads.js"></script>
     <script defer src="/classes.js"></script>
+    <script defer src="/roster_import.js"></script>
     <script defer src="/schedule.js"></script>
     <script defer src="/reviews.js"></script>
     <script defer src="/class_reports.js"></script>
+    <script defer src="/studio.js"></script>
+    <script defer src="/batch.js"></script>
+    <script defer src="/analytics.js"></script>
   </head>
   <body>
     <header class="topbar">
@@ -29,11 +34,11 @@
           ></a
         >
         <nav aria-label="Основная навигация">
-          <button class="nav-button active" id="createNav">Главная</button
+          <button class="nav-button active" id="createNav">Создать лист</button
           ><button class="nav-button" id="savedNav">
-            <span class="nav-label">Мои материалы</span>
+            <span class="nav-label">Моя библиотека</span>
             <span id="savedCount">0</span></button
-          ><button class="nav-button" id="libraryNav">Библиотека</button>
+          ><button class="nav-button" id="libraryNav">Обмен материалами</button>
           <button class="nav-button" id="classesNav">Классы</button>
           <button class="nav-button" id="scheduleNav">Расписание</button>
         </nav>
@@ -247,9 +252,10 @@
       </section>
       <section id="workspace" hidden>
         <div class="workspace-heading">
-          <h1>Создать рабочий лист</h1>
+          <p class="eyebrow">МАСТЕРСКАЯ УЧИТЕЛЯ</p>
+          <h1>Хороший урок начинается здесь.</h1>
           <p class="quiet">
-            Добавьте материал, проверьте задания и скачайте PDF.
+            Добавьте задания. Лист, ответы и варианты — соберём вместе.
           </p>
         </div>
         <ol class="steps" aria-label="Этапы создания листа">
@@ -268,8 +274,8 @@
               <div class="panel-heading">
                 <span class="section-number">01</span>
                 <div>
-                  <h2 id="inputTitle">С чего начнём?</h2>
-                  <p>Выберите страницы учебника или свои задания.</p>
+                  <h2 id="inputTitle">Материал для нового листа</h2>
+                  <p>Фото учебника, PDF или ваш текст.</p>
                 </div>
               </div>
               <fieldset>
@@ -291,8 +297,8 @@
               </fieldset>
               <label class="upload-zone" id="dropZone" for="fileInput"
                 ><span class="upload-icon" aria-hidden="true">＋</span
-                ><strong>Выбрать фото или PDF</strong
-                ><span>Выберите файлы или перетащите их сюда</span
+                ><strong>Перетащите материал сюда</strong
+                ><span>или нажмите, чтобы выбрать фото / PDF</span
                 ><small
                   >До 10 фото или один PDF до 10 страниц · файл до 15 МБ, всего
                   до 20 МБ</small
@@ -627,6 +633,7 @@
                 >
               </div>
               <p id="resultSheetTitle" class="result-sheet-title"></p>
+              <a id="downloadTeacher" class="button secondary" target="_blank" rel="noopener" hidden>Комплект учителя: лист + ответы ↗</a>
               <iframe
                 id="pdfPreview"
                 title="Предпросмотр рабочего листа PDF"

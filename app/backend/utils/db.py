@@ -41,6 +41,12 @@ def init_db():
             created_at REAL NOT NULL, updated_at REAL NOT NULL
         );
         CREATE INDEX IF NOT EXISTS bot_inbox_queue ON bot_inbox(status,created_at);
+        CREATE TABLE IF NOT EXISTS bot_runs (
+            job_id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS bot_drafts (
+            owner_id TEXT PRIMARY KEY, material_id TEXT NOT NULL, revision INTEGER NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS materials (
             id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
             worksheet TEXT NOT NULL, source TEXT NOT NULL,
@@ -165,13 +171,42 @@ def init_db():
             base_revision INTEGER NOT NULL, revision TEXT NOT NULL,
             payload TEXT NOT NULL, updated_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS review_batches (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
+            assignment_id TEXT NOT NULL REFERENCES assignments(id),
+            fingerprint TEXT NOT NULL, pages TEXT NOT NULL DEFAULT '[]',
+            photo_count INTEGER NOT NULL DEFAULT 0, expires_at REAL NOT NULL,
+            revision INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL,
+            UNIQUE(assignment_id,fingerprint)
+        );
+        CREATE TABLE IF NOT EXISTS schools (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL, owner_id TEXT NOT NULL REFERENCES users(id), created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS school_members (
+            school_id TEXT NOT NULL REFERENCES schools(id), user_id TEXT NOT NULL REFERENCES users(id),
+            role TEXT NOT NULL CHECK(role IN ('admin','teacher')), joined_at TEXT NOT NULL,
+            PRIMARY KEY(school_id,user_id), UNIQUE(user_id)
+        );
+        CREATE TABLE IF NOT EXISTS school_invites (
+            token_hash TEXT PRIMARY KEY, school_id TEXT NOT NULL REFERENCES schools(id), expires_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS analytics_insights (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
+            snapshot_hash TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL
+        );
     ''')
     if 'owner_id' not in {row[1] for row in c.execute('PRAGMA table_info(history)')}:
         c.execute('ALTER TABLE history ADD COLUMN owner_id TEXT')
+    if 'payload' not in {row[1] for row in c.execute('PRAGMA table_info(bot_inbox)')}:
+        c.execute("ALTER TABLE bot_inbox ADD COLUMN payload TEXT NOT NULL DEFAULT '{}'")
     if 'marp' not in {row[1] for row in c.execute('PRAGMA table_info(artifacts)')}:
         c.execute('ALTER TABLE artifacts ADD COLUMN marp TEXT')
+    if 'teacher' not in {row[1] for row in c.execute('PRAGMA table_info(artifacts)')}:
+        c.execute('ALTER TABLE artifacts ADD COLUMN teacher TEXT')
     if 'scheduled_date' not in {row[1] for row in c.execute('PRAGMA table_info(assignments)')}:
         c.execute("ALTER TABLE assignments ADD COLUMN scheduled_date TEXT NOT NULL DEFAULT ''")
+    if 'topic' not in {row[1] for row in c.execute('PRAGMA table_info(assignments)')}:
+        c.execute("ALTER TABLE assignments ADD COLUMN topic TEXT NOT NULL DEFAULT ''")
     c.execute('CREATE INDEX IF NOT EXISTS assignments_schedule ON assignments(owner_id,scheduled_date)')
     conn.commit()
     conn.close()
