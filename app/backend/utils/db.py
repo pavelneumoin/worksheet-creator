@@ -196,6 +196,11 @@ def init_db():
         CREATE TABLE IF NOT EXISTS school_invites (
             token_hash TEXT PRIMARY KEY, school_id TEXT NOT NULL REFERENCES schools(id), expires_at REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS answer_form_exports (
+            id TEXT PRIMARY KEY REFERENCES artifacts(id) ON DELETE CASCADE,
+            assignment_id TEXT NOT NULL REFERENCES assignments(id),
+            mode TEXT NOT NULL CHECK(mode IN ('class','blank'))
+        );
         CREATE TABLE IF NOT EXISTS analytics_insights (
             id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
             snapshot_hash TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL

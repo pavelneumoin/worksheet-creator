@@ -170,6 +170,13 @@ def assignment_row(conn, row, detail=False):
         result['result'] = result_links(dict(row, id=row['edition_id']))
         result['students'] = [student_row(r) for r in conn.execute('SELECT student_id AS id FROM assignment_students WHERE assignment_id=?', (row['id'],))]
         result['students'].sort(key=lambda s: s['code'])
+        result['answer_forms'] = []
+        seen_modes = set()
+        for export in conn.execute('''SELECT f.*,x.mode FROM answer_form_exports x JOIN artifacts f ON f.id=x.id
+                                       WHERE x.assignment_id=? ORDER BY f.created_at DESC,f.rowid DESC''', (row['id'],)):
+            if export['mode'] not in seen_modes:
+                result['answer_forms'].append({'mode': export['mode'], **result_links(export)})
+                seen_modes.add(export['mode'])
     return result
 
 

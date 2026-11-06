@@ -40,7 +40,8 @@ def merge_pages(tasks, pages):
             answers.append({'task_id': task['id'], 'text': '', 'state': 'unclear'})
             if len(candidates) > 1:
                 conflicts.append(task['id'])
-    codes = [{'page': i, 'edition_code': p.get('edition_code', ''), 'student_code': p.get('student_code', '')}
+    codes = [{'page': i, 'edition_code': p.get('edition_code', ''), 'student_code': p.get('student_code', ''),
+              'assignment_code': p.get('assignment_code', ''), 'marker_warning': p.get('marker_warning', '')}
              for i, p in enumerate(pages, 1)]
     return {'answers': answers, 'page_codes': codes, 'conflict_task_ids': conflicts}
 
@@ -55,6 +56,8 @@ def recognize(tasks, paths):
 
 
 def _recognize_single(tasks, paths):
+    from utils import answer_markers
+    marker = answer_markers.read(paths[0]) if paths else {}
     from gigachat.models import Chat, Messages, MessagesRole
     # Never reveal questions: a model can solve them and silently replace an
     # incorrect handwritten answer even when told only to transcribe.
@@ -85,7 +88,7 @@ def _recognize_single(tasks, paths):
                             raise AIServiceError('Неверный формат кода страницы.', 'invalid_recognition', 502)
                         # Provider text cannot set worker control fields such as
                         # photos, page_codes, errors or conflict flags.
-                        return {'answers': answers, **codes}
+                        return {'answers': answers, **codes, **marker}
                     except (ValueError, TypeError, AttributeError, AIServiceError):
                         if attempt:
                             raise AIServiceError('ИИ вернул непонятный формат ответов. Загрузите чёткое фото с номерами заданий.', 'invalid_recognition', 502)

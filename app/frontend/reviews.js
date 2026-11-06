@@ -478,6 +478,7 @@ async function openReview(id, ready = null) {
   await flushReviewDraft();
   clearTimeout(reviewState.timer);
   const r = ready || (await request("/api/v2/reviews/" + id)).review;
+  if(reviewState.batchContext?.assignmentId!==r.assignment_id)reviewState.batchContext=null;
   resetReviewEditor();
   reviewState.current = r;
   classScreen("reviewView");
@@ -496,6 +497,7 @@ async function openReview(id, ready = null) {
     node("p", reviewLabels[r.status] + " · Версия " + r.edition_code, "quiet"),
   );
   target.append(panel);
+  if(reviewState.batchContext)target.prepend(reviewButton("← К пачке сканов",()=>openBatch(reviewState.batchContext.id),"ghost back-link"));
   if (r.status === "processing") {
     panel.append(
       node(
@@ -877,8 +879,13 @@ function renderReviewForm(target, r) {
         classJson("PUT", body("confirm")),
       );
       resetReviewEditor();
-      await openClassReport(r.assignment_id);
-      notice("Результат подтверждён и учтён в отчёте класса.");
+      if(reviewState.batchContext?.assignmentId===r.assignment_id){
+        await openBatch(reviewState.batchContext.id);
+        notice("Результат учтён в статистике. Продолжайте со следующим учеником.");
+      }else{
+        await openClassReport(r.assignment_id);
+        notice("Результат подтверждён и учтён в отчёте класса.");
+      }
     });
   });
   const history = node("details", undefined, "panel review-history");

@@ -66,6 +66,10 @@ def execute(job_id):
             writer.write(Path(latex.OUTPUT_DIR)/(base+'_teacher.pdf'))
             export_bundle(payload['worksheet'], Path(latex.OUTPUT_DIR) / (base + '_marp.zip'), payload.get('origin'))
             result = {'ok': True}
+        elif job['kind'] == 'answer_forms':
+            from utils.answer_forms import compile_forms
+            compile_forms(payload['assignment'], payload['mode'], 'job_' + job_id)
+            result = {'ok': True}
         elif job['kind'] == 'analytics_pdf':
             from utils.analytics_export import compile_report
             compile_report(payload['report'],'job_'+job_id)
@@ -124,7 +128,7 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
     command = [sys.executable, str(ROOT / 'scripts/run_worker.py'), '--execute', job['id']]
     count = json.loads(job['payload']).get('variant_count', 1)
     payload = json.loads(job['payload'])
-    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', [])), 'batch_grade':12300,'analytics_pdf':180,'analytics_insight':300,'roster_recognize':780}[job['kind']]
+    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'answer_forms': 300, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', [])), 'batch_grade':12300,'analytics_pdf':180,'analytics_insight':300,'roster_recognize':780}[job['kind']]
     process = None
     succeeded = False
     try:

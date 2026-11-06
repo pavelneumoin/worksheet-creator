@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/studio.css" />
+    <link rel="stylesheet" href="/compact.css" />
     <script defer src="/vendor/katex/katex.min.js"></script>
     <script defer src="/jobs.js"></script>
     <script defer src="/script.js"></script>
@@ -24,6 +25,7 @@
     <script defer src="/studio.js"></script>
     <script defer src="/batch.js"></script>
     <script defer src="/analytics.js"></script>
+    <script defer src="/mobile.js"></script>
   </head>
   <body>
     <header class="topbar">
@@ -727,7 +729,7 @@
             ＋ Создать лист
           </button>
         </div>
-        <div class="materials-toolbar">
+        <div class="library-controls"><div class="materials-toolbar">
           <label for="materialSearch" class="sr-only">Найти материал</label>
           <input
             id="materialSearch"
@@ -745,20 +747,20 @@
         </button>
         <div class="cabinet-filters">
           <label
-            >Папка<select id="folderFilter">
+            ><span class="sr-only">Папка</span><select id="folderFilter">
               <option value="*">Все папки</option>
               <option value="">Без папки</option>
             </select></label
           >
           <label
-            >Показать<select id="archiveFilter">
+            ><span class="sr-only">Показать</span><select id="archiveFilter">
               <option value="active">В работе</option>
               <option value="archived">Архив</option>
               <option value="all">Все материалы</option>
             </select></label
           >
         </div>
-        <datalist id="folderSuggestions"></datalist>
+        </div><datalist id="folderSuggestions"></datalist>
         <div id="savedList" class="saved-list" aria-live="polite"></div>
         <button id="logoutBtn" class="button ghost" hidden>
           Выйти из профиля

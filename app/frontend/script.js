@@ -162,6 +162,7 @@ function showView(view, refresh = true) {
   $("libraryNav").classList.toggle("active", view === "library");
   $("classesNav").classList.toggle("active", view === "classes");
   $("scheduleNav").classList.toggle("active", view === "schedule");
+  $("mobileMoreNav")?.classList.toggle("active", ["schedule", "analytics", "school", "library"].includes(view));
   if (view === "schedule" && refresh)
     busy("Загружаем расписание", refreshSchedule);
   if (view === "classes" && refresh) busy("Загружаем классы", refreshClasses);
@@ -615,9 +616,9 @@ function renderSaved() {
       card.append(node("p", "Основа: " + item.origin.author, "quiet"));
     if (item.folder) card.append(node("p", "Папка: " + item.folder, "quiet"));
     if (item.archived) card.append(node("span", "В архиве", "material-badge"));
-    const actions = node("div", undefined, "actions");
-    const open = node("button", "Открыть", "button secondary");
-    const remove = node("button", "Удалить", "button ghost");
+    const actions = node("div", undefined, "actions material-actions");
+    const open = node("button", "Открыть", "button primary");
+    const remove = node("button", "Удалить", "button ghost material-delete");
     open.addEventListener("click", () => {
       if (
         state.dirty &&
@@ -676,20 +677,24 @@ function renderSaved() {
         else await preparePublication(item.id);
       }),
     );
-    actions.append(open, share, remove);
+    actions.append(open);
+    if (item.edition_count) {
+      const assign = node("button", "Назначить", "button secondary");
+      assign.title = "Назначить классу";
+      assign.addEventListener("click", () => busy("Выбираем класс", () => openAssignmentForm(null, item.id)));
+      actions.append(assign);
+    }
+    const more = node("details", undefined, "material-more");
+    const moreLabel = node("summary", "Ещё");
+    const moreActions = node("div", undefined, "material-more-actions");
+    moreActions.append(share, remove); more.append(moreLabel, moreActions);
+    actions.append(more);
     card.append(actions);
     appendCabinetTools(card, item);
     $("savedList").append(card);
   }
 }
 function appendCabinetTools(card, item) {
-  if (item.edition_count) {
-    const assign = node("button", "Назначить классу", "button secondary");
-    assign.addEventListener("click", () =>
-      busy("Выбираем класс", () => openAssignmentForm(null, item.id)),
-    );
-    card.append(assign);
-  }
   const details = node("details", undefined, "cabinet-tools");
   details.append(
     node(
@@ -704,7 +709,7 @@ function appendCabinetTools(card, item) {
   folder.placeholder = "Например, 8А · Физика";
   folder.setAttribute("list", "folderSuggestions");
   label.append(folder);
-  const save = node("button", "Сохранить папку", "button secondary");
+  const save = node("button", "Сохранить", "button secondary");
   const archive = node(
     "button",
     item.archived ? "Вернуть в работу" : "В архив",

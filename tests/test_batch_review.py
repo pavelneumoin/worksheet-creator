@@ -19,7 +19,7 @@ class BatchReviewTests(unittest.TestCase):
     classroom=classes.ClassTests.classroom
     assignment=classes.ClassTests.assignment
 
-    def ready_batch(self,wrong_version=False,partial=False):
+    def ready_batch(self,wrong_version=False,partial=False,wrong_assignment=False):
         _,_,a,_=self.assignment()
         path=Path(self.temp.name)/'scan.pdf';path.write_bytes(b'%PDF-synthetic queue fixture')
         job,_=job_store.submit('max:11','batch_grade',uuid.uuid4().hex,{'assignment_id':a['id']},[path],require_worker=False)
@@ -28,6 +28,7 @@ class BatchReviewTests(unittest.TestCase):
         for i,color in enumerate(('white','blue')):
             Image.new('RGB',(80,100),color).save(directory/f'page_{i+1}.jpg')
             pages.append({'student_code':a['students'][i]['code'],'edition_code':'WRONG' if wrong_version else a['code'],
+                          'assignment_code':'0'*32 if wrong_assignment else '',
                           'answers':[{'task_id':t['id'],'text':t['answer'],'state':'readable'} for t in a['worksheet']['tasks']]})
         self.assertTrue(job_store.complete(claim,{'batch_pages':pages[:1] if partial else pages,'photo_count':2}))
         return a,batch_review.get('max:11',job['id']),path
@@ -40,6 +41,15 @@ class BatchReviewTests(unittest.TestCase):
         self.assertEqual(r['status'],'needs_review')
         self.assertEqual(review_store.report('max:11',a['id'])['summary']['confirmed'],0)
         self.assertEqual(len(r['photos']),1)
+
+    def test_qr_of_another_assignment_requires_manual_mapping_and_review(self):
+        a,b,_=self.ready_batch(wrong_assignment=True)
+        self.assertIsNone(b['pages'][0]['suggested_student_id'])
+        self.assertIn('другой назначенной',b['pages'][0]['warning'])
+        result=batch_review.attach('max:11',b['id'],{'revision':b['revision'],'student_id':a['students'][0]['id'],'pages':[0]})
+        review=review_store.get_review('max:11',result['review_id'])
+        self.assertTrue(any('назначенной работы' in warning for warning in review['warnings']))
+        self.assertEqual(review['status'],'needs_review')
 
     def test_ocr_separator_is_normalized_without_guessing_code_characters(self):
         for text in ('YAD211957BE','Y-AD211957BE','У—AD211957BE','У - AD211957BE'):

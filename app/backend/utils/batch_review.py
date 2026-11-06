@@ -45,6 +45,8 @@ def recognize(tasks,paths,directory):
             page=grading_ai.recognize(tasks,[path])
         except AIServiceError as exc:
             page={'answers':review_store.validate_recognition({'answers':[]},tasks),'student_code':'','edition_code':'','error':str(exc)[:300]}
+            from utils import answer_markers
+            page.update(answer_markers.read(path))
         pages.append(page)
         # Preserve paid work already completed if the process is interrupted.
         write_result(directory,{'batch_pages':pages,'photo_count':len(paths)})
@@ -65,9 +67,15 @@ def complete(conn,owner,batch_id,output,directory):
         if not all(isinstance(v,str) and len(v)<=80 for v in (pupil,edition)): review_store.fail('Неверный код страницы.','invalid_batch',502)
         normalized=class_store.normalize_student_code(pupil)
         wrong_edition=bool(edition and edition.upper().replace(' ','')!=a['code'])
+        assignment_code=item.get('assignment_code','')
+        marker_warning=item.get('marker_warning','')
+        if not all(isinstance(v,str) and len(v)<=300 for v in (assignment_code,marker_warning)):
+            review_store.fail('Неверная метка страницы.','invalid_batch',502)
+        wrong_assignment=bool(assignment_code and assignment_code!=a['id'])
         pages.append({'index':i,'answers':answers,'student_code':pupil,'edition_code':edition,
-                      'suggested_student_id':codes.get(normalized) if not wrong_edition else None,
-                      'warning':'Другой код версии: сверьте лист.' if wrong_edition else '',
+                      'assignment_code':assignment_code,'marker_warning':marker_warning,
+                      'suggested_student_id':codes.get(normalized) if not (wrong_edition or wrong_assignment or marker_warning) else None,
+                      'warning':marker_warning or ('QR другой назначенной работы: сверьте лист.' if wrong_assignment else 'Другой код версии: сверьте лист.' if wrong_edition else ''),
                       'error':str(item.get('error',''))[:300],'review_id':None})
         source=Path(directory)/f'page_{i+1}.jpg'
         if not source.is_file(): review_store.fail('Страница скана отсутствует.','batch_photo_missing',500)

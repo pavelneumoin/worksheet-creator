@@ -17,6 +17,7 @@ jobs:
           docker run --rm --network none listok:night7 python scripts/smoke_pdf.py
           docker run --rm --network none listok:night7 python scripts/smoke_queue.py
           docker run --rm --network none listok:night7 python scripts/smoke_analytics.py
+          docker run --rm --network none listok:night7 python scripts/smoke_answer_forms.py
       - name: Four CMU templates, page totals and print catalogue
         run: |
           docker run --name print-samples --network none listok:night7 python scripts/check_templates.py

@@ -97,7 +97,12 @@ def complete(conn, owner, review_id, output, paths):
     if not isinstance(page_codes, list) or len(page_codes) != len(paths) or any(not isinstance(p, dict) for p in page_codes):
         fail('Не удалось сопоставить страницы ответов.', 'invalid_recognition', 502)
     for page_index, codes in enumerate(page_codes, 1):
+        marker_warning = codes.get('marker_warning', '')
+        if not isinstance(marker_warning, str) or len(marker_warning) > 300:
+            fail('Неверная метка страницы.', 'invalid_recognition', 502)
+        if marker_warning: warnings.append(marker_warning)
         for name, expected, title in [('edition_code', assignment['code'], 'версии листа'),
+                                      ('assignment_code', assignment['id'], 'назначенной работы'),
                                       ('student_code', class_store.student_code(row['student_id']), 'ученика')]:
             seen = codes.get(name, '')
             if not isinstance(seen, str) or len(seen) > 80 or '\x00' in seen:

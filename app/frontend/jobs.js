@@ -178,6 +178,8 @@ async function sendPendingJob() {
     notice(
       submission.kind === "report_pdf"
         ? "PDF отчёта готовится. Снимок результатов сохранён; файл появится в блоке «Задачи»."
+        : submission.kind === "answer_forms"
+          ? "Бланки готовятся. Откройте результат в «Задачах»; PDF также сохранится в назначенной работе."
         : submission.kind === "roster_recognize"
           ? "Распознаём список. После завершения откройте результат здесь и проверьте имена."
           : "Задача принята. Результат появится здесь и в ваших материалах.",
@@ -215,6 +217,12 @@ async function openJobResult(job, chosenMaterial = null) {
   if (fresh.status !== "succeeded") throw new Error("Результат ещё не готов.");
   if (fresh.kind === "roster_recognize") {
     await openRosterResult(fresh); return;
+  }
+  if (fresh.kind === "answer_forms") {
+    showView("classes", false);
+    await openAssignment(fresh.result.assignment_id);
+    notice("Бланки готовы. Скачайте PDF в разделе «Быстрая проверка по ответам».");
+    return;
   }
   if (["analytics_pdf","analytics_insight"].includes(fresh.kind)) {
     await openAnalytics(fresh.result.filters);

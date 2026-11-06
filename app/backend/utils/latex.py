@@ -122,7 +122,7 @@ def _diagnostic(output):
     return '\n'.join(lines[-10:])[-900:] or 'Компилятор не сообщил подробностей.'
 
 
-def compile_latex_local(latex_source, filename_base, strict_layout=False):
+def compile_latex_local(latex_source, filename_base, strict_layout=False, assets=None):
     """Compile trusted template + validated body in a fresh local directory."""
     if not _safe_filename(filename_base):
         return None, 'Недопустимое имя выходного файла.'
@@ -136,6 +136,10 @@ def compile_latex_local(latex_source, filename_base, strict_layout=False):
     try:
         with tempfile.TemporaryDirectory(prefix='listok-tex-') as temp_dir:
             temp_path = Path(temp_dir)
+            for name, content in (assets or {}).items():
+                if not re.fullmatch(r'[a-z0-9_-]+\.png', name) or not isinstance(content, bytes) or len(content) > 512_000:
+                    raise ValueError('Invalid template asset')
+                (temp_path / name).write_bytes(content)
             (temp_path / 'document.tex').write_text(latex_source, encoding='utf-8')
             command = [compiler, '-interaction=nonstopmode', '-halt-on-error',
                        '-no-shell-escape', '-file-line-error']

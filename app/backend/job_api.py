@@ -83,6 +83,16 @@ def roster_result(job_id):
     return jsonify(roster_store.get(g.identity['owner_id'], job_id, discard=request.method == 'DELETE'))
 
 
+@api.post('/answer_forms')
+def answer_forms():
+    data = body()
+    if set(data) != {'assignment_id', 'mode'} or data.get('mode') not in ('class', 'blank') or not isinstance(data['assignment_id'], str):
+        raise AIServiceError('Выберите назначенную работу и вид бланка.', 'invalid_answer_form', 400)
+    with connection() as conn:
+        class_store.assignment_detail(conn, g.identity['owner_id'], data['assignment_id'])
+    return accepted('answer_forms', data)
+
+
 @api.post('/report_pdf')
 def report_pdf():
     data = body()

@@ -508,6 +508,18 @@ async function openAssignment(id, loaded = null) {
       "quiet",
     ),
   );
+  const forms = node("section", undefined, "answer-forms panel");
+  forms.append(node("h2", "Быстрая проверка по ответам"), node("p", "Один бланк на ученика: номера заданий, клеточки и коды. Для проверки коротких ответов сканируйте только эти страницы; решения остаются на рабочих листах.", "quiet"));
+  const formActions = node("div", undefined, "actions");
+  for (const [mode, title] of [["class", "Бланки класса"], ["blank", "Пустой бланк"]]) {
+    const ready = a.answer_forms?.find(f => f.mode === mode);
+    if (ready) {
+      formActions.append(editionDownload(ready.artifact_id, a.code, ready, "pdf_url", title + " · PDF"));
+    } else formActions.append(classButton(title, () => busy("Готовим бланки", () => enqueueJob("answer_forms", {assignment_id: a.id, mode}, true)), "secondary"));
+  }
+  formActions.append(classButton("Загрузить сканы", () => busy("Открываем проверку", () => openBatchHome(a.id, a.class_id)), "primary"));
+  forms.append(formActions, node("p", "Печать: A4, 100%, односторонняя. До 30 заданий на одной странице. Длинные решения проверяйте по полному скану.", "quiet"));
+  panel.append(forms);
   const members = node("details", undefined, "assignment-members");
   members.append(node("summary", "Кому назначено · " + a.student_count));
   const list = node("ol");

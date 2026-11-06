@@ -21,6 +21,8 @@ LABELS = {'recognize': 'Распознаём задания и готовим о
 LANES.update(analytics_pdf='compile',analytics_insight='ai')
 LABELS.update(analytics_pdf='Собираем подробный отчёт',analytics_insight='Готовим рекомендации по статистике')
 LANES['roster_recognize'] = 'ai'
+LANES['answer_forms'] = 'compile'
+LABELS['answer_forms'] = 'Готовим бланки ответов'
 LABELS['roster_recognize'] = 'Распознаём список учеников'
 LEASE_SECONDS = 45
 RETENTION_SECONDS = 7 * 86400
@@ -165,6 +167,11 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
                     if not insight or insight['snapshot_hash']!=analytics_ai.digest(stored['report']):
                         raise AIServiceError('Статистика изменилась. Обновите рекомендации или сформируйте PDF без них.','insight_stale',409)
                     stored['report']['insight']=json.loads(insight['content'])
+            if kind == 'answer_forms':
+                from utils import class_store
+                if payload.get('mode') not in ('class', 'blank'):
+                    raise AIServiceError('Выберите вид бланка.', 'invalid_answer_form', 400)
+                stored['assignment'] = class_store.assignment_detail(conn, owner, payload.get('assignment_id'))
             if kind == 'report_pdf':
                 from utils import review_store
                 stored['report'] = review_store.report(owner, payload.get('assignment_id'), conn)
@@ -258,7 +265,7 @@ def complete(job, output, active_connection=None):
                 raise AIServiceError('Некорректные рекомендации.','insight_invalid',502)
             conn.execute('INSERT INTO analytics_insights VALUES(?,?,?,?,?)',(job_id,owner,analytics_ai.digest(payload['report']),json.dumps(content,ensure_ascii=False),now))
             result={'insight_id':job_id,'insight':content,'generated_at':payload['report']['generated_at'],'filters':payload['filters']}
-        elif current['kind'] in ('report_pdf','analytics_pdf'):
+        elif current['kind'] in ('report_pdf','analytics_pdf','answer_forms'):
             base = 'job_' + job_id
             path = Path(latex.OUTPUT_DIR) / (base + '.pdf')
             if not path.is_file() or not path.with_suffix('.tex').is_file():
@@ -268,9 +275,13 @@ def complete(job, output, active_connection=None):
                     raise AIServiceError('PDF отчёта повреждён.', 'report_missing', 500)
             conn.execute('INSERT INTO artifacts (id,owner_id,pdf,tex,created_at) VALUES (?,?,?,?,?)',
                          (job_id, owner, base + '.pdf', base + '.tex', now))
-            result = {**({'assignment_id':payload['assignment_id'],'edition_code':payload['report']['edition_code']} if current['kind']=='report_pdf' else {'filters':payload['filters']}),
-                      'generated_at': payload['report']['generated_at'],
-                      **result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone())}
+            if current['kind'] == 'answer_forms':
+                conn.execute('INSERT INTO answer_form_exports VALUES (?,?,?)', (job_id, payload['assignment_id'], payload['mode']))
+                result = {'assignment_id': payload['assignment_id'], 'mode': payload['mode'], 'generated_at': now}
+            else:
+                result = {**({'assignment_id':payload['assignment_id'],'edition_code':payload['report']['edition_code']} if current['kind']=='report_pdf' else {'filters':payload['filters']}),
+                          'generated_at': payload['report']['generated_at']}
+            result.update(result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone()))
         elif current['kind'] == 'batch_grade':
             from utils import batch_review
             result = batch_review.complete(conn,owner,job_id,output,job_directory(job_id)/'pages')
