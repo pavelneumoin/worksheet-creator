@@ -15,7 +15,11 @@ async function openBatchHome(assignmentId = null, classId = null) {
   if(classId && classes.some(c=>c.id===classId))classSelect.value=classId;
   for(const [text,select] of [["Класс",classSelect],["Назначенная работа",workSelect]]){const label=node("label",text);label.append(select);grid.append(label);}
   const label=node("label",undefined,"upload-zone");const file=node("input");file.type="file";file.accept="application/pdf,.pdf";file.id="batchFile";
-  label.append(node("span","▤","upload-icon"),node("strong","PDF со сканами работ"),node("span","До 40 страниц · до 15 МБ"),file);
+  const fileName=node("strong","PDF со сканами работ"),fileHint=node("span","До 40 страниц · до 15 МБ");
+  fileName.style.overflowWrap="anywhere";fileName.setAttribute("aria-live","polite");
+  file.setAttribute("aria-label","Выбрать PDF со сканами работ");
+  file.addEventListener("change",()=>{const chosen=file.files[0];fileName.textContent=chosen?chosen.name:"PDF со сканами работ";fileHint.textContent=chosen?`${(chosen.size/1024/1024).toLocaleString("ru-RU",{maximumFractionDigits:2})} МБ · нажмите, чтобы заменить`:"До 40 страниц · до 15 МБ";});
+  label.append(node("span","▤","upload-icon"),fileName,fileHint,file);
   const submit=node("button","Распознать пачку","button primary");submit.type="submit";
   const recent=node("div",undefined,"batch-recent");form.append(grid,label,node("p","Код ученика на каждом листе помогает собрать страницы. Без кода вы сможете выбрать ученика сами. Сканы доступны 7 дней.","quiet"),submit);batchView.append(form,recent);
   const loadRecent=async()=>{
@@ -43,7 +47,7 @@ async function openBatch(id) {
   await flushReviewDraft();reviewState.queueContext=null;
   const b=(await request("/api/v2/batches/"+id)).batch;batchState.current=b;
   showView("batch",false);batchView.replaceChildren(batchHeading(b.title,b.class_name+" · сопоставление страниц"),classButton("← Все пачки",()=>busy("Открываем пачки",openBatchHome),"ghost"));
-  if(!b.pages.length){batchView.append(node("p",b.expired?"Срок хранения сканов истёк.":b.error||"Страницы обрабатываются. Результат появится в разделе «Задачи».","empty-state"));return;}
+  if(!b.pages.length){batchView.append(node("p",b.expired?"Срок хранения сканов истёк.":b.error||"Страницы обрабатываются. Готовый результат появится в карточке обработки.","empty-state"));return;}
   const used=b.pages.filter(p=>p.review_id).length;
   batchView.append(node("p",`Сопоставлено ${used} из ${b.pages.length} страниц. Баллы учитываются после подтверждения.`,"batch-progress"));
   batchView.append(classButton("Очередь сомнительных ответов",()=>busy("Открываем очередь",()=>openBatchQueue(id)),"primary"));

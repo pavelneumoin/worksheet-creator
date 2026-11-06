@@ -1,0 +1,17 @@
+[Unit]
+Description=Verified ListOK database and files backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/listok/deploy/scheduled_backup.py --directory /srv/listok-files/backups --keep 7
+TimeoutStartSec=12min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+MemoryMax=768M

@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily ListOK backup at 04:15 Moscow time
+
+[Timer]
+OnCalendar=*-*-* 04:15:00 Europe/Moscow
+Persistent=true
+RandomizedDelaySec=120
+Unit=listok-backup.service
+
+[Install]
+WantedBy=timers.target
