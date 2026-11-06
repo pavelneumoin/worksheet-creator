@@ -13,6 +13,7 @@ COPY app ./app
 COPY run_local.py ./
 COPY scripts ./scripts
 RUN python scripts/install_voice_model.py /opt
+COPY deploy/scheduled_backup.py ./deploy/scheduled_backup.py
 COPY tests ./tests
 RUN useradd --create-home --uid 10001 listok \
     && mkdir -p /app/app/backend/static/generated /app/app/backend/uploads /app/data/jobs \
