@@ -55,16 +55,24 @@ def scan(assignment, edition, pupil, title, answers):
         draw.text((65,y+10),str(i+1),font=bold,fill='black')
         draw.rectangle((120,y,920,y+70),outline='#b1b9c4',width=2)
         for x in range(160,920,40):draw.line((x,y,x,y+70),fill='#dbe0e8',width=1)
-        draw.text((137,y+13),text,font=ink,fill='#1c3b78')
+        fitted=ink
+        for size in range(36,17,-1):
+            fitted=ImageFont.truetype(str(FONTS/'cmunti.otf'),size)
+            if fitted.getlength(text)<770:break
+        draw.text((137,y+13),text,font=fitted,fill='#1c3b78')
     return image
 
 
 def manifest(owner):
     with connection() as conn:
-        row=conn.execute('SELECT manifest FROM demo_spaces WHERE demo_owner=?',(owner,)).fetchone()
+        row=conn.execute('SELECT manifest,real_owner FROM demo_spaces WHERE demo_owner=?',(owner,)).fetchone()
         if not row:
             raise AIServiceError('Откройте демо-кабинет.', 'demo_required', 404)
-        return json.loads(row['manifest'])
+        data=json.loads(row['manifest'])
+    if data.get('version',1)<2:
+        ensure(row['real_owner'])
+        return manifest(owner)
+    return data
 
 
 def ensure(real_owner):
@@ -75,6 +83,8 @@ def ensure(real_owner):
             conn.execute('BEGIN IMMEDIATE')
             old=conn.execute('SELECT demo_owner FROM demo_spaces WHERE real_owner=?',(real_owner,)).fetchone()
             if old:
+                from utils.demo_advanced import upgrade
+                upgrade(conn,old['demo_owner'],created_files)
                 refresh_scans(conn,old['demo_owner'])
                 return old['demo_owner']
             if not all((ASSETS/(key+'.pdf')).is_file() for key in sheets()):
@@ -193,6 +203,8 @@ def ensure(real_owner):
                       batch=bid,sample_pdf=dict(artifact_id=sample,pdf_url='/api/generated/'+name),
                       created_at=now,version=1)
             conn.execute('INSERT INTO demo_spaces VALUES(?,?,?,?)',(real_owner,owner,encoded(data),now))
+            from utils.demo_advanced import upgrade
+            upgrade(conn,owner,created_files)
             return owner
     except Exception:
         for path in created_files:path.unlink(missing_ok=True)
@@ -202,7 +214,8 @@ def ensure(real_owner):
 def refresh_scans(conn, owner):
     """Rebuild only prepared synthetic scans after normal retention expires."""
     for row in conn.execute('''SELECT r.*,a.title,e.code FROM reviews r JOIN assignments a ON a.id=r.assignment_id
-            JOIN editions e ON e.id=a.edition_id WHERE r.owner_id LIKE ? AND r.comment='Учебный результат'
+            JOIN editions e ON e.id=a.edition_id WHERE r.owner_id LIKE ? AND (r.comment='Учебный результат'
+            OR (r.comment='Учебный результат · старшие классы' AND r.status='needs_review'))
             AND r.photo_expires<?''',(realm(owner)+'%',time.time())):
         target=review_store.photo_path(row['id'],0);target.parent.mkdir(exist_ok=True)
         if not target.exists():

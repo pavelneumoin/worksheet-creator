@@ -39,7 +39,7 @@ def stop_process(process):
 
 def remove_outputs(job_id):
     base = 'job_' + job_id
-    for suffix in ('.pdf', '.tex', '.log', '_keys.pdf', '_keys.tex', '_keys.log', '_marp.zip','_teacher.pdf'):
+    for suffix in ('.pdf', '.tex', '.log', '_keys.pdf', '_keys.tex', '_keys.log', '_marp.zip','_teacher.pdf','_answer_form.pdf','_answer_form.tex','_answer_form.log'):
         (Path(latex.OUTPUT_DIR) / (base + suffix)).unlink(missing_ok=True)
 
 
@@ -56,6 +56,7 @@ def execute(job_id):
             return 1
         job = dict(row)
     payload = json.loads(job['payload'])
+    directory.mkdir(exist_ok=True)
     try:
         if job['kind'] == 'compile':
             base = 'job_' + job_id
@@ -65,7 +66,13 @@ def execute(job_id):
             for suffix in ('.pdf','_keys.pdf'):writer.append(Path(latex.OUTPUT_DIR)/(base+suffix))
             writer.write(Path(latex.OUTPUT_DIR)/(base+'_teacher.pdf'))
             export_bundle(payload['worksheet'], Path(latex.OUTPUT_DIR) / (base + '_marp.zip'), payload.get('origin'))
+            from utils.answer_forms import compile_blank
+            compile_blank(payload['worksheet'], base + '_answer_form')
             result = {'ok': True}
+        elif job['kind'] == 'material_form':
+            from utils.answer_forms import compile_blank
+            compile_blank(payload['worksheet'],'job_'+job_id)
+            result={'ok':True}
         elif job['kind'] == 'answer_forms':
             from utils.answer_forms import compile_forms
             compile_forms(payload['assignment'], payload['mode'], 'job_' + job_id)
@@ -89,7 +96,11 @@ def execute(job_id):
             from utils import batch_review
             paths=source_pages.prepare([directory/name for name in payload['images']],directory/'pages',max_pages=batch_review.MAX_PAGES)
             result=batch_review.recognize(payload['tasks'],paths,directory)
-        elif job['kind'] == 'grade':
+        elif job['kind'] == 'solution_review':
+            from utils.solution_ai import analyze
+            paths=source_pages.prepare([directory/name for name in payload['images']],directory/'pages',max_pages=10)
+            result={'analysis':analyze(payload['tasks'],paths,payload['subject'])}
+        elif job['kind'] in ('grade','student_grade'):
             from utils import grading_ai
             paths = source_pages.prepare([directory / name for name in payload['images']], directory / 'pages')
             result = grading_ai.recognize(payload['tasks'], paths)
@@ -122,13 +133,13 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
                        LISTOK_JOBS_DIR=str(job_store.root()), LISTOK_GENERATED_DIR=str(Path(latex.OUTPUT_DIR).resolve()))
     # The compiler receives no provider or bot credentials, including in local development.
     for key in list(environment):
-        if key.startswith(('MAX_', 'OPENAI_', 'ANTHROPIC_', 'SESSION_')) or (lane == 'compile' and key.startswith('GIGACHAT_')):
+        if key.startswith(('MAX_', 'OPENAI_', 'ANTHROPIC_', 'SESSION_')) or (lane == 'compile' and key.startswith(('GIGACHAT_','DEEPSEEK_'))):
             del environment[key]
     environment['LISTOK_SKIP_DOTENV'] = '1'
     command = [sys.executable, str(ROOT / 'scripts/run_worker.py'), '--execute', job['id']]
     count = json.loads(job['payload']).get('variant_count', 1)
     payload = json.loads(job['payload'])
-    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'answer_forms': 300, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', [])), 'batch_grade':12300,'analytics_pdf':180,'analytics_insight':300,'roster_recognize':780}[job['kind']]
+    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'answer_forms': 300, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', [])), 'batch_grade':12300,'analytics_pdf':180,'analytics_insight':300,'roster_recognize':780,'student_grade':3300,'solution_review':3600,'material_form':180}[job['kind']]
     process = None
     succeeded = False
     try:

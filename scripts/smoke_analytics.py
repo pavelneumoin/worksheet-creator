@@ -10,6 +10,7 @@ def main():
           'totals':{'assignments':1,'classes':1,'students':2,'confirmed':1,'expected':2,'coverage':50.0,'percent':66.7},
           'classes':[{'name':'8А','confirmed':1,'expected':2,'coverage':50.0,'percent':66.7}],
           'topics':[{'topic':'Обыкновенные дроби','confirmed':1,'percent':66.7}],
+          'blocks':[{'name':'Алгебра','confirmed':1,'percent':66.7}],
           'works':[{'class_name':'8А','topic':'Обыкновенные дроби','date':'2026-11-06','confirmed':1,'expected':2,'percent':66.7}],
           'tasks':[{'class_name':'8А','topic':'Обыкновенные дроби','number':2,'correct':0,'confirmed':1,'percent':0}],
           'students':[{'class_name':'8А','student_code':'У-ABCDEF1234','topic':'Обыкновенные дроби','status':'confirmed','score':2,'maximum':3},

@@ -70,6 +70,8 @@ def class_detail(conn, owner, class_id):
     result = class_row(conn, owned_class(conn, owner, class_id))
     result['students'] = [student_row(r) for r in conn.execute(
         'SELECT id,archived FROM students WHERE class_id=? ORDER BY created_at,id', (class_id,))]
+    for pupil in result['students']:
+        pupil['connected'] = bool(conn.execute('SELECT 1 FROM student_links WHERE student_id=?', (pupil['id'],)).fetchone())
     result['students'].sort(key=lambda s: (s['archived'], s['code']))
     result['assignments'] = [assignment_row(conn, r) for r in conn.execute(
         '''SELECT a.*,e.code FROM assignments a JOIN editions e ON e.id=a.edition_id

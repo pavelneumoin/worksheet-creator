@@ -33,12 +33,14 @@ async function loadDemoGuide() {
   demoManifest=(await request("/api/v2/demo-space")).demo;
   const d=demoManifest, steps=$("demoSteps");steps.replaceChildren();
   const actions=[
-    ["01","Рабочий лист","Задания, оформление и PDF",()=>demoOpenMaterial(d.materials.fractions)],
+    ["01","Рабочий лист","Задания, оформление и PDF",()=>demoOpenMaterial(d.materials.trigonometry||d.materials.fractions)],
     ["02","Класс и ученики","Коды и назначенные работы",()=>openClass(d.classes[0])],
     ["03","Проверка ответа","Скан и частичные баллы",()=>openReview(d.review)],
     ["04","Пачка сканов","Готовая страница с QR",()=>openBatch(d.batch)],
     ["05","Загрузить PDF","Работа для пробной проверки",()=>openBatchHome(d.upload_assignment,d.classes[0])],
-    ["06","Статистика школы","Результаты трёх классов",()=>openAnalytics({scope:"school"})],
+    ["06","Статистика школы","Результаты по классам и темам",()=>openAnalytics({scope:"school"})],
+    ["07","От учеников","Исправление и повторная сдача",()=>openStudentAttempt(d.student_attempt)],
+    ["08","Кабинет ученика","Свои работы, баллы и исправления",()=>openStudentHome()],
   ];
   for(const [n,title,caption,action] of actions){const button=node("button",undefined,"demo-step");button.type="button";const body=node("span");body.append(node("strong",title),node("small",caption));button.append(node("b",n),body,node("span","↗","demo-arrow"));button.addEventListener("click",()=>busy("Открываем пример",async()=>{await action();$("demoGuide").open=false;}));steps.append(button);}
   const link=$("demoScanDownload");link.href=d.sample_pdf.pdf_url;link.target="_blank";link.rel="noopener";

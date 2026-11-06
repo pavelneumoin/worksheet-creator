@@ -15,6 +15,7 @@ app/backend/uploads
 app/backend/jobs
 app/backend/review_photos
 app/backend/batch_photos
+app/backend/student_uploads
 data
 output
 tmp

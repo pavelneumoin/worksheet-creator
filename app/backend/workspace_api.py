@@ -209,7 +209,7 @@ def export_files(artifact_id):
         conn.execute('INSERT INTO download_tickets VALUES (?,?,?,?)',
                      (token_hash(raw), g.identity['token_hash'], artifact_id, now + 600))
         urls = {name: f'/api/v2/downloads/{raw}/{artifact[column]}' for name, column in
-                (('pdf_url','pdf'), ('keys_url','answers'), ('tex_url','tex'), ('marp_url','marp'),('teacher_url','teacher')) if artifact[column]}
+                (('pdf_url','pdf'), ('keys_url','answers'), ('tex_url','tex'), ('marp_url','marp'),('teacher_url','teacher'),('answer_form_url','answer_form')) if artifact[column]}
     return jsonify(**urls, expires_at=now + 600)
 
 
@@ -219,7 +219,7 @@ def download_file(ticket, filename):
         workspace_store.missing()
     with workspace_store.connection() as conn:
         now = int(time.time())
-        row = conn.execute('''SELECT a.pdf,a.answers,a.tex,a.marp,a.teacher FROM download_tickets d
+        row = conn.execute('''SELECT a.pdf,a.answers,a.tex,a.marp,a.teacher,a.answer_form FROM download_tickets d
                               JOIN sessions s ON s.token_hash=d.session_hash
                               LEFT JOIN demo_sessions dm ON dm.session_hash=s.token_hash
                               JOIN artifacts a ON a.id=d.artifact_id AND a.owner_id=COALESCE(dm.demo_owner,s.owner_id)

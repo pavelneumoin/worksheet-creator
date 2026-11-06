@@ -6,6 +6,7 @@ sys.path.insert(0,str(ROOT/'app/backend'))
 from utils import latex
 from utils.demo_catalog import sheets
 from utils.worksheet import compile_worksheet
+from utils.answer_forms import compile_blank
 from pypdf import PdfReader,PdfWriter
 from PIL import Image,ImageDraw,ImageFont
 import pypdfium2
@@ -18,10 +19,12 @@ for key,sheet in sheets().items():
     writer=PdfWriter()
     for name in names:
         reader=PdfReader(out/name)
-        assert len(reader.pages)==1
+        assert 1<=len(reader.pages)<=3
         writer.append(reader)
         shutil.copyfile(out/name,dest/(key+('_keys' if '_keys' in name else '')+'.pdf'))
     with (dest/(key+'_teacher.pdf')).open('wb') as f:writer.write(f)
+    compile_blank(sheet,'demo_'+key+'_answer_form')
+    shutil.copyfile(out/('demo_'+key+'_answer_form.pdf'),dest/(key+'_answer_form.pdf'))
     doc=pypdfium2.PdfDocument(str(out/names[0]));page=doc[0];bitmap=page.render(scale=1.7)
     bitmap.to_pil().save(dest/(key+'.png'));bitmap.close();page.close();doc.close()
     print(key,'PDF, answers, teacher bundle, input image ready',flush=True)

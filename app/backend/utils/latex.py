@@ -147,7 +147,7 @@ def compile_latex_local(latex_source, filename_base, strict_layout=False, assets
                 command.append('--disable-installer')
             command.append('document.tex')
             environment = {key: value for key, value in os.environ.items()
-                           if not key.upper().startswith(('GIGACHAT_', 'MAX_', 'OPENAI_', 'SESSION_', 'ANTHROPIC_'))}
+                           if not key.upper().startswith(('GIGACHAT_', 'DEEPSEEK_', 'MAX_', 'OPENAI_', 'SESSION_', 'ANTHROPIC_'))}
             environment.update({'openin_any': 'p', 'openout_any': 'p', 'shell_escape': 'f'})
             fonts = Path(__file__).resolve().parents[1] / 'assets' / 'fonts' / 'cmu'
             shutil.copytree(fonts, temp_path / 'fonts')

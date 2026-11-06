@@ -31,7 +31,7 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(d,again)
         self.assertTrue(self.call(self.client,'get','/api/v2/auth/me').json['demo'])
         materials=self.call(self.client,'get','/api/v2/materials').json['materials']
-        self.assertEqual(len(materials),4)
+        self.assertEqual(len(materials),7)
         self.assertNotIn(real['id'],[m['id'] for m in materials])
         self.assertEqual(self.call(self.client,'get','/api/v2/materials/'+real['id']).status_code,404)
         self.assertEqual(self.call(self.other,'get','/api/v2/classes/'+d['classes'][0]).status_code,404)
@@ -39,9 +39,9 @@ class DemoTests(unittest.TestCase):
         ticket=self.call(self.client,'post','/api/v2/exports/'+d['sample_pdf']['artifact_id']).json['pdf_url']
         with self.call(self.anon,'get',ticket) as response:self.assertEqual(response.status_code,200)
         report=self.call(self.client,'get','/api/v2/analytics?scope=school').json['report']
-        self.assertEqual(report['totals']['classes'],3)
-        self.assertEqual(report['totals']['confirmed'],24)
-        self.assertEqual(report['totals']['needs_review'],4)
+        self.assertEqual(report['totals']['classes'],6)
+        self.assertEqual(report['totals']['confirmed'],96)
+        self.assertEqual(report['totals']['needs_review'],14)
         self.assertGreater(report['totals']['not_submitted'],0)
         self.assertEqual(self.call(self.client,'post','/api/v2/demo-space/exit').status_code,200)
         self.assertFalse(self.call(self.client,'get','/api/v2/auth/me').json['demo'])
@@ -128,7 +128,8 @@ class DemoTests(unittest.TestCase):
         from utils.demo_catalog import sheets
         from utils.worksheet import edition_code
         for key,sheet in sheets().items():
-            for suffix,count in [('',1),('_keys',1),('_teacher',2)]:
+            pages=2 if key=='physics_advanced' else 1
+            for suffix,count in [('',pages),('_keys',1),('_teacher',pages+1),('_answer_form',1)]:
                 with (demo_space.ASSETS/(key+suffix+'.pdf')).open('rb') as stream:
                     reader=PdfReader(stream)
                     self.assertEqual(len(reader.pages),count)

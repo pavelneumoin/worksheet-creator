@@ -1,7 +1,7 @@
 """Confirmed score arithmetic, scoped to a teacher or consenting school members."""
 from collections import defaultdict
 import json
-from utils import class_store,school_store,review_store,report_export
+from utils import class_store,school_store,review_store,report_export,methodology
 from utils.workspace_store import connection,timestamp
 
 def metric(rows):
@@ -11,11 +11,12 @@ def metric(rows):
             'percent':round(100*points/maximum,1) if maximum else None,
             'coverage':round(100*len(confirmed)/len(rows),1) if rows else 0,
             'not_submitted':sum(r['status']=='not_submitted' for r in rows),
-            'needs_review':sum(r['status'] in ('processing','needs_review','failed') for r in rows)}
+            'needs_review':sum(r['status'] in ('processing','needs_review','failed') or r.get('pending_correction',False) for r in rows),
+            'pending_corrections':sum(r.get('pending_correction',False) for r in rows)}
 
 def overview(user,filters,conn=None):
     from contextlib import nullcontext
-    allowed={'scope','from_date','to_date','q','class_id','teacher_id'}
+    allowed={'scope','from_date','to_date','q','class_id','teacher_id','block'}
     if any(k not in allowed or not isinstance(v,str) or len(v)>160 for k,v in filters.items()) or filters.get('scope','teacher') not in ('teacher','school'):
         class_store.fail('Проверьте фильтры отчёта.','invalid_filters')
     start=class_store.validate_date(filters.get('from_date',''),'Начало периода')
@@ -42,6 +43,8 @@ def overview(user,filters,conn=None):
         for row in work_rows:
             w=json.loads(row['worksheet'])
             topic=row['topic'] or w['title']
+            block=methodology.block(w['subject'],topic+' '+' '.join(t['question'] for t in w['tasks']))
+            if filters.get('block') and filters['block']!=block:continue
             if (teacher and row['owner_id']!=teacher) or (class_id and row['class_id']!=class_id):continue
             if start and (not row['scheduled_date'] or row['scheduled_date']<start):continue
             if end and (not row['scheduled_date'] or row['scheduled_date']>end):continue
@@ -50,20 +53,25 @@ def overview(user,filters,conn=None):
         if len(chosen)>500:class_store.fail('Сузьте период или выберите класс: в отчёте не более 500 работ.','analytics_limit',400)
         entries=[];works=[];task_rows=[]
         for a,w,topic in chosen:
+            block=methodology.block(w['subject'],topic+' '+' '.join(t['question'] for t in w['tasks']))
             reviews={r['student_id']:r for r in c.execute('SELECT * FROM reviews WHERE assignment_id=? AND owner_id=?',(a['id'],a['owner_id']))}
+            attempts={r['student_id']:r for r in c.execute('SELECT student_id,status FROM student_attempts WHERE assignment_id=? ORDER BY number',(a['id'],))}
             rows=[];scores_by_task=defaultdict(list)
             for student in c.execute('SELECT student_id FROM assignment_students WHERE assignment_id=?',(a['id'],)):
                 sid=student['student_id'];r=reviews.get(sid);answers=json.loads(r['answers']) if r and r['status']=='confirmed' else None
                 score=sum(x['score'] for x in answers) if answers is not None else None
+                attempt=attempts.get(sid)
+                incoming=bool(attempt and attempt['status'] in ('submitted','processing','needs_review'))
                 item={'assignment_id':a['id'],'class_id':a['class_id'],'class_name':a['class_name'],'teacher':a['first_name'],
                       'topic':topic,'title':a['title'],'subject':w['subject'],'date':a['scheduled_date'],'student_code':class_store.student_code(sid),
-                      'status':r['status'] if r else 'not_submitted','score':score,'maximum':len(w['tasks'])}
+                      'status':r['status'] if r else 'needs_review' if incoming else 'not_submitted','score':score,'maximum':len(w['tasks']),
+                      'block':block,'pending_correction':incoming and bool(r and r['status']=='confirmed')}
                 rows.append(item)
                 if answers is not None:
                     for x in answers:scores_by_task[x['task_id']].append(x['score'])
             entries.extend(rows)
             works.append({'id':a['id'],'class_id':a['class_id'],'class_name':a['class_name'],'teacher':a['first_name'],'title':a['title'],'topic':topic,
-                          'date':a['scheduled_date'],'subject':w['subject'],'revision':a['revision'],**metric(rows)})
+                          'date':a['scheduled_date'],'subject':w['subject'],'block':block,'revision':a['revision'],**metric(rows)})
             for i,t in enumerate(w['tasks'],1):
                 scores=scores_by_task[t['id']]
                 task_rows.append({'class_name':a['class_name'],'topic':topic,'title':a['title'],'number':i,
@@ -74,9 +82,11 @@ def overview(user,filters,conn=None):
             group=[r for r in entries if r['topic']==name and r['subject']==subject]
             topics.append({'topic':name,'subject':subject,**metric(group)})
         groups=[{'id':c['id'],'name':c['name'],**metric([r for r in entries if r['class_id']==c['id']])} for c in classes if any(r['class_id']==c['id'] for r in entries)]
+        blocks=[{'id':key,'name':methodology.GUIDES[key][0],**metric([r for r in entries if r['block']==key])} for key in methodology.GUIDES if any(r['block']==key for r in entries)]
         totals=metric(entries);totals.update(assignments=len(works),classes=len(groups),students=len({(r['class_id'],r['student_code']) for r in entries}))
         return {'title':title,'scope':'school' if school else 'teacher','generated_at':timestamp(),'filters':dict(filters),
-                'teachers':teachers,'available_classes':classes,'totals':totals,'classes':groups,'topics':topics,'works':works,'students':entries,'tasks':task_rows}
+                'teachers':teachers,'available_classes':classes,'available_blocks':[{'id':key,'name':v[0]} for key,v in methodology.GUIDES.items()],
+                'blocks':blocks,'totals':totals,'classes':groups,'topics':topics,'works':works,'students':entries,'tasks':task_rows}
 
 def csv_export(data):
     rows=[['Учитель','Класс','Тема','Работа','Дата','Код ученика','Статус','Баллы','Максимум']]

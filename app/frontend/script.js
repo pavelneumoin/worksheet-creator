@@ -125,6 +125,7 @@ function step(number) {
     $("step" + number).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function showView(view, refresh = true) {
+  if(typeof guardStudentLeave === "function" && !guardStudentLeave())return false;
   if (view === "home") view = "workspace";
   if (
     typeof guardReviewNavigation === "function" &&
@@ -151,6 +152,7 @@ function showView(view, refresh = true) {
     batch: "batchView",
     analytics: "analyticsView",
     school: "schoolView",
+    student: "studentView",
   }))
     if ($(id)) $(id).hidden = view !== name;
   for (const name of ["batch","analytics","school"]) $(name+"Nav")?.classList.toggle("active",view===name);
@@ -474,6 +476,7 @@ function validTasks() {
   return true;
 }
 async function renderResult() {
+  if($("prepareAnswerForm"))$("prepareAnswerForm").hidden=!!state.result?.answer_form_url;
   $("resultSheetTitle").textContent = state.sheet.title;
   $("resultTasks").replaceChildren();
   state.sheet.tasks.forEach((task, index) => {
@@ -491,6 +494,12 @@ async function renderResult() {
   if (state.result.marp_url) $("downloadMarp").href = state.result.marp_url;
   $("downloadTeacher").hidden=!state.result.teacher_url;
   if(state.result.teacher_url)$("downloadTeacher").href=state.result.teacher_url;
+  $("saveSheetPdf").href=state.result.pdf_url;
+  $("saveSheetPdf").download="Рабочий лист.pdf";
+  $("downloadAnswerForm").hidden=!state.result.answer_form_url;
+  if(state.result.answer_form_url)$("downloadAnswerForm").href=state.result.answer_form_url;
+  $("saveBtn").textContent=state.savedId&&!state.dirty?"Сохранено в библиотеке":"Сохранить изменения";
+  $("saveBtn").disabled=!!state.savedId&&!state.dirty;
   $("pdfPreview").src = state.result.pdf_url + "#toolbar=0";
   for (const [id, key, name] of [
     ["downloadSheet", "pdf_url", "Рабочий лист.pdf"],
@@ -498,6 +507,8 @@ async function renderResult() {
     ["downloadTex", "tex_url", "Рабочий лист.tex"],
     ["downloadMarp", "marp_url", "ЛистОК Marp.zip"],
     ["downloadTeacher","teacher_url","Комплект учителя.pdf"],
+    ["saveSheetPdf","pdf_url","Рабочий лист.pdf"],
+    ["downloadAnswerForm","answer_form_url","Бланк ответов.pdf"],
   ]) {
     bindArtifactDownload($(id), state.result.artifact_id, key, name);
   }
@@ -1185,6 +1196,7 @@ function renderAccount() {
     : "ЛатехТим";
   $("logoutBtn").hidden = !loggedIn || local;
   if (typeof renderDemoAccess === "function") renderDemoAccess();
+  if (typeof renderStudentAccess === "function") renderStudentAccess();
 }
 $("fileInput").addEventListener("change", (e) => {
   addFiles([...e.target.files]);
@@ -1222,6 +1234,7 @@ $("recognizeBtn").addEventListener("click", () =>
     form.append("instructions", $("teacherInstructions").value);
     form.append("settings", JSON.stringify(initialSettings()));
     form.append("variant_count", $("setupVariants").value);
+    form.append("auto_compile", "true");
     await enqueueJob("recognize", form, false);
   }),
 );
@@ -1313,6 +1326,7 @@ document.querySelectorAll("[data-variant]").forEach((button) =>
         revision: state.revision,
         difficulty: button.dataset.variant,
         variant_count: Number($("resultVariantCount").value),
+        auto_compile: true,
       });
     }),
   ),

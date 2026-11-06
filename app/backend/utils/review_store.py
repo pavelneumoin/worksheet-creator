@@ -170,6 +170,8 @@ def detail(conn, owner, review_id):
                   tasks=assignment['worksheet']['tasks'], photo_expires=row['photo_expires'],
                   photos=[f'/api/v2/reviews/{review_id}/photos/{i}' for i in range(row['photo_count'])] if row['photo_expires'] > time.time() else [],
                   job_status=job['status'] if job else None, error=job['error'] if job else None)
+    from utils.solution_store import latest
+    result['solution_analysis']=latest(conn,owner,'review',review_id,row['revision'])
     draft = conn.execute('SELECT * FROM review_drafts WHERE review_id=?', (review_id,)).fetchone()
     result['draft'] = (dict(json.loads(draft['payload']), revision=draft['revision'], base_revision=draft['base_revision'],
                             updated_at=draft['updated_at'], stale=draft['base_revision'] != row['revision']) if draft else None)
@@ -336,16 +338,20 @@ def report(owner, assignment_id, active_connection=None):
         assignment = class_store.assignment_detail(conn, owner, assignment_id)
         reviews = {r['student_id']: r for r in conn.execute('SELECT * FROM reviews WHERE owner_id=? AND assignment_id=?', (owner, assignment_id))}
         draft_ids = {r[0] for r in conn.execute('SELECT d.review_id FROM review_drafts d JOIN reviews r ON r.id=d.review_id WHERE r.owner_id=? AND r.assignment_id=?', (owner, assignment_id))}
+        attempts = {r['student_id']: r for r in conn.execute('SELECT id,student_id,status FROM student_attempts WHERE owner_id=? AND assignment_id=? ORDER BY number', (owner, assignment_id))}
         tasks = assignment['worksheet']['tasks']
         students, confirmed = [], []
         for student in assignment['students']:
             row = reviews.get(student['id'])
+            attempt = attempts.get(student['id'])
+            incoming = bool(attempt and attempt['status'] in ('submitted', 'processing', 'needs_review'))
             answers = json.loads(row['answers']) if row and row['status'] == 'confirmed' else None
             score = sum(a['score'] for a in answers) if answers is not None else None
-            students.append(dict(student, review_id=row['id'] if row else None, status=row['status'] if row else 'not_submitted',
+            students.append(dict(student, review_id=row['id'] if row else None, status=row['status'] if row else 'needs_review' if incoming else 'not_submitted',
+                                 student_attempt_id=attempt['id'] if incoming else None,
                                  score=score, maximum=len(tasks), confirmed_at=row['confirmed_at'] if row else None,
                                  task_scores=[a['score'] for a in answers] if answers is not None else [None] * len(tasks),
-                                 has_draft=bool(row and row['id'] in draft_ids)))
+                                 has_draft=bool(row and (row['id'] in draft_ids or incoming))))
             if score is not None:
                 confirmed.append(json.loads(row['answers']))
         breakdown = []

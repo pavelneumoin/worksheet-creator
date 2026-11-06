@@ -13,6 +13,9 @@ function jobButton(text, action, cls = "secondary") {
 }
 
 function renderJobs() {
+  let tray=$("activityTray");
+  if(!tray){tray=node("section",undefined,"activity-tray");tray.id="activityTray";tray.setAttribute("aria-label","Текущая обработка и результат");$("jobsPanel").before(tray);}
+  tray.replaceChildren();
   const active = currentJobs.find((job) =>
     ["queued", "running"].includes(job.status),
   );
@@ -29,10 +32,11 @@ function renderJobs() {
   $("retrySubmission").onclick = () =>
     busy("Повторяем отправку", sendPendingJob);
   $("jobsList").replaceChildren();
+  const featured=active||currentJobs.find(j=>j.status==="succeeded")||currentJobs[0];
   for (const job of currentJobs.slice(0, 8)) {
     const card = node("article", undefined, "job-card job-" + job.status);
     const labels = {recognize:"Распознавание заданий",variant:"Новый вариант",compile:"Рабочий лист PDF",grade:"Проверка ответов",batch_grade:"Проверка PDF",roster_recognize:"Список учеников",answer_forms:"Бланки ответов",analytics_pdf:"Отчёт PDF",report_pdf:"Отчёт по работе",analytics_insight:"Рекомендации"};
-    const heading = node("h3", labels[job.kind] || job.label);
+    const heading = node("h3", job.result?.worksheet?.title || labels[job.kind] || job.label);
     const info = node("div", undefined, "job-info");
     const status =
       job.status === "queued"
@@ -62,6 +66,14 @@ function renderJobs() {
       actions.append(
         jobButton("Открыть", () => openJobResult(job), "primary"),
       );
+    if(job.status==="succeeded"&&job.kind==="compile"&&job.result?.pdf_url){
+      for(const [label,key,name] of [["Скачать PDF","pdf_url","Рабочий лист.pdf"],["Ответы","keys_url","Ответы.pdf"],["Бланк ответов","answer_form_url","Бланк ответов.pdf"]]){
+        if(!job.result[key])continue;
+        const link=node("a",label,"button secondary");link.href=job.result[key];link.target="_blank";link.rel="noopener";link.download=name;
+        bindArtifactDownload(link,job.result.artifact_id,key,name);actions.append(link);
+      }
+      if(job.result.material_id)actions.append(jobButton("Назначить классу",()=>openAssignmentForm(null,job.result.material_id)));
+    }
     if (job.status === "queued")
       actions.append(
         jobButton(
@@ -89,8 +101,10 @@ function renderJobs() {
         ),
       );
     card.append(info, actions);
-    $("jobsList").append(card);
+    if(job.id===featured?.id)tray.append(card);else $("jobsList").append(card);
   }
+  tray.hidden=!tray.childElementCount;
+  $("jobsPanel").hidden=!$("jobsList").childElementCount&&!pendingSubmission;
   if (currentJobs.length > 8)
     $("jobsList").append(
       node(
@@ -121,9 +135,7 @@ async function refreshJobs() {
       jobSnapshot = snapshot;
       renderJobs();
       if (firstLoad)
-        $("jobsPanel").open = currentJobs.some((job) =>
-          ["queued", "running"].includes(job.status),
-        );
+        $("jobsPanel").open = false;
       if (justCompleted) await refreshMaterials();
     }
     $("jobsConnection").hidden = true;
@@ -176,7 +188,7 @@ async function sendPendingJob() {
       ...currentJobs.filter((job) => job.id !== response.job.id),
     ];
     renderJobs();
-    $("jobsPanel").open = true;
+    $("jobsPanel").open = false;
     notice(
       submission.kind === "report_pdf"
         ? "PDF отчёта готовится. Снимок результатов сохранён; файл появится в блоке «Задачи»."
@@ -186,7 +198,7 @@ async function sendPendingJob() {
           ? "Распознаём список. После завершения откройте результат здесь и проверьте имена."
           : "Задача принята. Результат появится здесь и в ваших материалах.",
     );
-    $("jobsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("activityTray")?.scrollIntoView({ behavior: "smooth", block: "start" });
     pollJobs();
     return response.job;
   } catch (error) {
@@ -213,6 +225,9 @@ async function enqueueJob(kind, body, json = true) {
 }
 
 async function openJobResult(job, chosenMaterial = null) {
+  if(job.kind === "material_form"){const link=node("a","Скачать бланк A4","button primary");link.href=job.result.pdf_url;link.target="_blank";link.rel="noopener";bindArtifactDownload(link,job.result.artifact_id,"pdf_url","Бланк ответов.pdf");$("activityTray").append(link);notice("Бланк готов.");return;}
+  if(job.kind === "solution_review") return job.result.target_kind === "student" ? openStudentAttempt(job.result.target_id) : openReview(job.result.target_id);
+  if(job.kind === "student_grade") return openStudentAttempt(job.result.student_attempt_id);
   // Preserve any edits made while a task was running.
   if (state.dirty && state.sheet) await saveCurrent();
   const fresh = (await request("/api/v2/jobs/" + job.id)).job;

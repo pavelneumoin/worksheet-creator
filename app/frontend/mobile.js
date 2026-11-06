@@ -14,7 +14,7 @@ const mobileMenuTitle = node("h2", "Рабочее пространство"); m
 const mobileMenuClose = node("button", "Закрыть", "button ghost");
 mobileMenuClose.addEventListener("click", () => mobileMenu.close());
 mobileMenuHead.append(mobileMenuTitle, mobileMenuClose); mobileMenu.append(mobileMenuHead);
-for (const [id, title, hint] of [["scheduleNav", "Расписание", "Работы и печать к уроку"], ["analyticsNav", "Статистика", "Результаты и темы"], ["schoolNav", "Моя школа", "Учителя и отчёт завуча"], ["libraryNav", "Обмен материалами", "Листы других учителей"]]) {
+for (const [id, title, hint] of [["studentInboxNav", "От учеников", "Присланные работы и исправления"], ["studentNav", "Кабинет ученика", "Мои задания и результаты"], ["scheduleNav", "Расписание", "Работы и печать к уроку"], ["analyticsNav", "Статистика", "Результаты и темы"], ["schoolNav", "Моя школа", "Учителя и отчёт завуча"], ["libraryNav", "Обмен материалами", "Листы других учителей"]]) {
   const button = node("button", undefined, "mobile-menu-item");
   button.append(node("strong", title), node("span", hint));
   button.addEventListener("click", () => { mobileMenu.close(); $(id).click(); });

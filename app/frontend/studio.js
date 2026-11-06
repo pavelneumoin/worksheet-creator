@@ -78,7 +78,9 @@ for(const id of ["toSettings","backToTasks","backToInput","editAgain"])$(id).add
 $("fileInput").addEventListener("change",()=>$("dropZone").classList.toggle("has-files",!!state.files.length));
 const personalHeading=$("savedView").querySelector("h1"); if(personalHeading)personalHeading.textContent="Моя библиотека";
 const libraryHeading=$("libraryView").querySelector("h1"); if(libraryHeading)libraryHeading.textContent="Обмен материалами";
-const scheduleResult=node("button","Назначить в расписание","button primary");scheduleResult.id="scheduleResult";scheduleResult.type="button";
+const scheduleResult=node("button","Назначить классу","button primary");scheduleResult.id="scheduleResult";scheduleResult.type="button";
 scheduleResult.addEventListener("click",()=>busy("Выбираем класс",async()=>{if(state.dirty||!state.savedId)await saveCurrent();await openAssignmentForm(null,state.savedId);}));
-$("step4").querySelector(".download-actions").after(scheduleResult);
+$("step4").querySelector(".result-next-actions").append(scheduleResult);
+const prepareAnswerForm=classButton("Бланк ответов A4",()=>busy("Готовим бланк",()=>enqueueJob("material_form",{edition_id:state.result.artifact_id})),"secondary");
+prepareAnswerForm.id="prepareAnswerForm";prepareAnswerForm.hidden=true;$("downloadAnswerForm").after(prepareAnswerForm);
 renderStudioPreview();

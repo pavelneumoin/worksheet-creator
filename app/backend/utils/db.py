@@ -224,6 +224,34 @@ def init_db():
             id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
             snapshot_hash TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS student_links (
+            student_id TEXT PRIMARY KEY REFERENCES students(id),
+            user_id TEXT NOT NULL REFERENCES users(id), created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS student_links_user ON student_links(user_id);
+        CREATE TABLE IF NOT EXISTS student_invites (
+            token_hash TEXT PRIMARY KEY, student_id TEXT NOT NULL REFERENCES students(id),
+            owner_id TEXT NOT NULL REFERENCES users(id), expires_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS student_attempts (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
+            user_id TEXT NOT NULL REFERENCES users(id), assignment_id TEXT NOT NULL,
+            student_id TEXT NOT NULL, number INTEGER NOT NULL, request_key TEXT NOT NULL,
+            fingerprint TEXT NOT NULL, files TEXT NOT NULL, expires_at REAL NOT NULL,
+            status TEXT NOT NULL DEFAULT 'submitted', revision INTEGER NOT NULL DEFAULT 1,
+            answers TEXT NOT NULL DEFAULT '[]', warnings TEXT NOT NULL DEFAULT '[]',
+            feedback TEXT NOT NULL DEFAULT '', job_id TEXT, review_id TEXT,
+            base_revision INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            UNIQUE(user_id,request_key), UNIQUE(assignment_id,student_id,number),
+            FOREIGN KEY(assignment_id,student_id) REFERENCES assignment_students(assignment_id,student_id)
+        );
+        CREATE INDEX IF NOT EXISTS student_attempts_owner ON student_attempts(owner_id,status,updated_at);
+        CREATE TABLE IF NOT EXISTS solution_analyses (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
+            target_kind TEXT NOT NULL, target_id TEXT NOT NULL, base_revision INTEGER NOT NULL,
+            content TEXT NOT NULL, created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS solution_analyses_target ON solution_analyses(owner_id,target_kind,target_id,created_at);
     ''')
     if 'owner_id' not in {row[1] for row in c.execute('PRAGMA table_info(history)')}:
         c.execute('ALTER TABLE history ADD COLUMN owner_id TEXT')
@@ -233,6 +261,8 @@ def init_db():
         c.execute('ALTER TABLE artifacts ADD COLUMN marp TEXT')
     if 'teacher' not in {row[1] for row in c.execute('PRAGMA table_info(artifacts)')}:
         c.execute('ALTER TABLE artifacts ADD COLUMN teacher TEXT')
+    if 'answer_form' not in {row[1] for row in c.execute('PRAGMA table_info(artifacts)')}:
+        c.execute('ALTER TABLE artifacts ADD COLUMN answer_form TEXT')
     if 'scheduled_date' not in {row[1] for row in c.execute('PRAGMA table_info(assignments)')}:
         c.execute("ALTER TABLE assignments ADD COLUMN scheduled_date TEXT NOT NULL DEFAULT ''")
     if 'topic' not in {row[1] for row in c.execute('PRAGMA table_info(assignments)')}:

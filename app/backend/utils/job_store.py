@@ -23,6 +23,12 @@ LABELS.update(analytics_pdf='Собираем подробный отчёт',ana
 LANES['roster_recognize'] = 'ai'
 LANES['answer_forms'] = 'compile'
 LABELS['answer_forms'] = 'Готовим бланки ответов'
+LANES['student_grade'] = 'ai'
+LABELS['student_grade'] = 'Распознаём присланную работу'
+LANES['solution_review'] = 'ai'
+LABELS['solution_review'] = 'Анализируем ход решения'
+LANES['material_form'] = 'compile'
+LABELS['material_form'] = 'Готовим бланк ответов A4'
 LABELS['roster_recognize'] = 'Распознаём список учеников'
 LEASE_SECONDS = 45
 RETENTION_SECONDS = 7 * 86400
@@ -172,6 +178,10 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
                 if payload.get('mode') not in ('class', 'blank'):
                     raise AIServiceError('Выберите вид бланка.', 'invalid_answer_form', 400)
                 stored['assignment'] = class_store.assignment_detail(conn, owner, payload.get('assignment_id'))
+            if kind == 'material_form':
+                edition=conn.execute('SELECT worksheet FROM editions WHERE id=? AND owner_id=?',(payload.get('edition_id'),owner)).fetchone()
+                if edition is None:raise AIServiceError('Версия листа не найдена.','edition_not_found',404)
+                stored['worksheet']=json.loads(edition['worksheet'])
             if kind == 'report_pdf':
                 from utils import review_store
                 stored['report'] = review_store.report(owner, payload.get('assignment_id'), conn)
@@ -179,6 +189,17 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
                 from utils import review_store
                 assignment = review_store.enqueue(conn, owner, job_id, payload, fingerprint('review_photo', {}, image_paths))
                 stored['tasks'] = assignment['worksheet']['tasks']
+            if kind == 'student_grade':
+                from utils import student_store
+                assignment=student_store.enqueue(conn,owner,payload.get('attempt_id'),job_id,payload.get('revision'))
+                stored['tasks']=assignment['worksheet']['tasks']
+            if kind == 'solution_review':
+                from utils import solution_store
+                analysis_row,assignment,_=solution_store.context(conn,owner,payload.get('target_kind'),payload.get('target_id'))
+                if analysis_row['revision']!=payload.get('base_revision'):
+                    raise AIServiceError('Работа изменилась. Откройте её заново.','revision_conflict',409)
+                stored['tasks']=assignment['worksheet']['tasks']
+                stored['subject']=assignment['worksheet']['subject']
             if kind == 'batch_grade':
                 from utils import batch_review
                 assignment = batch_review.enqueue(conn,owner,job_id,payload,fingerprint('batch_pdf',{},image_paths))
@@ -245,6 +266,8 @@ def complete(job, output, active_connection=None):
                          (job_id, owner, base + '.pdf', base + '_keys.pdf', base + '.tex', now, base + '_marp.zip'))
             if (Path(latex.OUTPUT_DIR)/(base+'_teacher.pdf')).is_file():
                 conn.execute('UPDATE artifacts SET teacher=? WHERE id=?',(base+'_teacher.pdf',job_id))
+            if (Path(latex.OUTPUT_DIR)/(base+'_answer_form.pdf')).is_file():
+                conn.execute('UPDATE artifacts SET answer_form=? WHERE id=?',(base+'_answer_form.pdf',job_id))
             material = conn.execute('SELECT * FROM materials WHERE id=? AND owner_id=?', (payload['material_id'], owner)).fetchone()
             record_edition(conn, job_id, owner, material['id'] if material else None, payload['worksheet'], payload['revision'])
             attached = material is not None and material['revision'] == payload['revision']
@@ -265,7 +288,7 @@ def complete(job, output, active_connection=None):
                 raise AIServiceError('Некорректные рекомендации.','insight_invalid',502)
             conn.execute('INSERT INTO analytics_insights VALUES(?,?,?,?,?)',(job_id,owner,analytics_ai.digest(payload['report']),json.dumps(content,ensure_ascii=False),now))
             result={'insight_id':job_id,'insight':content,'generated_at':payload['report']['generated_at'],'filters':payload['filters']}
-        elif current['kind'] in ('report_pdf','analytics_pdf','answer_forms'):
+        elif current['kind'] in ('report_pdf','analytics_pdf','answer_forms','material_form'):
             base = 'job_' + job_id
             path = Path(latex.OUTPUT_DIR) / (base + '.pdf')
             if not path.is_file() or not path.with_suffix('.tex').is_file():
@@ -275,7 +298,10 @@ def complete(job, output, active_connection=None):
                     raise AIServiceError('PDF отчёта повреждён.', 'report_missing', 500)
             conn.execute('INSERT INTO artifacts (id,owner_id,pdf,tex,created_at) VALUES (?,?,?,?,?)',
                          (job_id, owner, base + '.pdf', base + '.tex', now))
-            if current['kind'] == 'answer_forms':
+            if current['kind'] == 'material_form':
+                conn.execute('UPDATE artifacts SET answer_form=? WHERE id=? AND owner_id=?',(base+'.pdf',payload['edition_id'],owner))
+                result={'edition_id':payload['edition_id']}
+            elif current['kind'] == 'answer_forms':
                 conn.execute('INSERT INTO answer_form_exports VALUES (?,?,?)', (job_id, payload['assignment_id'], payload['mode']))
                 result = {'assignment_id': payload['assignment_id'], 'mode': payload['mode'], 'generated_at': now}
             else:
@@ -292,6 +318,18 @@ def complete(job, output, active_connection=None):
             if not isinstance(names, list) or not 1 <= len(names) <= 5 or len(names) != len(payload.get('images', [])) or any(not isinstance(n, str) or not re.fullmatch(r'page_[1-5]\.jpg', n) for n in names) or len(set(names)) != len(names):
                 raise AIServiceError('Не найдены обработанные фотографии.', 'invalid_recognition', 502)
             result = review_store.complete(conn, owner, job_id, output, [directory / n for n in names])
+        elif current['kind'] == 'solution_review':
+            analysis=output.get('analysis')
+            if not isinstance(analysis,dict) or not isinstance(analysis.get('tasks'),list):
+                raise AIServiceError('Анализ не получен.','analysis_invalid',502)
+            conn.execute('INSERT INTO solution_analyses VALUES(?,?,?,?,?,?,?)',(job_id,owner,payload['target_kind'],payload['target_id'],payload['base_revision'],json.dumps(analysis,ensure_ascii=False),now))
+            result={'target_kind':payload['target_kind'],'target_id':payload['target_id']}
+        elif current['kind'] == 'student_grade':
+            from utils import student_store
+            names=output.get('photos',[])
+            if not isinstance(names,list) or not 1<=len(names)<=10 or len(set(names))!=len(names) or any(not isinstance(n,str) or not re.fullmatch(r'page_(?:[1-9]|10)\.jpg',n) for n in names):
+                raise AIServiceError('Не найдены страницы работы.','invalid_recognition',502)
+            result=student_store.complete(conn,owner,payload['attempt_id'],job_id,output,[job_directory(job_id)/'pages'/n for n in names])
         else:
             worksheets = output.get('worksheets', [output.get('worksheet')])
             requested = payload.get('variant_count', 1)
@@ -309,8 +347,18 @@ def complete(job, output, active_connection=None):
                 if origin:
                     conn.execute('INSERT INTO material_origins VALUES (?,?,?,?)', (material_id, origin['publication_id'], origin['author'], origin['title']))
                 materials.append({'material_id': material_id, 'title': worksheet['title'], 'variant': worksheet['settings']['variant']})
+                if payload.get('auto_compile') is True and conn.execute("SELECT count(*) FROM jobs WHERE status IN ('queued','running')").fetchone()[0] < 30:
+                    preview_id=uuid.uuid5(uuid.UUID(material_id),'preview-pdf').hex
+                    preview={'worksheet':worksheet,'material_id':material_id,'revision':1,'source':'ai_draft','images':[],'auto_preview':True}
+                    queued_at=time.time()+index*.001
+                    conn.execute('''INSERT INTO jobs (id,owner_id,kind,lane,request_key,fingerprint,payload,status,created_at,updated_at)
+                                    VALUES (?,?,'compile','compile',?,?,?,'queued',?,?)''',
+                                 (preview_id,owner,'preview-'+material_id,fingerprint('compile',preview),json.dumps(preview,ensure_ascii=False),queued_at,queued_at))
+                    materials[-1]['compile_job_id']=preview_id
             result = {'material_id': job_id, 'materials': materials, 'requested_count': requested,
                       'warning': output.get('warning', '')[:1000]}
+            if payload.get('auto_compile') and any(not m.get('compile_job_id') for m in materials):
+                result['warning'] += ' Очередь печати заполнена. Оставшиеся листы сохранены в библиотеке: откройте их и нажмите «Собрать PDF».'
         completed = time.time()
         conn.execute("UPDATE jobs SET status='succeeded',result=?,finished_at=?,updated_at=? WHERE id=?", (json.dumps(result, ensure_ascii=False), completed, completed, job_id))
         return True
@@ -363,6 +411,8 @@ def maintain():
         terminal = [r['id'] for r in conn.execute("SELECT id FROM jobs WHERE status IN ('succeeded','failed','cancelled')")]
         from utils import review_store
         review_store.maintain(conn)
+        from utils import student_store
+        student_store.maintain(conn,now)
         from utils import batch_review
         batch_review.maintain(conn)
         conn.execute("DELETE FROM jobs WHERE finished_at<?", (now - RETENTION_SECONDS,))

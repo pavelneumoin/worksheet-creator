@@ -16,6 +16,8 @@
     <link rel="stylesheet" href="/review_focus.css" />
     <link rel="stylesheet" href="/refinement.css" />
     <link rel="stylesheet" href="/batch_queue.css" />
+    <link rel="stylesheet" href="/teacher_flow.css" />
+    <link rel="stylesheet" href="/students.css" />
     <script defer src="/vendor/katex/katex.min.js"></script>
     <script defer src="/jobs.js"></script>
     <script defer src="/script.js"></script>
@@ -31,6 +33,8 @@
     <script defer src="/batch_queue.js"></script>
     <script defer src="/analytics.js"></script>
     <script defer src="/demo.js"></script>
+    <script defer src="/students.js"></script>
+    <script defer src="/solution_analysis.js"></script>
     <script defer src="/mobile.js"></script>
   </head>
   <body>
@@ -606,34 +610,28 @@
                   <h2 id="resultTitle">Рабочий лист готов</h2>
                 </div>
               </div>
-              <div class="download-actions">
+              <p id="resultSheetTitle" class="result-sheet-title"></p>
+              <p id="resultReviewHint" class="result-review-hint">Сверьте условия и ответы перед выдачей ученикам.</p>
+              <div class="result-next-actions"></div>
+              <h3 class="result-section-label">Файлы для урока</h3>
+              <div class="download-actions result-files">
                 <a
                   class="button primary"
                   id="downloadSheet"
                   target="_blank"
                   rel="noopener"
-                  >Открыть лист PDF ↗</a
+                  >Посмотреть лист</a
                 ><a
                   class="button secondary"
                   id="downloadKeys"
                   target="_blank"
                   rel="noopener"
-                  >Ответы для учителя ↗</a
+                  >Ответы</a
                 >
+                <a id="saveSheetPdf" class="button secondary">Скачать лист</a>
+                <a id="downloadTeacher" class="button secondary" target="_blank" rel="noopener" hidden>Лист и ответы</a>
+                <a id="downloadAnswerForm" class="button secondary" target="_blank" rel="noopener" hidden>Бланк ответов · A4</a>
               </div>
-              <p id="resultSheetTitle" class="result-sheet-title"></p>
-              <a id="downloadTeacher" class="button secondary" target="_blank" rel="noopener" hidden>Комплект учителя: лист + ответы ↗</a>
-              <iframe
-                id="pdfPreview"
-                title="Предпросмотр рабочего листа PDF"
-              ></iframe>
-              <details class="mobile-result-preview">
-                <summary>Быстрый просмотр заданий</summary>
-                <div id="resultTasks"></div>
-                <p class="quiet">
-                  Точный макет для печати — в PDF. Ответы скачиваются отдельно.
-                </p>
-              </details>
               <div class="variant-panel">
                 <h3>Новый вариант</h3>
                 <label class="variant-count"
@@ -661,6 +659,14 @@
                   Сохранить в мои материалы
                 </button>
               </div>
+              <details class="result-preview-details">
+                <summary>Макет PDF</summary>
+                <iframe id="pdfPreview" title="Предпросмотр рабочего листа PDF"></iframe>
+              </details>
+              <details class="mobile-result-preview">
+                <summary>Задания</summary>
+                <div id="resultTasks"></div>
+              </details>
               <details class="help-details">
                 <summary>Исходник для дальнейшей работы</summary>
                 <a id="downloadTex" target="_blank" rel="noopener"

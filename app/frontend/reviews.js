@@ -270,7 +270,9 @@ async function openClassReport(id) {
     );
     row.append(info);
     if (student.has_draft)
-      info.append(node("p", "Есть сохранённые правки", "quiet"));
+      info.append(node("p", student.student_attempt_id ? "Ученик прислал исправление" : "Есть сохранённые правки", "quiet"));
+    if (student.student_attempt_id)
+      row.append(reviewButton("Проверить попытку", () => openStudentAttempt(student.student_attempt_id)));
     if (student.review_id)
       row.append(
         reviewButton(
@@ -499,6 +501,7 @@ async function openReview(id, ready = null) {
     node("p", reviewLabels[r.status] + " · Версия " + r.edition_code, "quiet"),
   );
   target.append(panel);
+  if(r.status==="confirmed")panel.append(classButton("Вернуть ученику",()=>showReturnToStudent(r),"secondary"));
   if(reviewState.batchContext)target.prepend(reviewButton("← К пачке сканов",()=>openBatch(reviewState.batchContext.id),"ghost back-link"));
   if (r.status === "processing") {
     panel.append(
@@ -564,6 +567,8 @@ async function openReview(id, ready = null) {
         "quiet",
       ),
     );
+  if (["needs_review", "confirmed"].includes(r.status))
+    renderSolutionAnalysis(target,"review",r,!!r.photos.length);
   if (["needs_review", "confirmed"].includes(r.status))
     renderReviewForm(target, r);
   if (r.status !== "confirmed") {

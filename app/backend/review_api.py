@@ -13,6 +13,19 @@ from utils.workspace_store import connection
 api = Blueprint('reviews', __name__, url_prefix='/api/v2')
 
 
+@api.post('/solution-analysis/<kind>/<target_id>')
+def solution_analysis(kind,target_id):
+    from utils import solution_store
+    status=get_ai_status()
+    if not status['ai_ready']:
+        raise AIServiceError(status['ai_message'],'ai_not_configured',503)
+    with connection() as conn:
+        row,_,paths=solution_store.context(conn,g.identity['owner_id'],kind,target_id)
+    job,_=job_store.submit(g.identity['owner_id'],'solution_review',request.headers.get('Idempotency-Key'),
+        {'target_kind':kind,'target_id':target_id,'base_revision':row['revision']},paths)
+    return jsonify(job=job),202
+
+
 @api.post('/assignments/<assignment_id>/submissions')
 def submit(assignment_id):
     job_store.validate_key(request.headers.get('Idempotency-Key'))

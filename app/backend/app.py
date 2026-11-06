@@ -47,6 +47,8 @@ from school_api import api as school_api
 app.register_blueprint(school_api)
 from demo_api import api as demo_api
 app.register_blueprint(demo_api)
+from student_api import api as student_api
+app.register_blueprint(student_api)
 
 
 @app.before_request

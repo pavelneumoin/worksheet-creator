@@ -43,6 +43,9 @@ def document(data):
         if c['percent'] is not None:
             source+=t(c['name'])+r'\quad '+t(percent(c['percent']))+r'\par{\color{purple}\rule{'+str(round(c['percent']*1.4,2))+r'mm}{2.2mm}}\par\medskip'
     source+=r'\section*{Темы: где нужна поддержка}'
+    if data.get('blocks'):
+        source+=table(['Раздел','Подтверждено','Выполнение'],[92,33,30],[
+            r'\rowcolor{'+shade(x['percent'])+'}'+' & '.join(t(v) for v in [x['name'],x['confirmed'],percent(x['percent'])])+r' \\' for x in data['blocks']])
     rows=[r'\rowcolor{'+shade(x['percent'])+'}'+' & '.join(t(v) for v in [x['topic'],x['confirmed'],percent(x['percent'])])+r' \\' for x in sorted(data['topics'],key=lambda x:(x['percent'] is None,x['percent'] or 0))]
     source+=table(['Тема','Работ','Выполнение'],[103,22,30],rows)
     source+=r'{\small '+t('Цветовые зоны: менее 40% — красная; 40–69,9% — жёлтая; от 70% — зелёная; без подтверждений — серая. Пороги служат ориентиром для повторения, а не школьными отметками.')+r'}\par'

@@ -93,6 +93,14 @@ def answer_forms():
     return accepted('answer_forms', data)
 
 
+@api.post('/material_form')
+def material_form():
+    data=body()
+    if set(data)!={'edition_id'} or not isinstance(data['edition_id'],str):
+        raise AIServiceError('Выберите готовую версию листа.','invalid_edition',400)
+    return accepted('material_form',data)
+
+
 @api.post('/report_pdf')
 def report_pdf():
     data = body()
@@ -149,7 +157,8 @@ def recognize():
             file.save(path)
             paths.append(path)
         return accepted('recognize', {'subject': discipline, 'text': text, 'instructions': instructions,
-                                     'settings': settings, 'variant_count': count}, paths)
+                                     'settings': settings, 'variant_count': count,
+                                     'auto_compile': request.form.get('auto_compile') == 'true'}, paths)
 
 
 def variant_count(value):
@@ -182,4 +191,5 @@ def worksheet_job():
             raise AIServiceError(status['ai_message'], 'ai_not_configured', 503)
         payload['difficulty'] = difficulty
         payload['variant_count'] = variant_count(data.get('variant_count', 1))
+        payload['auto_compile'] = data.get('auto_compile') is True
     return accepted(kind, payload)

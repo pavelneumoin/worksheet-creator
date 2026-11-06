@@ -309,6 +309,12 @@ function renderRoster(target, c) {
     )) {
       const row = node("div", undefined, "student-row");
       row.append(node("span", s.code, "student-name"));
+      if(!c.archived&&!s.archived){
+        row.append(classButton(s.connected?"Доступ подключён":"Пригласить",()=>busy("Доступ ученика",async()=>{
+          if(s.connected){if(!window.confirm("Отозвать доступ к этому ученику? Результаты останутся у учителя."))return;await request(`/api/v2/students/${s.id}/access`,{method:"DELETE"});await openClass(c.id,"students");}
+          else await showPupilInvite(c,s);
+        }),"ghost"));
+      }
       if (!c.archived)
         row.append(
           classButton(
@@ -488,28 +494,11 @@ async function openAssignment(id, loaded = null) {
       ),
     );
   if(a.result.teacher_url)downloads.append(editionDownload(a.edition_id,a.code,a.result,"teacher_url","Комплект учителя"));
-  panel.append(
-    downloads,
-    node(
-      "p",
-      "Лист и состав класса зафиксированы. Правки в материалах и списке учеников не изменяют эту работу.",
-      "quiet",
-    ),
-  );
-  panel.append(
-    classButton(
-      "Проверить ответы и открыть отчёт",
-      () => busy("Открываем проверку", () => openClassReport(a.id)),
-      "primary",
-    ),
-    node(
-      "p",
-      "Добавляйте фото ответов по коду ученика. Итоговые баллы появляются в отчёте после вашего подтверждения.",
-      "quiet",
-    ),
-  );
+  const next=node("div",undefined,"actions assignment-next-actions");
+  next.append(classButton("Проверить PDF",()=>busy("Открываем проверку",()=>openBatchHome(a.id,a.class_id)),"primary"),classButton("Результаты класса",()=>busy("Открываем результаты",()=>openClassReport(a.id)),"secondary"));
+  panel.append(next,node("h2","Печать к уроку"),downloads);
   const forms = node("section", undefined, "answer-forms panel");
-  forms.append(node("h2", "Быстрая проверка по ответам"), node("p", "Один бланк на ученика: номера заданий, клеточки и коды. Для проверки коротких ответов сканируйте только эти страницы; решения остаются на рабочих листах.", "quiet"));
+  forms.append(node("h2", "Бланк ответов · 1 страница"), node("p", "Код ученика, номер задания и поле ответа. Для коротких ответов достаточно отсканировать бланки.", "quiet"));
   const formActions = node("div", undefined, "actions");
   for (const [mode, title] of [["class", "Бланки класса"], ["blank", "Пустой бланк"]]) {
     const ready = a.answer_forms?.find(f => f.mode === mode);
@@ -517,8 +506,7 @@ async function openAssignment(id, loaded = null) {
       formActions.append(editionDownload(ready.artifact_id, a.code, ready, "pdf_url", title + " · PDF"));
     } else formActions.append(classButton(title, () => busy("Готовим бланки", () => enqueueJob("answer_forms", {assignment_id: a.id, mode}, true)), "secondary"));
   }
-  formActions.append(classButton("Загрузить сканы", () => busy("Открываем проверку", () => openBatchHome(a.id, a.class_id)), "primary"));
-  forms.append(formActions, node("p", "Печать: A4, 100%, односторонняя. До 30 заданий на одной странице. Длинные решения проверяйте по полному скану.", "quiet"));
+  forms.append(formActions, node("p", "A4 · односторонняя печать · масштаб 100%. Для развёрнутых решений загрузите полные сканы.", "quiet"));
   panel.append(forms);
   const members = node("details", undefined, "assignment-members");
   members.append(node("summary", "Кому назначено · " + a.student_count));
