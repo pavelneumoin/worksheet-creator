@@ -2,6 +2,8 @@
 (async () => {
   const params = new URLSearchParams(location.hash.slice(1));
   const token = params.getAll("token").length === 1 ? params.get("token") : null;
+  const requested = params.getAll("next").length === 1 ? params.get("next") : "";
+  const next = /^(?:review|batch|assignment|report|material):[a-f0-9]{32}$/.test(requested) ? requested : "";
   history.replaceState(null, "", location.pathname);
   const status = document.getElementById("loginStatus");
   const button = document.getElementById("confirmLogin");
@@ -24,7 +26,7 @@
       button.disabled = true;
       try {
         await post("/api/v2/auth/bot", { token, confirm: true });
-        location.replace("/");
+        location.replace(next ? "/?open=" + encodeURIComponent(next) : "/");
       } catch (error) {
         status.textContent = error.message;
         button.disabled = false;

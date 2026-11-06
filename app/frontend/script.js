@@ -256,12 +256,13 @@ async function busy(title, action) {
 }
 function mathPreview(target, text) {
   target.replaceChildren();
+  text = text.replace(/\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$\$([\s\S]+?)\$\$/g, (match, a, b, c) => "$" + (a ?? b ?? c).trim() + "$");
   const parts = text.split("$");
   parts.forEach((part, index) => {
     if (index % 2 && index < parts.length - 1 && window.katex) {
       const span = node("span");
       try {
-        window.katex.render(part, span, {
+          window.katex.render("\\displaystyle " + part, span, {
           throwOnError: false,
           trust: false,
           strict: false,
@@ -1515,6 +1516,18 @@ refreshStatus();
 busy("Открываем ваш профиль", async () => {
   try {
     await prepareMax();
+    if (state.auth?.authenticated) {
+      const requested = new URLSearchParams(location.search).get("open") || "";
+      if (/^(?:review|batch|assignment|report|material):[a-f0-9]{32}$/.test(requested)) {
+        const [kind,id] = requested.split(":");
+        const url = new URL(location.href); url.searchParams.delete("open"); history.replaceState(null,"",url.pathname + url.search + url.hash);
+        if (kind === "review") await openReview(id);
+        else if (kind === "batch") await openBatch(id);
+        else if (kind === "assignment") await openAssignment(id);
+        else if (kind === "report") await openClassReport(id);
+        else { await refreshMaterials(); showView("saved"); }
+      }
+    }
   } catch (error) {
     renderAccount();
     throw error;

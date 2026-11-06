@@ -19,7 +19,8 @@ RULES = '''Ты распознаёшь КОНЕЧНЫЕ ответы учени�
 Для blank и unclear text может быть пустым; не выдавай догадку за прочитанный ответ.
 Не возвращай имена, фамилии и посторонние надписи. Не меняй номера и не повторяй их.
 Верни только JSON:
-{"answers":[{"task_id":"1","text":"6","state":"readable"}],"edition_code":"","student_code":""}
+{"answers":[{"task_id":"1","text":"6","state":"readable","box":[100,200,800,260]}],"edition_code":"","student_code":""}
+box — необязательная рамка ВИДИМОГО поля ответа [лево, верх, право, низ] от 0 до 1000 относительно всей фотографии, начало в левом верхнем углу. Включи номер задания и весь ответ. Если положение неясно, верни null. Рамка нужна только для увеличения учителем, не влияет на баллы.
 edition_code и student_code заполни только если соответствующие коды отчётливо видны на фото (напечатаны или написаны от руки). Не угадывай нечитаемые символы.
 Ответы пиши обычным текстом: дробь 1/2, десятичное число 0,5, сохраняй единицы. Математические обозначения допустимы.
 Никаких баллов, оценки, решений, HTML или Markdown вне объекта JSON.'''
@@ -30,8 +31,11 @@ def merge_pages(tasks, pages):
     answers, conflicts = [], []
     for task in tasks:
         candidates = {}
-        for page in pages:
+        sources = []
+        for page_index, page in enumerate(pages):
             answer = next(a for a in page['answers'] if a['task_id'] == task['id'])
+            if answer['state'] in ('readable', 'blank') or answer.get('box'):
+                sources.append({'photo_index': page_index, 'box': answer.get('box')})
             if answer['state'] in ('readable', 'blank'):
                 candidates[(answer['state'], normalized(answer['text']))] = answer
         if len(candidates) == 1:
@@ -40,6 +44,8 @@ def merge_pages(tasks, pages):
             answers.append({'task_id': task['id'], 'text': '', 'state': 'unclear'})
             if len(candidates) > 1:
                 conflicts.append(task['id'])
+        if sources:
+            answers[-1]['sources'] = sources
     codes = [{'page': i, 'edition_code': p.get('edition_code', ''), 'student_code': p.get('student_code', ''),
               'assignment_code': p.get('assignment_code', ''), 'marker_warning': p.get('marker_warning', '')}
              for i, p in enumerate(pages, 1)]
@@ -58,6 +64,8 @@ def recognize(tasks, paths):
 def _recognize_single(tasks, paths):
     from utils import answer_markers
     marker = answer_markers.read(paths[0]) if paths else {}
+    from utils.answer_regions import grid_boxes
+    regions = grid_boxes(paths[0], len(tasks)) if marker.get('assignment_code') else []
     from gigachat.models import Chat, Messages, MessagesRole
     # Never reveal questions: a model can solve them and silently replace an
     # incorrect handwritten answer even when told only to transcribe.
@@ -88,6 +96,9 @@ def _recognize_single(tasks, paths):
                             raise AIServiceError('Неверный формат кода страницы.', 'invalid_recognition', 502)
                         # Provider text cannot set worker control fields such as
                         # photos, page_codes, errors or conflict flags.
+                        if regions:
+                            for task, box in zip(tasks, regions):
+                                next(a for a in answers if a['task_id'] == task['id'])['box'] = box
                         return {'answers': answers, **codes, **marker}
                     except (ValueError, TypeError, AttributeError, AIServiceError):
                         if attempt:

@@ -1,0 +1,44 @@
+.review-focus-toolbar { margin: 16px 0; scroll-margin-top: 20px; }
+.review-focus-filters { display: flex; gap: 6px; padding: 5px; background: #edeaf4; border-radius: 14px; }
+.review-focus-filters .button { flex: 1; min-width: 0; border: 0; background: transparent; color: #635b71; }
+.review-focus-filters .button.active { background: #fff; color: #6847c7; box-shadow: 0 2px 6px #44316012; }
+.review-focus-toolbar select { width: 100%; min-height: 44px; margin-top: 10px; }
+.review-focus-counter { font-size: 12px; line-height: 1.5; margin: 10px 2px; }
+.review-form .review-score-buttons { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 6px; }
+.review-form .review-score-buttons .button { min-width: 0; padding: 9px 2px; min-height: 46px; font-size: 16px; }
+.review-score-buttons .button.active { background: #7654d6; border-color: #7654d6; color: #fff; }
+.review-score-caption { margin: 16px 0 8px; font-weight: 650; font-size: 14px; }
+.review-form .review-answer { margin: 12px 0; }
+.review-answer-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.review-answer-top h3 { margin: 0; }
+.review-form .review-answer-top .button { width: auto; flex-shrink: 0; }
+.review-question { margin-bottom: 14px; }
+.review-question summary, .review-answer-note summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: #766b88; font-size: 13px; }
+.review-form .review-answer textarea { margin-top: 0; }
+.review-form .review-focus-nav { display: grid; grid-template-columns: 46px 1fr 46px; gap: 8px; background: #ffffffed; backdrop-filter: blur(12px); padding: 10px; border: 1px solid #e6e0ef; border-radius: 16px; position: sticky; bottom: 12px; z-index: 12; box-shadow: 0 5px 25px #36294a12; }
+.review-focus-nav .button { min-width: 0; padding: 10px 6px; }
+.review-focus-empty { text-align: center; padding: 28px; }
+.review-focus-empty .button { margin: 6px 0; }
+.review-confirmation { scroll-margin-top: 20px; }
+.review-past-warnings summary { cursor: pointer; color: #78683f; font-size: 13px; padding: 8px 0; }
+.scan-dialog { width: min(960px,96vw); max-width: 96vw; height: min(900px,94dvh); max-height: 94dvh; border: 0; border-radius: 20px; padding: 16px; color: #241c35; }
+.scan-dialog[open] { display: flex; flex-direction: column; gap: 10px; }
+.scan-dialog::backdrop { background: #20182ed9; }
+.scan-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.scan-dialog select { min-height: 44px; padding: 8px 12px; border: 1px solid #ddd6ea; border-radius: 10px; background: white; font: inherit; }
+.scan-viewport { flex: 1; min-height: 100px; position: relative; overflow: hidden; background: #e9e6ed; border-radius: 12px; touch-action: none; user-select: none; cursor: grab; }
+.scan-viewport:active { cursor: grabbing; }
+.scan-viewport img { position: absolute; top: 0; left: 0; max-width: none; transform-origin: 0 0; pointer-events: none; }
+.scan-tools { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.scan-tools .button { min-width: 44px; min-height: 44px; padding: 8px 12px; }
+.scan-scale { min-width: 48px; text-align: center; font-size: 13px; }
+.scan-hint { font-size: 12px; line-height: 1.4; margin: 0; }
+@media(max-width:720px) {
+  .review-form .review-focus-nav { bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .review-heading h1 { font-size: 23px; }
+  .review-form > h2 { font-size: 19px; }
+  .review-form > .quiet { font-size: 13px; }
+  .review-answer .review-key { padding: 10px; margin: 10px 0; }
+  .review-answer .review-warning { font-size: 13px; padding: 10px; }
+  .scan-dialog { margin: 0; width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; padding: max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom)); }
+}

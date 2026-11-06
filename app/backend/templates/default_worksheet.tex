@@ -8,6 +8,10 @@
 }{\setmainfont{CMU Serif}\setmonofont{CMU Typewriter Text}}
 \usepackage[russian]{babel}
 \usepackage{amsmath,amssymb,multicol}
+% Keep native Computer Modern mathematics alongside CMU Cyrillic text.
+% Worksheet formulas need full-size fractions and radicals even inside a sentence.
+\everymath{\displaystyle}
+\linespread{1.06}
 \usepackage[a4paper,top=26mm,bottom=22mm,headheight=28pt,headsep=5mm,footskip=10mm,PLACEHOLDER:MARGINS]{geometry}
 \usepackage{tikz,xcolor,fancyhdr,lastpage}
 \setlength{\parindent}{0pt}

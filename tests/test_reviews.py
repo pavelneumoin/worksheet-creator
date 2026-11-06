@@ -198,7 +198,7 @@ class ReviewTests(unittest.TestCase):
         _, r = self.recognized()
         payload = self.body(r); payload['reviewed'] = False
         self.assertEqual(self.call(self.client, 'put', '/api/v2/reviews/' + r['id'], json=payload).status_code, 400)
-        for score in (True, '1', 2, -1, 0.5):
+        for score in (True, '1', 2, -1, 0.3, float('nan'), float('inf')):
             with self.subTest(score=score), self.assertRaises(AIServiceError):
                 review_store.update('max:11', r['id'], self.body(r, score=score))
 
@@ -383,7 +383,9 @@ class ReviewTests(unittest.TestCase):
         tasks = [{'id': 'a'}]
         pages = [{'answers': [{'task_id': 'a', 'text': text, 'state': 'readable'}]} for text in ['5', '6']]
         result = grading_ai.merge_pages(tasks, pages)
-        self.assertEqual(result['answers'], [{'task_id': 'a', 'text': '', 'state': 'unclear'}])
+        self.assertEqual(result['answers'][0]['state'], 'unclear')
+        self.assertEqual(result['answers'][0]['text'], '')
+        self.assertEqual(result['answers'][0]['sources'], [{'photo_index':0,'box':None},{'photo_index':1,'box':None}])
         self.assertEqual(result['conflict_task_ids'], ['a'])
         result = grading_ai.merge_pages(tasks, [pages[0], pages[0]])
         self.assertEqual(result['answers'][0]['text'], '5'); self.assertEqual(result['conflict_task_ids'], [])
@@ -411,6 +413,65 @@ class ReviewTests(unittest.TestCase):
         claim = job_store.claim_next('ai')
         with self.assertRaises(AIServiceError): job_store.complete(claim, {'answers': [], 'photos': ['page_1.jpg']})
         self.assertEqual(review_store.get_review('max:11', job['id'])['status'], 'processing')
+
+    def test_partial_scores_survive_draft_confirmation_history_and_school_aggregates(self):
+        from utils import analytics, report_export
+        a, r = self.recognized()
+        r = review_store.update('max:11', r['id'], self.body(r))
+        payload = self.body(r)
+        for item, score in zip(payload['answers'], (.25, .5, .75)):
+            item.update(score=score, checked=True)
+        draft = review_store.save_draft('max:11', r['id'], payload)
+        self.assertEqual(review_store.report('max:11', a['id'])['summary']['average'], 3)
+        self.assertEqual([x['score'] for x in draft['answers']], [.25,.5,.75])
+        payload['draft_revision'] = draft['revision']
+        confirmed = review_store.update('max:11', r['id'], payload)
+        self.assertTrue(all(x['checked'] for x in confirmed['answers']))
+        report = review_store.report('max:11', a['id'])
+        self.assertEqual(report['summary']['average'], 1.5)
+        self.assertEqual(report['summary']['percent'], 50)
+        self.assertEqual(report['tasks'][0]['correct'], 0)
+        self.assertEqual(report['tasks'][0]['partial'], 1)
+        self.assertEqual(report['tasks'][0]['points'], .25)
+        self.assertIn('0,25', report_export.assignment_csv(report))
+        self.assertIn('1,5', report_export.report_tex(report))
+        self.assertEqual(analytics.overview('max:11', {})['totals']['percent'], 50)
+        changes = review_store.history('max:11', r['id'])[0]['changes']
+        self.assertEqual(changes[0]['fields']['score']['after'], .25)
+
+    def test_checked_marker_persists_but_editing_text_without_recheck_resets_it(self):
+        _, r = self.recognized()
+        body = self.body(r, action='save', score=.5)
+        for a in body['answers']: a['checked'] = True
+        r = review_store.update('max:11', r['id'], body)
+        self.assertTrue(r['answers'][0]['checked'])
+        body = self.body(r, action='save', score=.5)
+        body['answers'][0]['text'] = 'Changed'
+        r = review_store.update('max:11', r['id'], body)
+        self.assertFalse(r['answers'][0]['checked'])
+        body = self.body(r, score=None)
+        body['answers'][0]['checked'] = True
+        draft = review_store.save_draft('max:11', r['id'], body)
+        self.assertFalse(draft['answers'][0]['checked'])
+
+    def test_ocr_boxes_are_optional_bounded_and_cannot_inject_grades_or_sources(self):
+        tasks = [{'id':'a'}]
+        value = {'answers':[{'task_id':'a','text':'1','state':'readable','score':1,'checked':True,
+                             'sources':[{'photo_index':99}], 'box':[10,20,300,100]}]}
+        parsed = review_store.validate_recognition(value, tasks)[0]
+        self.assertEqual(parsed['box'], [10,20,300,100])
+        for key in ('score','checked','sources'): self.assertNotIn(key, parsed)
+        for box in ([0,0,float('nan'),100],[-1,0,100,100],[1,2,1,100],[0,False,100,100], 'arbitrary'):
+            value['answers'][0]['box'] = box
+            self.assertNotIn('box', review_store.validate_recognition(value,tasks)[0])
+
+    def test_multi_page_sources_follow_selected_page_order_and_conflicts_keep_both(self):
+        from utils import grading_ai
+        tasks = [{'id':'a'}]
+        pages = [{'answers':[{'task_id':'a','state':'readable','text':text,'box':box}]} for text,box in [('1',[0,0,50,50]),('2',[60,60,100,100])]]
+        merged = grading_ai.merge_pages(tasks,pages)
+        self.assertEqual(merged['answers'][0]['state'],'unclear')
+        self.assertEqual(merged['answers'][0]['sources'][1],{'photo_index':1,'box':[60,60,100,100]})
 
     def test_reordered_duplicate_pages_cannot_be_assigned_to_another_pupil(self):
         _, _, a, _ = self.assignment()

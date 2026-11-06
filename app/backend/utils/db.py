@@ -47,6 +47,17 @@ def init_db():
         CREATE TABLE IF NOT EXISTS bot_drafts (
             owner_id TEXT PRIMARY KEY, material_id TEXT NOT NULL, revision INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS bot_actions (
+            token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL, kind TEXT NOT NULL,
+            payload TEXT NOT NULL, expires_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS bot_context (
+            user_id INTEGER PRIMARY KEY, assignment_id TEXT NOT NULL, expires_at REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS bot_print_queue (
+            id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, assignment_id TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending', created_at REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS materials (
             id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
             worksheet TEXT NOT NULL, source TEXT NOT NULL,

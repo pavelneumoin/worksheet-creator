@@ -246,7 +246,7 @@ async function openClassReport(id) {
         "strong",
         t.percent === null
           ? "Нет данных"
-          : `${t.correct} из ${t.total} · ${t.percent}%`,
+          : `${reviewScoreLabel(t.points ?? t.correct)} из ${t.total} баллов · ${t.percent}%`,
       ),
     );
     taskPanel.append(row);
@@ -263,7 +263,7 @@ async function openClassReport(id) {
         "p",
         reviewLabels[student.status] +
           (student.score !== null
-            ? ` · ${student.score} из ${student.maximum}`
+            ? ` · ${reviewScoreLabel(student.score)} из ${student.maximum}`
             : ""),
         "quiet",
       ),
@@ -525,17 +525,21 @@ async function openReview(id, ready = null) {
         "job-error",
       ),
     );
+  const warnings = r.status === "confirmed" && r.warnings.length
+    ? node("details", undefined, "review-past-warnings") : panel;
+  if (warnings !== panel) {
+    warnings.append(node("summary", "Замечания распознавания · " + r.warnings.length));
+    panel.append(warnings);
+  }
   for (const warning of r.warnings)
-    panel.append(node("p", warning, "review-warning"));
+    warnings.append(node("p", warning, "review-warning"));
   if (r.photos.length) {
     const gallery = node("details", undefined, "panel review-gallery");
-    gallery.open = true;
+    gallery.open = false;
     gallery.append(node("summary", "Фото ответов · " + r.photos.length));
     for (const [i, url] of r.photos.entries()) {
-      const link = node("a");
-      link.href = url;
-      link.target = "_blank";
-      link.rel = "noopener";
+      const link = classButton("", () => openReviewScan(r, {sources:[{photo_index:i}]}, "обзор"), "ghost");
+      link.setAttribute("aria-label", "Увеличить страницу " + (i + 1));
       const img = node("img");
       img.src = url;
       img.alt = "Страница ответов " + (i + 1);
@@ -545,7 +549,7 @@ async function openReview(id, ready = null) {
     gallery.append(
       node(
         "p",
-        "Откройте снимок для увеличения. Фото удаляются через 7 дней после загрузки.",
+        "Увеличение и перемещение доступны внутри кабинета. Фото удаляются через 7 дней после загрузки.",
         "quiet",
       ),
     );
@@ -599,7 +603,7 @@ function renderReviewForm(target, r) {
       node(
         "p",
         r.status === "confirmed"
-          ? "Открыт сохранённый черновик исправлений. В отчёте пока прежние подтверждённые баллы. Для применения сверьте работу и подтвердите исправления."
+          ? "Черновик восстановлен. В отчёте прежние баллы — до подтверждения исправлений."
           : "Ваши сохранённые правки восстановлены. Сверьте ответы и подтвердите результат, когда закончите.",
         "review-warning",
       ),
@@ -613,7 +617,7 @@ function renderReviewForm(target, r) {
     ),
     node(
       "p",
-      "Каждое задание — 0 или 1 балл. Совпадение с ключом — подсказка, итог подтверждаете вы. Развёрнутое решение здесь не оценивается.",
+      "До 1 балла за задание, шаг 0,25. Частичный балл выставляете вы по своим критериям. Совпадение с ключом — подсказка; итог нужно подтвердить.",
       "quiet",
     ),
   );
@@ -630,13 +634,16 @@ function renderReviewForm(target, r) {
   reviewed.type = "checkbox";
   const refreshTotal = () => {
     const done = fields.filter((f) => f.score.value !== "");
-    total.textContent = `Баллы: ${done.reduce((n, f) => n + Number(f.score.value), 0)} из ${r.tasks.length} · Оценено заданий: ${done.length} из ${r.tasks.length}`;
+    total.textContent = `Баллы: ${reviewScoreLabel(done.reduce((n, f) => n + Number(f.score.value), 0))} из ${r.tasks.length} · Оценено: ${done.length} из ${r.tasks.length}`;
     confirm.disabled = !reviewed.checked || done.length !== r.tasks.length;
   };
   for (const [i, task] of r.tasks.entries()) {
     const answer = (draft?.answers || r.answers)[i],
       card = node("section", undefined, "panel review-answer");
-    card.append(node("h3", "Задание " + (i + 1)));
+    const top = node("div", undefined, "review-answer-top");
+    top.append(node("h3", "Задание " + (i + 1)));
+    if (r.photos.length) top.append(classButton("Увеличить скан", () => openReviewScan(r, answer, i + 1), "secondary"));
+    card.append(top);
     const question = node("p"),
       expected = node("p", undefined, "review-key");
     mathPreview(question, task.question);
@@ -663,11 +670,15 @@ function renderReviewForm(target, r) {
     text.maxLength = 2000;
     text.rows = 2;
     textLabel.append(text);
-    const scoreLabel = node("label", "Баллы · задание " + (i + 1)),
+    const scoreLabel = node("p", "Баллы за ответ · максимум 1", "review-score-caption"),
       score = node("select");
+    score.hidden = true;
     for (const [value, label] of [
       ["", "Выберите баллы"],
       ["0", "0 — неверно / нет ответа"],
+      ["0.25", "0,25 — частично"],
+      ["0.5", "0,5 — частично"],
+      ["0.75", "0,75 — частично"],
       ["1", "1 — верно"],
     ]) {
       const option = node("option", label);
@@ -675,20 +686,31 @@ function renderReviewForm(target, r) {
       score.append(option);
     }
     score.value = answer.score === null ? "" : String(answer.score);
-    scoreLabel.append(score);
+    const scoreButtons = node("div", undefined, "review-score-buttons");
+    scoreButtons.setAttribute("role", "group"); scoreButtons.setAttribute("aria-label", "Баллы · задание " + (i + 1));
+    for (const points of [0, 0.25, 0.5, 0.75, 1]) {
+      const button = classButton(reviewScoreLabel(points), () => { score.value = String(points); score.dispatchEvent(new Event("change")); });
+      button.dataset.score = String(points); button.setAttribute("aria-label", reviewScoreLabel(points) + " балла · задание " + (i + 1));
+      scoreButtons.append(button);
+    }
+    const syncScore = () => { for (const b of scoreButtons.children) { b.classList.toggle("active", b.dataset.score === score.value); b.setAttribute("aria-pressed", String(b.dataset.score === score.value)); } };
+    syncScore();
     const noteLabel = node("label", "Комментарий · задание " + (i + 1)),
       note = node("input");
     note.value = answer.comment;
     note.maxLength = 500;
     noteLabel.append(note);
+    const field = { id: task.id, text, score, note, card, answer, checked: answer.checked === true || (!draft && r.status === "confirmed"), edited:false };
     text.addEventListener("input", () => {
       score.value = "";
+      field.checked = false; field.edited = true; syncScore();
       reviewed.checked = false;
       caption.textContent = "Ответ изменён. Укажите баллы после проверки.";
       refreshTotal();
       editReviewDraft();
     });
     score.addEventListener("change", () => {
+      field.checked = false; syncScore();
       reviewed.checked = false;
       refreshTotal();
       editReviewDraft();
@@ -698,8 +720,11 @@ function renderReviewForm(target, r) {
       refreshTotal();
       editReviewDraft();
     });
-    fields.push({ id: task.id, text, score, note });
-    card.append(question, expected, caption, textLabel, scoreLabel, noteLabel);
+    fields.push(field);
+    const condition = node("details", undefined, "review-question"); condition.append(node("summary", "Условие задания"), question);
+    const notes = node("details", undefined, "review-answer-note"); notes.open = !!answer.comment;
+    notes.append(node("summary", "Комментарий к оценке"), noteLabel);
+    card.append(condition, expected, caption, textLabel, scoreLabel, score, scoreButtons, notes);
     form.append(card);
   }
   const controls = node("section", undefined, "panel review-confirmation"),
@@ -734,6 +759,7 @@ function renderReviewForm(target, r) {
       text: f.text.value,
       score: f.score.value === "" ? null : Number(f.score.value),
       comment: f.note.value,
+      checked: f.checked,
     })),
   });
   const saveStatus = node(
@@ -870,6 +896,7 @@ function renderReviewForm(target, r) {
   form.append(controls);
   target.append(form);
   refreshTotal();
+  mountReviewFocus(form, fields, controls, r, refreshTotal);
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     busy("Подтверждаем результат", async () => {

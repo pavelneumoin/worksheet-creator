@@ -11,6 +11,7 @@ from pypdf import PdfReader
 
 from utils import latex
 from utils.gigachat_client import AIServiceError, normalize_cyrillic_units
+from utils.math_markup import canonical_delimiters, math_typography
 
 MAX_TASKS = 30
 
@@ -100,19 +101,29 @@ def edition_code(value):
 
 def rich_text_to_tex(text):
     """Escape all prose; accept a deliberately small math language inside $...$."""
-    if text.count("$") % 2:
+    text = canonical_delimiters(text)
+    if text.count("$") % 2 or any(delimiter in text for delimiter in (r'\(', r'\)', r'\[', r'\]')):
         invalid("В формуле не закрыт знак $. Исправьте формулу или уберите оба знака $.")
     result = []
     for i, part in enumerate(text.split("$")):
         if i % 2:
             if not part.strip():
                 invalid("Пустая формула: используйте один знак $ с каждой стороны.")
-            part = normalize_cyrillic_units(part)
-            forbidden = {"TaskBox", "WriteField", "begin", "end", "newpage", "clearpage",
+            part = normalize_cyrillic_units('$' + math_typography(part) + '$')[1:-1]
+            environments = re.findall(r'\\(begin|end)\s*\{([^{}]+)\}', part)
+            stack = []
+            for action, environment in environments:
+                if environment not in {'cases', 'aligned', 'gathered', 'matrix', 'pmatrix', 'bmatrix', 'vmatrix', 'Vmatrix'}:
+                    invalid('В формулах доступны системы, матрицы и выравнивание строк.')
+                if action == 'begin': stack.append(environment)
+                elif not stack or stack.pop() != environment: invalid('Проверьте начало и конец системы или матрицы.')
+            if stack: invalid('Закройте систему или матрицу в формуле.')
+            forbidden = {"TaskBox", "WriteField", "newpage", "clearpage",
                          "pagebreak", "section", "subsection", "paragraph", "item", "color",
                          "textcolor", "rule", "hspace", "vspace", "hfill"}
-            commands = set(re.findall(r"\\([A-Za-z@]+)", part))
-            if commands - (latex._SAFE_COMMANDS - forbidden) or any(x in part for x in ("^^", "%", "#", "&", "\n", "\\\\")):
+            commands = set(re.findall(r"\\([A-Za-z@]+)", part.replace(r'\\', ' ')))
+            if (commands - (latex._SAFE_COMMANDS - forbidden) or any(x in part for x in ("^^", "%", "#"))
+                    or (not environments and ('&' in part or r'\\' in part))):
                 invalid("Формула содержит неподдерживаемую команду или символ.")
             depth = 0
             for char in re.sub(r"\\[{}]", "", part):
@@ -123,6 +134,8 @@ def rich_text_to_tex(text):
                 invalid("Проверьте скобки в формуле.")
             result.append("$" + part + "$")
         else:
+            if re.search(r'\\(?:frac|dfrac|sqrt|begin|end|cdot|left|right)\b', part):
+                invalid('Формула записана вне математического режима. Заключите её в $...$ или \\( ... \\).')
             # Newlines become spaces, not user-controlled TeX commands.
             result.append(''.join(latex._ESCAPES.get(char, char) for char in part.replace('\n', ' ')))
     return "".join(result)

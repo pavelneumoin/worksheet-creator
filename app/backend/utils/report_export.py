@@ -37,8 +37,8 @@ def assignment_csv(data):
              *[f'Задание {i}' for i in range(1, len(data['tasks']) + 1)]]]
     for student in data['students']:
         rows.append([data['class_name'], data['title'], data['edition_code'], student['code'], LABELS[student['status']],
-                     student['score'], student['maximum'], student['confirmed_at'], data['scheduled_date'], data['due_date'],
-                     'Да' if student['has_draft'] else '', data['generated_at'], *student['task_scores']])
+                     decimal(student['score']), student['maximum'], student['confirmed_at'], data['scheduled_date'], data['due_date'],
+                     'Да' if student['has_draft'] else '', data['generated_at'], *[decimal(s) for s in student['task_scores']]])
     return csv_text(rows)
 
 
@@ -54,7 +54,7 @@ def overview_csv(data):
                      s['total'], s['submitted'], s['confirmed'], s['not_submitted'], s['needs_review'], s['processing'], s['failed'],
                      s['maximum'], decimal(s['average']), decimal(s['percent']), s['pending_corrections'],
                      data['selected_student']['code'] if individual else '', LABELS[individual['status']] if individual else '',
-                     individual['score'] if individual else None, data['generated_at']])
+                     decimal(individual['score']) if individual else None, data['generated_at']])
     return csv_text(rows)
 
 
@@ -83,10 +83,10 @@ def report_tex(data):
     roster = []
     for student in data['students']:
         label = LABELS[student['status']] + (' *' if student['has_draft'] else '')
-        roster.append(' & '.join([tex(student['code']), tex(label), str(student['score']) if student['score'] is not None else '-', str(student['maximum'])]) + r' \\')
+        roster.append(' & '.join([tex(student['code']), tex(label), decimal(student['score']) if student['score'] is not None else '-', str(student['maximum'])]) + r' \\')
     tasks = []
     for number, task in enumerate(data['tasks'], 1):
-        tasks.append(' & '.join([str(number), str(task['correct']), str(task['total']),
+        tasks.append(' & '.join([str(number), decimal(task.get('points', task['correct'])), str(task['total']),
                                 tex(str(task['percent']).replace('.', ',')) + r'\%' if task['percent'] is not None else '-']) + r' \\')
     score = ('Пока нет подтверждённых результатов.' if s['average'] is None else
              f"Средний балл: {decimal(s['average'])} из {s['maximum']}. Выполнение: {decimal(s['percent'])}%.")

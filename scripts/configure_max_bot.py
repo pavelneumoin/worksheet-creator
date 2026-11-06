@@ -25,12 +25,17 @@ def main():
         if any(item.get('url') != url for item in subscriptions):
             raise RuntimeError('Another webhook exists; review it before changing the integration')
         client.call('POST', '/subscriptions', json={
-            'url': url, 'update_types': ['bot_started', 'message_created'], 'secret': secret})
+            'url': url, 'update_types': ['bot_started', 'message_created', 'message_callback'], 'secret': secret})
         client.call('PATCH', '/me/commands', json={'commands': [
             {'name': 'start', 'description': 'Открыть личный кабинет ЛистОК'},
             {'name': 'login', 'description': 'Получить новую ссылку для входа'},
             {'name': 'quick', 'description': 'Создать лист прямо в чате'},
             {'name': 'today', 'description': 'PDF для сегодняшних уроков'},
+            {'name': 'check', 'description': 'Проверить PDF с работами класса'},
+            {'name': 'next', 'description': 'Следующий сомнительный ответ'},
+            {'name': 'summary', 'description': 'Итог урока и отчёт класса'},
+            {'name': 'repeat', 'description': 'Лист по ошибкам класса'},
+            {'name': 'cancel', 'description': 'Отменить ожидание сканов'},
             {'name': 'draft', 'description': 'Посмотреть последний черновик'},
             {'name': 'pdf', 'description': 'Подтвердить задания и собрать PDF'},
             {'name': 'files', 'description': 'Повторить готовые PDF'},

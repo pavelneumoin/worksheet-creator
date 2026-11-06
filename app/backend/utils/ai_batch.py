@@ -33,7 +33,7 @@ def generate(kind, payload, paths, directory):
                 # Always use the same base for difficulty: four harder variants must not
                 # become four successive increases in difficulty.
                 sheet = structured_ai.generate(original['subject'], original=original,
-                                                difficulty=payload.get('difficulty', 'same'))
+                                                difficulty=payload.get('difficulty', 'same'), instructions=payload.get('instructions',''))
                 if questions(sheet) & seen:
                     raise AIServiceError('ИИ повторил задание из другого варианта. Готовые варианты сохранены; оставшиеся можно заказать отдельно.', 'duplicate_variant', 502)
             if count > 1:

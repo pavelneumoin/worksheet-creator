@@ -24,7 +24,7 @@ class QuickTests(unittest.TestCase):
     def test_private_photo_and_explicit_text_command_have_sender_identity(self):
         update=self.message('');update['message']['body']['attachments']=[{'type':'image','payload':{'url':'https://photo.oneme.ru/a'}}]
         result=bot_login.event_request(update)
-        self.assertEqual((result['action'],result['user_id']),('recognize',11))
+        self.assertEqual((result['action'],result['user_id']),('chat_media',11))
         update['message']['recipient']['chat_type']='chat';self.assertIsNone(bot_login.event_request(update))
         self.assertEqual(bot_login.event_request(self.message('/лист 2 + 2'))['payload']['text'],'2 + 2')
         self.assertIsNone(bot_login.event_request(self.message('произвольное сообщение')))

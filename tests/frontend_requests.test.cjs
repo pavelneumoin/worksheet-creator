@@ -14,6 +14,35 @@ const requestSource = script.slice(
   script.indexOf("async function busy("),
 );
 
+async function loginRoute(target) {
+  const fields = new Map(), routes = [], calls = [];
+  const element = id => {
+    if (!fields.has(id)) fields.set(id, {addEventListener: (_event, handler) => {fields.get(id).click = handler;}});
+    return fields.get(id);
+  };
+  const context = vm.createContext({URLSearchParams,
+    location: {hash: '#token=test-token&' + target, pathname: '/bot-login.html', replace: value => routes.push(value)},
+    history: {replaceState: () => {}}, document: {getElementById: element},
+    fetch: async (path, options) => {calls.push([path, options]); return {ok:true,json:async()=>({first_name:'Учитель'})};},
+  });
+  await vm.runInContext(fs.readFileSync(path.join(root,'app/frontend/bot-login.js'),'utf8'),context);
+  assert.equal(routes.length,0); // Preview never consumes a login or follows a link.
+  await fields.get('confirmLogin').click();
+  assert.equal(JSON.parse(calls.find(([p])=>p==='/api/v2/auth/bot')[1].body).confirm,true);
+  return routes[0];
+}
+
+test('bot login returns to a specific review only after profile confirmation', async () => {
+  const target='review:'+'a'.repeat(32);
+  assert.equal(await loginRoute('next='+encodeURIComponent(target)), '/?open='+encodeURIComponent(target));
+});
+
+test('bot login rejects external, malformed and duplicate continuation targets', async () => {
+  for (const target of ['next=https%3A%2F%2Fevil.test','next=review%3A../private','next=report%3A'+'b'.repeat(32)+'&next=review%3A'+'a'.repeat(32)]) {
+    assert.equal(await loginRoute(target),'/');
+  }
+});
+
 function compilationHarness() {
   const fields = Object.fromEntries(Object.entries({
     teacherInput: "", gradeInput: "", columnsSelect: "1", countSelect: "3",

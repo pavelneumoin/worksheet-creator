@@ -54,7 +54,7 @@ def remember(user,job):
 def draft(owner):
     with workspace_store.connection() as conn:
         row=conn.execute('SELECT * FROM bot_drafts WHERE owner_id=?',(owner,)).fetchone()
-        latest=conn.execute("SELECT j.result FROM bot_runs r JOIN jobs j ON j.id=r.job_id WHERE j.owner_id=? AND j.kind='recognize' AND j.status='succeeded' ORDER BY j.created_at DESC LIMIT 1",(owner,)).fetchone()
+        latest=conn.execute("SELECT j.result FROM bot_runs r JOIN jobs j ON j.id=r.job_id WHERE j.owner_id=? AND j.kind IN ('recognize','variant') AND j.status='succeeded' ORDER BY j.created_at DESC LIMIT 1",(owner,)).fetchone()
     # A crash between committing the material and sending its preview must not hide it.
     if latest:
         ident=json.loads(latest['result'])['material_id']
@@ -88,7 +88,12 @@ def deliver_files(client,user,material):
 def handle(client,item):
     user=item['user_id'];owner=f'max:{user}';action=item['action']
     with workspace_store.connection() as conn:conn.execute('INSERT INTO users VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET first_name=excluded.first_name',(owner,item['first_name'],'max'))
+    if action in ('callback','check','review_next','summary','repeat','cancel','chat_media','today'):
+        from utils import bot_workflows
+        return bot_workflows.handle(client,item)
     if action=='quick_help':
+        from utils.bot_workflows import clear_context
+        clear_context(user)
         client.send(user,'Быстрый лист: пришлите до 10 фотографий одним сообщением, один PDF или /лист и текст заданий. Поддерживаются математика и физика. Черновик и ответы покажу прямо здесь, после вашей проверки пришлю PDF. Всё сохраняется в вашей личной библиотеке.\n\n/today — листы на сегодня\n/draft — последний черновик\n/files — повторить готовые PDF\n/start — открыть кабинет')
     elif action=='recognize':
         payload=json.loads(item.get('payload') or '{}') if isinstance(item.get('payload'),str) else item.get('payload',{})
@@ -107,15 +112,6 @@ def handle(client,item):
         remember(user,job);client.send(user,'Собираю PDF: лист ученика, ответы и полный комплект учителя.')
     elif action=='files':
         material,_=draft(owner);deliver_files(client,user,material)
-    elif action=='today':
-        today=datetime.now(timezone(timedelta(hours=3))).date().isoformat()
-        works=[a for a in class_store.schedule(owner,today[:7]) if a['scheduled_date']==today and a['status']=='active']
-        if not works:client.send(user,'На сегодня работ нет. Назначьте лист классу и выберите дату урока в расписании кабинета: /start.');return
-        if len(works)>20:client.send(user,'На сегодня больше 20 работ. Все доступны в расписании кабинета: /start. Здесь отправлю первые 20.')
-        for a in works[:20]:
-            detail=class_store.get_assignment(owner,a['id']);client.send(user,a['class_name']+' · '+a['title'])
-            name=Path(urlsplit(detail['result']['pdf_url']).path).name
-            client.send_file(user,Path(latex.OUTPUT_DIR)/name,'Лист — '+a['class_name']+'.pdf')
 
 
 def poll(client):
@@ -128,7 +124,18 @@ def poll(client):
     try:
         job=job_store.get_job(f"max:{item['user_id']}",item['job_id'])
         if job['status']!='succeeded':client.send(item['user_id'],'Обработка не завершена. '+(job.get('error') or 'Запрос отменён.'))
-        elif item['kind']=='recognize':show_draft(client,item['user_id'],workspace_store.get_material(f"max:{item['user_id']}",job['result']['material_id']))
+        elif item['kind'] in ('recognize','variant'):show_draft(client,item['user_id'],workspace_store.get_material(f"max:{item['user_id']}",job['result']['material_id']))
+        elif item['kind'] in ('batch_grade','answer_forms','report_pdf'):
+            from utils import bot_workflows
+            with workspace_store.connection() as conn:
+                person=conn.execute('SELECT first_name FROM users WHERE id=?',(f"max:{item['user_id']}",)).fetchone()
+            name=person['first_name'] if person else 'Учитель'
+            result=job['result'];user=item['user_id']
+            if item['kind']=='batch_grade':bot_workflows.batch_ready(client,user,name,result['batch_id'])
+            else:
+                bot_workflows.deliver_result_file(client,user,result,'Бланки класса.pdf' if item['kind']=='answer_forms' else 'Итог урока.pdf')
+                target=('assignment:' if item['kind']=='answer_forms' else 'report:')+result['assignment_id']
+                client.send(user,'Готово. PDF сохранён в вашем кабинете.',buttons=[[bot_workflows.web_button(user,name,target,'Открыть результат')]])
         else:
             material=workspace_store.get_material(f"max:{item['user_id']}",json.loads(item['payload'])['material_id']);deliver_files(client,item['user_id'],material)
         success=True

@@ -85,6 +85,19 @@ class Client:
     def close(self):
         self.session.close()
 
+    def send_image(self, user, path, text, buttons=None):
+        from utils.bot_quick import media_url
+        if not path.is_file() or path.stat().st_size > 5 * 1024 * 1024: raise RuntimeError('Image unavailable')
+        upload = self.call('POST', '/uploads', params={'type':'image'})
+        with path.open('rb') as stream:
+            response = requests.post(media_url(upload.get('url')), files={'data':('answer.png',stream,'image/png')},
+                                     timeout=(5,40),verify=self.verify,allow_redirects=False)
+        if response.status_code != 200: raise RuntimeError('MAX image upload failed')
+        data = response.json(); photos = data.get('photos', {})
+        token = data.get('token') or next((v.get('token') for v in photos.values() if isinstance(v,dict) and v.get('token')),None)
+        if not isinstance(token,str) or not token: raise RuntimeError('MAX image token missing')
+        self.send(user,text,attachments=[{'type':'image','payload':{'token':token}}],buttons=buttons)
+
 
 def reply(client, item):
     if item['action'] not in ('help','login'):
@@ -95,7 +108,7 @@ def reply(client, item):
         return
     if item['action'] == 'help':
         body = {'text': 'ЛистОК помогает подготовить задания, варианты и PDF, назначить работу классу и собрать отчёт.\n\n'
-                        'Быстрый лист: /quick или пришлите фото. /today — PDF на сегодня. /draft — черновик, /pdf — подтвердить и собрать, /files — повторить PDF.\n\n'
+                        'Быстрый лист: /quick или пришлите фото. /today — комплект на сегодня. /check — проверить пачку, /next — сомнительные ответы, /summary — итог урока, /repeat — повторить ошибки. /draft — черновик, /pdf — собрать, /files — повторить PDF, /cancel — отменить ожидание сканов.\n\n'
                         'Отправьте /start — получите личную ссылку для входа на 5 минут. '
                         'Откройте её и подтвердите свой профиль. В кабинете можно начать с готового примера.\n\n'
                         'Условия и ответы ИИ проверяет учитель. Оценки попадают в отчёт после вашего подтверждения.'}
@@ -108,7 +121,9 @@ def reply(client, item):
                         'не пересылайте её. Для нового входа отправьте /start.',
                 'attachments': [{'type': 'inline_keyboard', 'payload': {'buttons': [
                     [{'type': 'link', 'text': 'Открыть ЛистОК', 'url': url}],
-                    [{'type':'message','text':'Быстрый лист'},{'type':'message','text':'Сегодня'}]]}}]}
+                    [{'type':'message','text':'Быстрый лист'},{'type':'message','text':'На печать сегодня'}],
+                    [{'type':'message','text':'Проверить пачку'},{'type':'message','text':'Итог урока'}],
+                    [{'type':'message','text':'Следующий сомнительный'},{'type':'message','text':'Повторить ошибки'}]]}}]}
     result = client.call('POST', '/messages', params={'user_id': item['user_id'], 'disable_link_preview': 'true'}, json=body)
     if not isinstance(result.get('message'), dict):
         raise RuntimeError('MAX API did not confirm message')

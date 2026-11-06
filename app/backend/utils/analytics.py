@@ -66,7 +66,8 @@ def overview(user,filters,conn=None):
                           'date':a['scheduled_date'],'subject':w['subject'],'revision':a['revision'],**metric(rows)})
             for i,t in enumerate(w['tasks'],1):
                 scores=scores_by_task[t['id']]
-                task_rows.append({'class_name':a['class_name'],'topic':topic,'title':a['title'],'number':i,'correct':sum(scores),'confirmed':len(scores),
+                task_rows.append({'class_name':a['class_name'],'topic':topic,'title':a['title'],'number':i,
+                                  'correct':sum(s==1 for s in scores),'partial':sum(0<s<1 for s in scores),'points':sum(scores),'confirmed':len(scores),
                                   'percent':round(100*sum(scores)/len(scores),1) if scores else None})
         topics=[]
         for name,subject in sorted({(r['topic'],r['subject']) for r in entries}):
@@ -79,5 +80,5 @@ def overview(user,filters,conn=None):
 
 def csv_export(data):
     rows=[['Учитель','Класс','Тема','Работа','Дата','Код ученика','Статус','Баллы','Максимум']]
-    rows.extend([[r['teacher'],r['class_name'],r['topic'],r['title'],r['date'],r['student_code'],report_export.LABELS[r['status']],r['score'],r['maximum']] for r in data['students']])
+    rows.extend([[r['teacher'],r['class_name'],r['topic'],r['title'],r['date'],r['student_code'],report_export.LABELS[r['status']],report_export.decimal(r['score']),r['maximum']] for r in data['students']])
     return report_export.csv_text(rows)

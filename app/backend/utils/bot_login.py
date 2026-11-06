@@ -69,6 +69,16 @@ def event_request(update, now=None):
         user = update.get('user')
         source = f'start:{stamp}'
         action = 'login'
+    elif kind == 'message_callback':
+        callback, message = update.get('callback'), update.get('message')
+        if not isinstance(callback, dict) or not isinstance(message, dict): return None
+        if not isinstance(message.get('recipient'), dict) or message['recipient'].get('chat_type') != 'dialog': return None
+        token, callback_id = callback.get('payload'), callback.get('callback_id')
+        if not isinstance(token,str) or not re.fullmatch(r'lk:[a-f0-9]{32}',token): return None
+        if not isinstance(callback_id,str) or not 1 <= len(callback_id) <= 256: return None
+        user = callback.get('user'); action = 'callback'
+        source = 'callback:' + callback_id
+        payload = {'token':token[3:],'callback_id':callback_id}
     elif kind == 'message_created':
         message = update.get('message')
         if not isinstance(message, dict) or not isinstance(message.get('recipient'), dict):
@@ -84,7 +94,10 @@ def event_request(update, now=None):
         command = text.strip().lower()
         commands={'/start':'login','/login':'login','начать':'login','войти':'login','/help':'help',
                   '/today':'today','сегодня':'today','/quick':'quick_help','быстрый лист':'quick_help',
-                  '/draft':'draft','/pdf':'compile','проверил, собрать pdf':'compile','/files':'files'}
+                  '/draft':'draft','/pdf':'compile','проверил, собрать pdf':'compile','/files':'files',
+                  '/check':'check','проверить пачку':'check','/next':'review_next','следующий сомнительный':'review_next',
+                  '/summary':'summary','итог урока':'summary','/repeat':'repeat','повторить ошибки':'repeat',
+                  '/cancel':'cancel','отмена':'cancel','на печать сегодня':'today'}
         if command in commands:action=commands[command]
         else:
             attachments=body.get('attachments') or []
@@ -96,6 +109,7 @@ def event_request(update, now=None):
                 p=a.get('payload')
                 if not isinstance(p,dict) or not isinstance(p.get('url'),str) or len(p['url'])>6000:return None
                 payload['media'].append({'url':p['url'],'type':a['type']})
+            if media: action = 'chat_media'
         mid = body.get('mid')
         if not isinstance(mid, str) or not 1 <= len(mid) <= 200:
             return None
@@ -120,7 +134,7 @@ def enqueue(update):
         # Protect a double tap and duplicate deliveries without a second response.
         recent = conn.execute('SELECT 1 FROM bot_inbox WHERE user_id=? AND action=? AND created_at>?',
                               (item['user_id'],item['action'], now - 2)).fetchone()
-        if not recent:
+        if not recent or item['action'] == 'callback':
             conn.execute('INSERT OR IGNORE INTO bot_inbox(id,user_id,first_name,action,created_at,updated_at,payload) VALUES (?,?,?,?,?,?,?)',
                          (item['id'], item['user_id'], item['first_name'], item['action'], now, now,json.dumps(item['payload'],ensure_ascii=False)))
 

@@ -1,6 +1,7 @@
 """Teacher-reviewed final answers, immutable assigned keys and class aggregates."""
 from contextlib import nullcontext
 import json
+import math
 from pathlib import Path
 import re
 import shutil
@@ -82,8 +83,20 @@ def validate_recognition(value, tasks):
         if state == 'readable' and not text.strip():
             state = 'unclear'
         found[item['task_id']] = {'task_id': item['task_id'], 'text': text.strip() if state != 'blank' else '', 'state': state}
+        box = valid_box(item.get('box'))
+        if box is not None:
+            found[item['task_id']]['box'] = box
     # An omitted number might be on a missing page; it is never a guessed blank.
     return [found.get(t['id'], {'task_id': t['id'], 'text': '', 'state': 'unclear'}) for t in tasks]
+
+
+def valid_box(value):
+    """Optional OCR location, in 0..1000 image coordinates; never a grading fact."""
+    if (isinstance(value, list) and len(value) == 4
+            and all(type(v) in (int, float) and math.isfinite(v) and 0 <= v <= 1000 for v in value)
+            and value[2] - value[0] >= 2 and value[3] - value[1] >= 2):
+        return value
+    return None
 
 
 def complete(conn, owner, review_id, output, paths):
@@ -124,6 +137,17 @@ def complete(conn, owner, review_id, output, paths):
         answer.update(hint(task['answer'], answer['text'], answer['state']))
         answer['score'] = answer['suggested_score']
         answer['comment'] = ''
+        answer['checked'] = False
+        incoming = next((a for a in output['answers'] if a['task_id'] == task['id']), {})
+        sources = incoming.get('sources', [{'photo_index': 0, 'box': answer.get('box')}]
+                               if len(paths) == 1 else [])
+        answer['sources'] = []
+        if isinstance(sources, list):
+            for source in sources[:5]:
+                if (isinstance(source, dict) and type(source.get('photo_index')) is int
+                        and 0 <= source['photo_index'] < len(paths)):
+                    answer['sources'].append({'photo_index': source['photo_index'], 'box': valid_box(source.get('box'))})
+        answer.pop('box', None)
     if not 1 <= len(paths) <= 5:
         fail('Неверное количество фотографий.', 'invalid_recognition', 502)
     for index, path in enumerate(paths):
@@ -171,11 +195,17 @@ def editable(conn, owner, row, value, confirm=False):
         text, comment, score = item.get('text'), item.get('comment', ''), item.get('score')
         if not isinstance(text, str) or len(text) > 2000 or '\x00' in text or not isinstance(comment, str) or len(comment) > 500 or '\x00' in comment:
             fail('Ответ — до 2000 символов, комментарий — до 500.')
-        if score is not None and (type(score) is not int or score not in (0, 1)):
-            fail('За каждое задание можно поставить 0 или 1 балл.')
+        if score is not None and (type(score) not in (int, float) or not math.isfinite(score)
+                                  or score not in (0, .25, .5, .75, 1)):
+            fail('Баллы за задание: 0, 0,25, 0,5, 0,75 или 1.')
         if confirm and score is None:
             fail('Укажите баллы за каждое задание. Пропуск не равен нулю.', 'scores_incomplete', 400)
         answer = dict(previous[task['id']], text=text.strip(), comment=comment.strip(), score=score)
+        checked = item.get('checked', previous[task['id']].get('checked', False)
+                           if (answer['text'], score) == (previous[task['id']]['text'], previous[task['id']]['score']) else False)
+        if type(checked) is not bool:
+            fail('Неверная отметка проверки задания.')
+        answer['checked'] = checked and score is not None
         answer['teacher_edited'] = bool(answer.get('teacher_edited')) or answer['text'] != previous[task['id']]['text']
         comparison_state = ('readable' if answer['text'] else 'blank') if answer['teacher_edited'] else answer['state']
         answer.update(hint(task['answer'], answer['text'], comparison_state))
@@ -312,14 +342,17 @@ def report(owner, assignment_id, active_connection=None):
                 confirmed.append(json.loads(row['answers']))
         breakdown = []
         for task in tasks:
-            correct = sum(next(a['score'] for a in answers if a['task_id'] == task['id']) for answers in confirmed)
-            breakdown.append({'task_id': task['id'], 'question': task['question'], 'correct': correct, 'total': len(confirmed),
-                              'percent': round(100 * correct / len(confirmed), 1) if confirmed else None})
+            scores = [next(a['score'] for a in answers if a['task_id'] == task['id']) for answers in confirmed]
+            points = sum(scores)
+            breakdown.append({'task_id': task['id'], 'question': task['question'],
+                              'correct': sum(s == 1 for s in scores), 'partial': sum(0 < s < 1 for s in scores),
+                              'points': points, 'total': len(confirmed),
+                              'percent': round(100 * points / len(confirmed), 1) if confirmed else None})
         scores = [s['score'] for s in students if s['score'] is not None]
         summary = summarize(students, len(tasks))
         difficult = [i + 1 for i, t in enumerate(breakdown) if t['percent'] is not None and t['percent'] < 60]
         recommendation = ('Пока нет подтверждённых результатов. Завершите проверку, чтобы увидеть выводы.' if not scores else
-                          'Повторите задания ' + ', '.join(map(str, difficult)) + ': менее 60% верных ответов среди подтверждённых работ.' if difficult else
+                          'Повторите задания ' + ', '.join(map(str, difficult)) + ': набрано менее 60% баллов среди подтверждённых работ.' if difficult else
                           'Во всех заданиях не менее 60% верных ответов среди подтверждённых работ. Просмотрите индивидуальные ошибки.')
         return {'assignment_id': assignment['id'], 'class_id': assignment['class_id'], 'class_name': assignment['class_name'],
                 'title': assignment['title'], 'edition_code': assignment['code'], 'scheduled_date': assignment['scheduled_date'],

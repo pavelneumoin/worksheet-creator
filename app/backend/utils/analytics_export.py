@@ -54,13 +54,13 @@ def document(data):
     rows=[' & '.join(t(v) for v in [w['class_name'],w['topic'],w['date'] or '—',f"{w['confirmed']}/{w['expected']}",percent(w['percent'])])+r' \\' for w in data['works']]
     source+=table(['Класс','Тема','Дата','Проверено','Выполнение'],[24,61,24,22,24],rows)
     source+=r'\section*{Задания для разбора}'
-    rows=[r'\rowcolor{'+shade(r['percent'])+'}'+' & '.join(t(v) for v in [r['class_name'],r['topic'],r['number'],f"{r['correct']}/{r['confirmed']}",percent(r['percent'])])+r' \\' for r in data['tasks'] if r['percent'] is not None and r['percent']<70]
-    source+=table(['Класс','Тема','№','Верно','Доля верных'],[24,61,16,25,29],rows) if rows else t('Подтверждённых затруднений ниже порога 70% не найдено.')+r'\par'
+    rows=[r'\rowcolor{'+shade(r['percent'])+'}'+' & '.join(t(v) for v in [r['class_name'],r['topic'],r['number'],f"{report_export.decimal(r.get('points', r['correct']))}/{r['confirmed']}",percent(r['percent'])])+r' \\' for r in data['tasks'] if r['percent'] is not None and r['percent']<70]
+    source+=table(['Класс','Тема','№','Баллы','Выполнение'],[24,61,16,25,29],rows) if rows else t('Подтверждённых затруднений ниже порога 70% не найдено.')+r'\par'
     source+=r'\section*{Подробные результаты по кодам}'
     rows=[]
     for r in data['students']:
         p=100*r['score']/r['maximum'] if r['score'] is not None else None
-        rows.append(r'\rowcolor{'+shade(p)+'}'+' & '.join(t(v) for v in [r['class_name'],r['student_code'],r['topic'],report_export.LABELS[r['status']],f"{r['score']}/{r['maximum']}" if r['score'] is not None else '—'])+r' \\')
+        rows.append(r'\rowcolor{'+shade(p)+'}'+' & '.join(t(v) for v in [r['class_name'],r['student_code'],r['topic'],report_export.LABELS[r['status']],f"{report_export.decimal(r['score'])}/{r['maximum']}" if r['score'] is not None else '—'])+r' \\')
     source+=table(['Класс','Код ученика','Тема','Статус','Баллы'],[22,33,48,32,20],rows)
     source=source.replace(r'\section*',r'\Needspace{45mm}\section*').replace(r'\subsection*',r'\Needspace{30mm}\subsection*')
     return source+r'\end{document}'
