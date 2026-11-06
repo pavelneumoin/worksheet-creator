@@ -95,7 +95,7 @@ def event_request(update, now=None):
         commands={'/start':'login','/login':'login','начать':'login','войти':'login','/help':'help',
                   '/today':'today','сегодня':'today','/quick':'quick_help','быстрый лист':'quick_help',
                   '/draft':'draft','/pdf':'compile','проверил, собрать pdf':'compile','/files':'files',
-                  '/check':'check','проверить пачку':'check','/next':'review_next','следующий сомнительный':'review_next',
+                  '/check':'check','проверить пачку':'check','/next':'review_next','следующий сомнительный':'review_next','проверка ответов':'review_next',
                   '/summary':'summary','итог урока':'summary','/repeat':'repeat','повторить ошибки':'repeat',
                   '/cancel':'cancel','отмена':'cancel','на печать сегодня':'today'}
         if command in commands:action=commands[command]

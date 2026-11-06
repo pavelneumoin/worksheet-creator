@@ -123,7 +123,7 @@ def reply(client, item):
                     [{'type': 'link', 'text': 'Открыть ЛистОК', 'url': url}],
                     [{'type':'message','text':'Быстрый лист'},{'type':'message','text':'На печать сегодня'}],
                     [{'type':'message','text':'Проверить пачку'},{'type':'message','text':'Итог урока'}],
-                    [{'type':'message','text':'Следующий сомнительный'},{'type':'message','text':'Повторить ошибки'}]]}}]}
+                    [{'type':'message','text':'Проверка ответов'},{'type':'message','text':'Повторить ошибки'}]]}}]}
     result = client.call('POST', '/messages', params={'user_id': item['user_id'], 'disable_link_preview': 'true'}, json=body)
     if not isinstance(result.get('message'), dict):
         raise RuntimeError('MAX API did not confirm message')
