@@ -17,3 +17,16 @@ test('conflict preserves local changes and prevents successful navigation flush'
   const statuses=[];const s=new StudentAutosave({delay:60000,read:()=>({comment:'local'}),send:async()=>{throw new Error('draft conflict');},onStatus:status=>statuses.push(status)});
   s.edit();await assert.rejects(s.flush(),/conflict/);s.dispose();assert.equal(s.dirty,true);assert.equal(s.pending.body.comment,'local');assert.equal(statuses.at(-1),'error');
 });
+test('switching demo waits for student saves and does not change identity on failure',async()=>{
+  const fs=require('node:fs'),vm=require('node:vm');const source=fs.readFileSync(require('node:path').join(__dirname,'../app/frontend/demo.js'),'utf8');
+  const calls=[];let failure=true;
+  const c=vm.createContext({state:{dirty:false},pendingSubmission:null,request:async()=>calls.push('switch'),location:{assign:()=>calls.push('navigate')},flushStudentDraft:async()=>{calls.push('save');if(failure)throw Error('offline');}});
+  vm.runInContext(source.slice(source.indexOf('async function switchDemo('),source.indexOf('async function enterDemo(')),c);
+  await assert.rejects(vm.runInContext('switchDemo("enter")',c));assert.deepEqual(calls,['save']);failure=false;
+  await vm.runInContext('switchDemo("enter")',c);assert.deepEqual(calls,['save','save','switch','navigate']);
+});
+test('student notification login target is an allowed internal route',async()=>{
+  const fs=require('node:fs'),vm=require('node:vm'),fields=new Map(),routes=[];
+  const c=vm.createContext({URLSearchParams,location:{hash:'#token=fixture&next=student:'+ 'a'.repeat(32),pathname:'/bot-login.html',replace:value=>routes.push(value)},history:{replaceState:()=>{}},document:{getElementById:id=>{if(!fields.has(id))fields.set(id,{addEventListener:(_,f)=>fields.get(id).click=f});return fields.get(id);}},fetch:async()=>({ok:true,json:async()=>({first_name:'Ученик'})})});
+  await vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../app/frontend/bot-login.js'),'utf8'),c);await fields.get('confirmLogin').click();assert.equal(routes[0],'/?open=student%3A'+'a'.repeat(32));
+});

@@ -1480,6 +1480,7 @@ $("localLoginBtn").addEventListener("click", () =>
 $("logoutBtn").addEventListener("click", () => {
   if (state.dirty && !window.confirm("Выйти без сохранения изменений?")) return;
   busy("Выходим из профиля", async () => {
+    if (typeof flushStudentDraft === "function") await flushStudentDraft();
     if (typeof flushReviewDraft === "function") await flushReviewDraft();
     await request("/api/v2/auth/logout", { method: "POST" });
     markDirty(false);

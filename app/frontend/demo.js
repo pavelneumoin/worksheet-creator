@@ -5,14 +5,14 @@ function renderDemoAccess() {
   $("demoBar").hidden = !state.auth?.demo;
 }
 async function switchDemo(path) {
-  if (typeof hasUnsavedReview === "function" && hasUnsavedReview()) {
-    if (!window.confirm("В проверке есть несохранённые изменения. Перейти в другой кабинет?")) return;
-  }
+  if (typeof flushStudentDraft === "function") await flushStudentDraft();
+  if (typeof flushReviewDraft === "function") await flushReviewDraft();
   if (state.dirty && state.sheet) await saveCurrent();
   if (pendingSubmission) throw new Error("Сначала завершите отправку задачи.");
   await request("/api/v2/demo-space/" + path, {method:"POST"});
   state.dirty = false;
   if (typeof resetReviewEditor === "function") resetReviewEditor();
+  if (typeof resetStudentEditor === "function") resetStudentEditor();
   location.assign("/");
 }
 async function enterDemo() {
