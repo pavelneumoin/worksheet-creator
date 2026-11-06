@@ -44,6 +44,45 @@ def accepted(kind, payload, images=()):
     return jsonify(job=result, reused=not created), 202 if result['status'] in job_store.ACTIVE else 200
 
 
+@api.post('/roster_recognize')
+def roster_recognize():
+    job_store.validate_key(request.headers.get('Idempotency-Key'))
+    class_id = request.form.get('class_id', '')
+    with connection() as conn:
+        class_store.owned_class(conn, g.identity['owner_id'], class_id, active=True)
+    if request.form.get('consent') != 'true':
+        raise AIServiceError('Подтвердите отправку фотографии списка в GigaChat.', 'roster_consent', 400)
+    files = [f for f in request.files.getlist('files') if f.filename]
+    if not 1 <= len(files) <= 3:
+        raise AIServiceError('Добавьте от 1 до 3 фотографий списка.', 'input_limit', 400)
+    with tempfile.TemporaryDirectory(prefix='listok-roster-') as temporary:
+        paths = []; total = 0
+        for file in files:
+            ext = Path(file.filename).suffix.lower()
+            head = file.stream.read(8)
+            file.stream.seek(0, 2); size = file.stream.tell(); file.stream.seek(0)
+            total += size
+            if size > 15 * 1024 * 1024 or total > 20 * 1024 * 1024:
+                raise AIServiceError('До 15 МБ на фото и до 20 МБ всего.', 'file_too_large', 413)
+            if not ((ext == '.png' and head.startswith(b'\x89PNG\r\n\x1a\n')) or
+                    (ext in ('.jpg', '.jpeg') and head.startswith(b'\xff\xd8\xff'))):
+                raise AIServiceError('Для списка поддерживаются фотографии PNG и JPEG.', 'invalid_image', 415)
+            path = Path(temporary) / (uuid.uuid4().hex + ext)
+            file.save(path); paths.append(path)
+        job_store.fingerprint('review_photo', {}, paths)  # Reject repeated copies of the same photo.
+        status = get_ai_status()
+        if not status['ai_ready']:
+            raise AIServiceError(status['ai_message'], 'ai_not_configured', 503)
+        return accepted('roster_recognize', {'class_id': class_id}, paths)
+
+
+@api.get('/<job_id>/roster')
+@api.delete('/<job_id>/roster')
+def roster_result(job_id):
+    from utils import roster_store
+    return jsonify(roster_store.get(g.identity['owner_id'], job_id, discard=request.method == 'DELETE'))
+
+
 @api.post('/report_pdf')
 def report_pdf():
     data = body()

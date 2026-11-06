@@ -20,6 +20,8 @@ LANES = {'recognize': 'ai', 'variant': 'ai', 'compile': 'compile', 'grade': 'ai'
 LABELS = {'recognize': 'Распознаём задания и готовим ответы', 'variant': 'Готовим новый вариант', 'compile': 'Собираем лист, ответы и Marp', 'grade': 'Распознаём ответы ученика', 'report_pdf': 'Готовим PDF отчёта класса','batch_grade':'Проверяем пачку сканов класса'}
 LANES.update(analytics_pdf='compile',analytics_insight='ai')
 LABELS.update(analytics_pdf='Собираем подробный отчёт',analytics_insight='Готовим рекомендации по статистике')
+LANES['roster_recognize'] = 'ai'
+LABELS['roster_recognize'] = 'Распознаём список учеников'
 LEASE_SECONDS = 45
 RETENTION_SECONDS = 7 * 86400
 
@@ -150,6 +152,9 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
             directory.mkdir()
             created = True
             stored = dict(payload)
+            if kind == 'roster_recognize':
+                from utils import class_store
+                class_store.owned_class(conn, owner, payload['class_id'], active=True)
             if kind in ('analytics_pdf','analytics_insight'):
                 from utils import analytics,analytics_ai
                 stored['report']=analytics.overview(owner,payload.get('filters',{}),conn)
@@ -243,6 +248,9 @@ def complete(job, output, active_connection=None):
             result = {'worksheet': payload['worksheet'], 'source': payload.get('source', 'manual'),
                       'material_id': material['id'] if attached else None, 'attached': attached,
                       **result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone())}
+        elif current['kind'] == 'roster_recognize':
+            from utils import roster_store
+            result = roster_store.complete(job_id, payload['class_id'], output)
         elif current['kind'] == 'analytics_insight':
             from utils import analytics_ai
             content=output.get('insight')
@@ -339,6 +347,8 @@ def maintain():
                         error_code='worker_interrupted',finished_at=?,updated_at=? WHERE status='running' AND heartbeat<?""", (now, now, now - LEASE_SECONDS))
         conn.execute("""UPDATE jobs SET status='failed',error='Время ожидания истекло. Повторите действие.',error_code='queue_expired',finished_at=?,updated_at=?
                         WHERE status='queued' AND created_at<?""", (now, now, now - 86400))
+        from utils import roster_store
+        roster_store.maintain(conn, now)
         terminal = [r['id'] for r in conn.execute("SELECT id FROM jobs WHERE status IN ('succeeded','failed','cancelled')")]
         from utils import review_store
         review_store.maintain(conn)

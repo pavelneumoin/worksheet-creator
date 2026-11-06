@@ -38,7 +38,7 @@ function renderJobs() {
         : job.status === "running"
           ? "Выполняется. Можно продолжить работу с другими материалами."
           : job.status === "succeeded"
-            ? "Готово и сохранено"
+            ? job.kind === "roster_recognize" ? "Список готов · откройте в течение 15 минут" : "Готово и сохранено"
             : job.status === "cancelled"
               ? "Отменено до начала обработки"
               : job.error || "Обработка не завершилась. Повторите действие.";
@@ -125,6 +125,7 @@ async function refreshJobs() {
       if (justCompleted) await refreshMaterials();
     }
     $("jobsConnection").hidden = true;
+    if (typeof showReadyRoster === "function") await showReadyRoster(currentJobs);
   })();
   try {
     await jobRefresh;
@@ -177,10 +178,13 @@ async function sendPendingJob() {
     notice(
       submission.kind === "report_pdf"
         ? "PDF отчёта готовится. Снимок результатов сохранён; файл появится в блоке «Задачи»."
-        : "Задача принята. Результат появится здесь и в ваших материалах.",
+        : submission.kind === "roster_recognize"
+          ? "Распознаём список. После завершения откройте результат здесь и проверьте имена."
+          : "Задача принята. Результат появится здесь и в ваших материалах.",
     );
     $("jobsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
     pollJobs();
+    return response.job;
   } catch (error) {
     // A definite HTTP rejection can be corrected; a lost reply must reuse its key.
     if (error.status && error.status < 500) pendingSubmission = null;
@@ -201,7 +205,7 @@ async function enqueueJob(kind, body, json = true) {
     json,
     key: crypto.randomUUID(),
   };
-  await sendPendingJob();
+  return await sendPendingJob();
 }
 
 async function openJobResult(job, chosenMaterial = null) {
@@ -209,6 +213,9 @@ async function openJobResult(job, chosenMaterial = null) {
   if (state.dirty && state.sheet) await saveCurrent();
   const fresh = (await request("/api/v2/jobs/" + job.id)).job;
   if (fresh.status !== "succeeded") throw new Error("Результат ещё не готов.");
+  if (fresh.kind === "roster_recognize") {
+    await openRosterResult(fresh); return;
+  }
   if (["analytics_pdf","analytics_insight"].includes(fresh.kind)) {
     await openAnalytics(fresh.result.filters);
     if(fresh.kind==="analytics_insight")showAnalyticsInsight(fresh.result);

@@ -77,6 +77,10 @@ def execute(job_id):
             from utils.report_export import compile_report
             compile_report(payload['report'], 'job_' + job_id)
             result = {'ok': True}
+        elif job['kind'] == 'roster_recognize':
+            from utils import roster_ai
+            paths = source_pages.prepare([directory / name for name in payload['images']], directory / 'pages', max_pages=3)
+            result = roster_ai.recognize(paths)
         elif job['kind'] == 'batch_grade':
             from utils import batch_review
             paths=source_pages.prepare([directory/name for name in payload['images']],directory/'pages',max_pages=batch_review.MAX_PAGES)
@@ -120,7 +124,7 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
     command = [sys.executable, str(ROOT / 'scripts/run_worker.py'), '--execute', job['id']]
     count = json.loads(job['payload']).get('variant_count', 1)
     payload = json.loads(job['payload'])
-    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', [])), 'batch_grade':12300,'analytics_pdf':180,'analytics_insight':300}[job['kind']]
+    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', [])), 'batch_grade':12300,'analytics_pdf':180,'analytics_insight':300,'roster_recognize':780}[job['kind']]
     process = None
     succeeded = False
     try:

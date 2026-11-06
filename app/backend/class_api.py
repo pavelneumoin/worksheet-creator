@@ -48,6 +48,13 @@ def update_student(class_id, student_id):
     return jsonify(classroom=class_store.update_student(g.identity['owner_id'], class_id, student_id, body()))
 
 
+@api.post('/classes/<class_id>/roster-imports')
+def import_roster(class_id):
+    from utils import roster_store
+    result = roster_store.import_codes(g.identity['owner_id'], class_id, body())
+    return jsonify(**result), 200 if result['reused'] else 201
+
+
 @api.post('/classes/<class_id>/assignments')
 def assign(class_id):
     assignment, created = class_store.assign(g.identity['owner_id'], class_id, body())

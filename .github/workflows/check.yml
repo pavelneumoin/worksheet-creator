@@ -34,7 +34,7 @@ jobs:
       - name: Parse exported Marp with the real renderer
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
-          node --test tests/frontend_requests.test.cjs tests/frontend_downloads.test.cjs
+          node --test tests/frontend_requests.test.cjs tests/frontend_downloads.test.cjs tests/frontend_roster.test.cjs
           for file in app/frontend/*.js; do node --check "$file"; done
           docker run --name marp-samples --network none listok:night7 python scripts/prepare_marp_samples.py
           docker cp marp-samples:/app/output ./output

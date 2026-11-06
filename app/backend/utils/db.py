@@ -83,6 +83,12 @@ def init_db():
             name TEXT NOT NULL, archived INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS students_class ON students(class_id,archived);
+        CREATE TABLE IF NOT EXISTS roster_imports (
+            owner_id TEXT NOT NULL REFERENCES users(id), request_key TEXT NOT NULL,
+            class_id TEXT NOT NULL REFERENCES classrooms(id), fingerprint TEXT NOT NULL,
+            student_ids TEXT NOT NULL, created_at TEXT NOT NULL,
+            PRIMARY KEY(owner_id,request_key)
+        );
         CREATE TABLE IF NOT EXISTS assignments (
             id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
             class_id TEXT NOT NULL REFERENCES classrooms(id),
