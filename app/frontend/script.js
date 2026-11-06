@@ -324,7 +324,10 @@ function renderTasks() {
           task.note.startsWith("Ответ к этому числовому выражению проверен")
         ) {
           task.note = "";
-          card.querySelector(".task-note")?.remove();
+          const previousNote = card.querySelector(".task-note");
+          const previousEditor = card.querySelector(".task-note-input");
+          if (previousNote) previousNote.textContent = "";
+          if (previousEditor) previousEditor.value = "";
         }
         invalidate();
         mathPreview(preview, input.value);
@@ -341,7 +344,24 @@ function renderTasks() {
       block.append(title, preview, edit);
       content.append(block);
     }
-    if (task.note) content.append(node("p", task.note, "task-note"));
+    const notePreview = node("p", task.note, "task-note");
+    const noteEdit = node("details", undefined, "task-edit");
+    const noteInput = node("textarea");
+    noteInput.className = "task-note-input";
+    noteInput.setAttribute("aria-label", "Пояснение к ответу задания " + (index + 1));
+    noteInput.value = task.note;
+    noteInput.maxLength = 500;
+    noteInput.rows = 2;
+    noteInput.addEventListener("input", () => {
+      task.note = noteInput.value;
+      notePreview.textContent = task.note;
+      invalidate();
+    });
+    noteEdit.addEventListener("toggle", () => {
+      if (noteEdit.open) noteInput.value = task.note;
+    });
+    noteEdit.append(node("summary", "Изменить пояснение к ответу"), noteInput);
+    content.append(notePreview, noteEdit);
     card.append(content);
     $("taskList").append(card);
   });

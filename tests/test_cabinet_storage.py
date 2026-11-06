@@ -85,14 +85,27 @@ class CabinetTests(unittest.TestCase):
         self.assertEqual(job['status'],'queued')
 
     def test_backup_restore_preserves_files_editions_and_revokes_sessions(self):
+        from utils import bot_login
+        import time
         m, artifact = self.compiled()
+        bot_login.issue(11, 'Fixture')
+        bot_login.enqueue({'update_type': 'bot_started', 'timestamp': int(time.time() * 1000),
+                           'user': {'user_id': 11, 'first_name': 'Fixture', 'is_bot': False}})
         job_store.submit('max:22','recognize',uuid.uuid4().hex,{'subject':'math','text':'a'},require_worker=False)
         archive = Path(self.temp.name,'snapshot.zip')
         backup.create_backup(archive)
+        archived_db = Path(self.temp.name, 'archived.db')
+        with zipfile.ZipFile(archive) as zipped:
+            archived_db.write_bytes(zipped.read('worksheets.db'))
+        with closing(sqlite3.connect(archived_db)) as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM bot_login_tokens').fetchone()[0],0)
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM bot_inbox').fetchone()[0],0)
         restored = Path(self.temp.name,'restore')
         backup.restore_backup(archive,restored)
         with closing(sqlite3.connect(restored/'worksheets.db')) as conn:
             self.assertEqual(conn.execute('SELECT COUNT(*) FROM sessions').fetchone()[0],0)
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM bot_login_tokens').fetchone()[0],0)
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM bot_inbox').fetchone()[0],0)
             self.assertEqual(conn.execute('SELECT COUNT(*) FROM editions').fetchone()[0],1)
             self.assertEqual(conn.execute("SELECT status FROM jobs WHERE kind='recognize'").fetchone()[0],'failed')
         self.assertEqual((restored/'generated'/('job_'+artifact+'.pdf')).read_bytes(),b'fixture-file')
@@ -101,6 +114,9 @@ class CabinetTests(unittest.TestCase):
         # Live sessions and queue have not been altered by backup.
         self.assertEqual(self.call(self.client,'get','/api/v2/materials').status_code,200)
         self.assertEqual(job_store.list_jobs('max:22')[0]['status'],'queued')
+        with workspace_store.connection() as conn:
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM bot_login_tokens').fetchone()[0],1)
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM bot_inbox').fetchone()[0],1)
 
     def test_restore_rejects_path_traversal_and_corruption_without_partial_directory(self):
         m, _ = self.compiled()

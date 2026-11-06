@@ -45,6 +45,13 @@ def fail_restored_reviews(conn):
         conn.execute("UPDATE reviews SET status='failed' WHERE status='processing'")
 
 
+def revoke_bot_state(conn):
+    # Older archives predate bot login. Never restore login links or replay replies.
+    for table in ('bot_login_tokens', 'bot_inbox'):
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+            conn.execute('DELETE FROM ' + table)
+
+
 def create_backup(destination):
     destination = Path(destination).resolve()
     if destination.exists():
@@ -66,6 +73,7 @@ def create_backup(destination):
                 snapshot.execute('DELETE FROM download_tickets')
                 snapshot.execute('DELETE FROM sessions')
                 snapshot.execute('DELETE FROM workers')
+                revoke_bot_state(snapshot)
                 # Inputs are intentionally excluded; never replay paid requests on restore.
                 snapshot.execute("UPDATE jobs SET status='failed',error='Сервис восстановлен из копии. Повторите действие вручную.',error_code='backup_restored',finished_at=?,updated_at=?,claim=NULL WHERE status IN ('queued','running')", (time.time(), time.time()))
                 snapshot.commit()
@@ -144,6 +152,7 @@ def restore_backup(archive_path, destination):
                 raise ValueError('Состав фотографий не соответствует базе.')
             fail_restored_reviews(conn)
             conn.execute('DELETE FROM download_tickets'); conn.execute('DELETE FROM sessions'); conn.execute('DELETE FROM workers')
+            revoke_bot_state(conn)
             conn.execute("UPDATE jobs SET status='failed',error_code='backup_restored',error='Восстановлено из копии. Повторите вручную.',finished_at=? WHERE status IN ('queued','running')", (time.time(),))
             conn.commit()
         finally:
