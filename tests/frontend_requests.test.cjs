@@ -14,6 +14,58 @@ const requestSource = script.slice(
   script.indexOf("async function busy("),
 );
 
+function compilationHarness() {
+  const fields = Object.fromEntries(Object.entries({
+    teacherInput: "", gradeInput: "", columnsSelect: "1", countSelect: "3",
+    templateSelect: "cards", variantInput: "", lessonDateInput: "", printSides: "single",
+  }).map(([key, value]) => [key, {value}]));
+  fields.reviewCheckbox = {checked: true};
+  const state = {dirty: false, savedId: "material-1", revision: 2, result: {}, sheet: {
+    teacher_name: "", grade: "", settings: {columns: 1, tasks_per_page: 3, field: "grid",
+      template: "cards", print_sides: "single", variant: "", lesson_date: ""},
+  }};
+  const saves = [];
+  const context = vm.createContext({
+    state, $: (id) => fields[id], document: {querySelector: () => ({value: "grid"})},
+    markDirty: (value) => {state.dirty = value;},
+    saveCurrent: async () => {
+      saves.push(JSON.parse(JSON.stringify(state.sheet)));
+      state.revision += 1;
+      state.dirty = false;
+    },
+  });
+  vm.runInContext(script.slice(script.indexOf("function readSettings("), script.indexOf("function templateHint(")), context);
+  return {context, fields, state, saves};
+}
+
+test("compile saves changed form values even when no blur/change event fired", async () => {
+  const h = compilationHarness();
+  h.fields.gradeInput.value = "8";
+  h.fields.countSelect.value = "2";
+  const payload = await h.context.prepareCompilation();
+  assert.equal(h.saves.length, 1);
+  assert.equal(h.saves[0].grade, "8");
+  assert.equal(h.saves[0].settings.tasks_per_page, 2);
+  assert.equal(payload.revision, 3);
+  assert.equal(payload.reviewed, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(payload.worksheet)), h.saves[0]);
+});
+
+test("unchanged layout does not save merely because settings property order differs", async () => {
+  const h = compilationHarness();
+  const payload = await h.context.prepareCompilation();
+  assert.equal(h.saves.length, 0);
+  assert.equal(payload.revision, 2);
+});
+
+test("failed save prevents compilation from returning a stale snapshot", async () => {
+  const h = compilationHarness();
+  h.fields.gradeInput.value = "8";
+  h.context.saveCurrent = async () => { throw new Error("revision conflict"); };
+  await assert.rejects(h.context.prepareCompilation(), /revision conflict/);
+  assert.equal(h.state.revision, 2);
+});
+
 function harness(fetch) {
   const timers = new Map();
   let timerId = 0;

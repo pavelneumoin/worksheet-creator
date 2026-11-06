@@ -408,9 +408,9 @@ function summary() {
     Math.ceil(state.sheet.tasks.length / count);
 }
 function readSettings() {
-  state.sheet.teacher_name = $("teacherInput").value;
-  state.sheet.grade = $("gradeInput").value;
-  state.sheet.settings = {
+  const teacher = $("teacherInput").value;
+  const grade = $("gradeInput").value;
+  const settings = {
     columns: Number($("columnsSelect").value),
     tasks_per_page: Number($("countSelect").value),
     field: document.querySelector('[name="field"]:checked').value,
@@ -418,6 +418,26 @@ function readSettings() {
     variant: $("variantInput").value,
     lesson_date: $("lessonDateInput").value,
     print_sides: $("printSides").value,
+  };
+  const changed = teacher !== state.sheet.teacher_name || grade !== state.sheet.grade ||
+    Object.keys(settings).some((key) => settings[key] !== state.sheet.settings[key]);
+  state.sheet.teacher_name = teacher;
+  state.sheet.grade = grade;
+  state.sheet.settings = settings;
+  // Autofill and keyboard submission may precede a change/blur event.
+  if (changed) {
+    state.result = null;
+    markDirty(true);
+  }
+}
+async function prepareCompilation() {
+  readSettings();
+  if (state.dirty || !state.savedId) await saveCurrent();
+  return {
+    worksheet: state.sheet,
+    material_id: state.savedId,
+    revision: state.revision,
+    reviewed: $("reviewCheckbox").checked,
   };
 }
 function templateHint() {
@@ -1249,14 +1269,7 @@ $("reviewCheckbox").addEventListener("change", () => {
 });
 $("compileBtn").addEventListener("click", () =>
   busy("Сохраняем лист и ставим на сборку", async () => {
-    readSettings();
-    if (state.dirty || !state.savedId) await saveCurrent();
-    await enqueueJob("compile", {
-      worksheet: state.sheet,
-      material_id: state.savedId,
-      revision: state.revision,
-      reviewed: $("reviewCheckbox").checked,
-    });
+    await enqueueJob("compile", await prepareCompilation());
   }),
 );
 $("editAgain").addEventListener("click", () => {
