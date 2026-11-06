@@ -70,4 +70,14 @@ class QuickTests(unittest.TestCase):
             backup.revoke_bot_state(conn)
             self.assertEqual(conn.execute('SELECT COUNT(*) FROM bot_runs').fetchone()[0],0)
 
+    def test_crash_before_first_preview_can_be_recovered_but_not_silently_confirmed(self):
+        fake=Fake();job_store.heartbeat('test','ai');job_store.heartbeat('compiler','compile')
+        bot_quick.handle(fake,self.item('recognize',{'text':'2+2'}))
+        job_store.complete(job_store.claim_next('ai'),{'worksheets':[demo_worksheet('math')]})
+        with workspace_store.connection() as conn:conn.execute("UPDATE bot_runs SET status='sending'")
+        with self.assertRaises(AIServiceError):bot_quick.handle(fake,self.item('compile'))
+        bot_quick.handle(fake,self.item('draft'))
+        self.assertTrue(any('Ответ:' in m[1] for m in fake.messages))
+        self.assertEqual(bot_quick.draft('max:11')[1],1)
+
 if __name__=='__main__':unittest.main()

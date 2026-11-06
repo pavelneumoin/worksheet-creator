@@ -52,7 +52,14 @@ def remember(user,job):
 
 
 def draft(owner):
-    with workspace_store.connection() as conn:row=conn.execute('SELECT * FROM bot_drafts WHERE owner_id=?',(owner,)).fetchone()
+    with workspace_store.connection() as conn:
+        row=conn.execute('SELECT * FROM bot_drafts WHERE owner_id=?',(owner,)).fetchone()
+        latest=conn.execute("SELECT j.result FROM bot_runs r JOIN jobs j ON j.id=r.job_id WHERE j.owner_id=? AND j.kind='recognize' AND j.status='succeeded' ORDER BY j.created_at DESC LIMIT 1",(owner,)).fetchone()
+    # A crash between committing the material and sending its preview must not hide it.
+    if latest:
+        ident=json.loads(latest['result'])['material_id']
+        if not row or row['material_id']!=ident:
+            return workspace_store.get_material(owner,ident),0 # Requires /draft before /pdf.
     if not row:raise AIServiceError('Пришлите фото заданий или /лист и текст. После распознавания здесь появится черновик.','no_bot_draft',404)
     material=workspace_store.get_material(owner,row['material_id'])
     return material,row['revision']
