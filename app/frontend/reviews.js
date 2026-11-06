@@ -620,7 +620,7 @@ function renderReviewForm(target, r) {
     node(
       "p",
       "До 1 балла за задание, шаг 0,25. Частичный балл выставляете вы по своим критериям. Совпадение с ключом — подсказка; итог нужно подтвердить.",
-      "quiet",
+      "quiet review-score-help",
     ),
   );
   const total = node("p", undefined, "review-total");

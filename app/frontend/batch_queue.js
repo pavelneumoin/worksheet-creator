@@ -34,7 +34,7 @@ async function openBatchQueue(id) {
   }
   summary.append(counts);
   if(q.remaining) summary.append(queueAction("Продолжить проверку",()=>openQueueAnswer(q.items.find(i=>!i.resolved)),"primary"));
-  if(!q.remaining && !q.reviews.length)summary.querySelector("h2").textContent="Подготовьте страницы к проверке";
+  if(!q.remaining && (q.proposals.length || q.blocked.length || !q.reviews.length || q.reviews.some(r=>!r.usable&&!r.confirmed)))summary.querySelector("h2").textContent="Подготовьте страницы к проверке";
   batchView.append(summary);
   if(q.proposals.length){
     const prepare=node("section",undefined,"panel queue-prepare");
