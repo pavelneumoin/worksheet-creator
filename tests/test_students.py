@@ -139,6 +139,7 @@ class StudentTests(unittest.TestCase):
             'reviewed':True,'replace_review':fresh['current_review'],'answers':[
                 {'task_id':t['id'],'text':'checked','score':1,'comment':''} for t in fresh['tasks']]})
         self.assertEqual(updated['status'],'confirmed')
+        self.assertFalse(updated['base_conflict'])
 
     def test_closed_class_and_invalid_files_cannot_submit(self):
         c,a,_=self.joined()

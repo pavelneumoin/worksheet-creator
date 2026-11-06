@@ -131,7 +131,7 @@ def attempt_view(conn, row, teacher=False):
         from utils.solution_store import latest
         result['solution_analysis']=latest(conn,row['owner_id'],'student',row['id'],row['revision'])
         official=conn.execute('SELECT id,revision,answers,status FROM reviews WHERE assignment_id=? AND student_id=?',(row['assignment_id'],row['student_id'])).fetchone()
-        result['base_conflict']=(official['id'] if official else None)!=row['review_id'] or (official['revision'] if official else None)!=row['base_revision']
+        result['base_conflict']=row['status'] in ('submitted','needs_review') and ((official['id'] if official else None)!=row['review_id'] or (official['revision'] if official else None)!=row['base_revision'])
         result['current_review']={'id':official['id'],'revision':official['revision'],'score':sum(a['score'] for a in json.loads(official['answers'])) if official['status']=='confirmed' else None} if official else None
     return result
 

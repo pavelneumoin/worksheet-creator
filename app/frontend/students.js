@@ -83,7 +83,9 @@ async function openStudentAttempt(id){
     const noteLabel=node("label","Комментарий к заданию"),note=node("textarea");note.maxLength=500;note.value=answer.comment||"";noteLabel.append(note);card.append(textLabel,scoreLabel,noteLabel);form.append(card);inputs.push({task_id:t.id,text,score,note});
   }
   form.addEventListener("input",()=>{studentAttemptDirty=true;});form.addEventListener("change",()=>{studentAttemptDirty=true;});
+  if(!["submitted","needs_review"].includes(a.status))for(const item of inputs){item.text.readOnly=true;item.score.disabled=true;item.note.readOnly=true;}
   const commentLabel=node("label","Комментарий к работе"),comment=node("textarea");comment.maxLength=2000;comment.value=a.feedback||"";commentLabel.append(comment);form.append(commentLabel);
+  if(["processing","returned"].includes(a.status))comment.readOnly=true;
   const replaceCheck=node("input");replaceCheck.type="checkbox";
   if(a.base_conflict&&a.current_review){const label=node("label",undefined,"check-row");replaceCheck.required=true;label.append(replaceCheck,node("span",`Текущий результат ${a.current_review.score??"не подтверждён"}. Я сверил(а) его и заменяю результат этой попыткой.`));form.append(label);}
   if(["submitted","needs_review"].includes(a.status)){
