@@ -198,6 +198,20 @@ def demo():
     })
 
 
+@app.get('/api/health/ready')
+def readiness():
+    """Queue readiness, separate from liveness to avoid a Compose startup cycle."""
+    from utils.job_store import workers_ready
+    try:
+        checks = {'ai_worker': workers_ready('ai'),
+                  'compile_worker': workers_ready('compile'),
+                  'compiler': bool(_compiler())}
+    except Exception:
+        return jsonify(ready=False), 503
+    ready = all(checks.values())
+    return jsonify(ready=ready, checks=checks), 200 if ready else 503
+
+
 @app.route("/api/process", methods=["POST"])
 def process_file():
     files = [f for f in request.files.getlist("files") if f and f.filename]

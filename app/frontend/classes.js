@@ -420,19 +420,7 @@ function editionDownload(editionId, code, links, key, title) {
   a.href = links[key];
   a.target = "_blank";
   a.rel = "noopener";
-  a.addEventListener("click", (e) => {
-    if (!window.WebApp?.downloadFile) return;
-    e.preventDefault();
-    busy("Готовим файл", async () => {
-      const result = await request("/api/v2/exports/" + editionId, {
-        method: "POST",
-      });
-      await window.WebApp.downloadFile(
-        new URL(result[key], location.origin).href,
-        title + " " + code + ".pdf",
-      );
-    });
-  });
+  bindArtifactDownload(a, editionId, key, title + " " + code + ".pdf");
   return a;
 }
 async function openAssignment(id, loaded = null) {

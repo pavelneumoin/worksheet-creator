@@ -440,38 +440,13 @@ async function renderResult() {
   $("downloadMarp").hidden = !state.result.marp_url;
   if (state.result.marp_url) $("downloadMarp").href = state.result.marp_url;
   $("pdfPreview").src = state.result.pdf_url + "#toolbar=0";
-  if (window.WebApp?.downloadFile && state.result.artifact_id) {
-    const links = await request("/api/v2/exports/" + state.result.artifact_id, {
-      method: "POST",
-    });
-    for (const [id, key, name] of [
-      ["downloadSheet", "pdf_url", "Рабочий лист.pdf"],
-      ["downloadKeys", "keys_url", "Ответы.pdf"],
-      ["downloadTex", "tex_url", "Рабочий лист.tex"],
-      ["downloadMarp", "marp_url", "ЛистОК Marp.zip"],
-    ]) {
-      if (!links[key]) continue;
-      $(id).onclick = (event) => {
-        event.preventDefault();
-        if (Date.now() >= links.expires_at * 1000) {
-          busy("Обновляем ссылку", async () => {
-            await renderResult();
-            notice("Ссылка готова. Нажмите кнопку скачивания ещё раз.");
-          });
-          return;
-        }
-        Promise.resolve()
-          .then(() =>
-            window.WebApp.downloadFile(
-              new URL(links[key], location.origin).href,
-              name,
-            ),
-          )
-          .catch(() =>
-            notice("MAX не смог скачать файл. Повторите скачивание.", true),
-          );
-      };
-    }
+  for (const [id, key, name] of [
+    ["downloadSheet", "pdf_url", "Рабочий лист.pdf"],
+    ["downloadKeys", "keys_url", "Ответы.pdf"],
+    ["downloadTex", "tex_url", "Рабочий лист.tex"],
+    ["downloadMarp", "marp_url", "ЛистОК Marp.zip"],
+  ]) {
+    bindArtifactDownload($(id), state.result.artifact_id, key, name);
   }
   document
     .querySelectorAll("[data-variant]")
@@ -739,20 +714,8 @@ function appendCabinetTools(card, item) {
           a.href = url;
           a.target = "_blank";
           a.rel = "noopener";
-          a.addEventListener("click", (event) => {
-            if (!window.WebApp?.downloadFile) return;
-            event.preventDefault();
-            busy("Готовим файл", async () => {
-              const exports = await request("/api/v2/exports/" + edition.id, {
-                method: "POST",
-              });
-              const key = text === "Лист" ? "pdf_url" : "keys_url";
-              await window.WebApp.downloadFile(
-                new URL(exports[key], location.origin).href,
-                text + " " + edition.code + ".pdf",
-              );
-            });
-          });
+          bindArtifactDownload(a, edition.id, text === "Лист" ? "pdf_url" : "keys_url",
+            text + " " + edition.code + ".pdf");
           links.append(a);
         }
         const copy = node("button", "Создать копию версии", "button ghost");

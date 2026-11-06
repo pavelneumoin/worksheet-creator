@@ -1,0 +1,7 @@
+# MAX_APP_URL must be an HTTPS origin without a path, query or fragment.
+{$MAX_APP_URL} {
+    encode zstd gzip
+    reverse_proxy listok:10000
+    header Strict-Transport-Security "max-age=31536000"
+    # Access logging is intentionally off: download URLs contain private tickets.
+}

@@ -15,7 +15,7 @@ from utils.workspace_store import connection
 auth = Blueprint('auth', __name__, url_prefix='/api/v2/auth')
 COOKIE = 'listok_session'
 TTL = 7 * 24 * 3600
-PUBLIC_ENDPOINTS = {'index', 'static', 'status', 'demo', 'workspace.demo',
+PUBLIC_ENDPOINTS = {'index', 'static', 'status', 'readiness', 'demo', 'workspace.demo',
                     'auth.me', 'auth.login_max', 'auth.login_local', 'workspace.max_launch', 'workspace.download_file'}
 
 
