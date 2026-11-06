@@ -72,6 +72,7 @@ summary:focus-visible {
 .brand {
   display: flex;
   align-items: center;
+  min-height: 44px;
   font-size: 26px;
   font-weight: 750;
   letter-spacing: -1px;
