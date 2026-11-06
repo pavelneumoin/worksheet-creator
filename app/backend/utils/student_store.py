@@ -119,7 +119,13 @@ def attempt_view(conn, row, teacher=False):
     result['student_code'] = class_store.student_code(row['student_id'])
     files = json.loads(row['files']) if row['expires_at'] > time.time() else []
     result['files'] = [{'url':f"/api/v2/student-attempts/{row['id']}/files/{i}", 'name': ('Страница ' + str(i+1)) if name.endswith('.jpg') else 'PDF работы', 'image':name.endswith(('.jpg','.jpeg','.png'))} for i,name in enumerate(files)]
+    if row['status']=='returned':
+        result['task_feedback']=[{'task_id':a['task_id'],'comment':a.get('comment','')} for a in json.loads(row['answers']) if a.get('comment')]
     if teacher:
+        from utils import student_drafts
+        result['draft'] = student_drafts.view(conn, row)
+        notification = conn.execute('SELECT status FROM student_notifications WHERE attempt_id=? ORDER BY attempt_revision DESC LIMIT 1', (row['id'],)).fetchone()
+        result['notification'] = notification['status'] if notification else None
         assignment = class_store.assignment_detail(conn, row['owner_id'], row['assignment_id'])
         result.update(title=assignment['title'], class_name=assignment['class_name'], tasks=assignment['worksheet']['tasks'],
                       answers=json.loads(row['answers']), warnings=json.loads(row['warnings']))
@@ -205,6 +211,8 @@ def inbox(owner):
 
 def enqueue(conn, owner, attempt_id, job_id, expected_revision):
     row=owned_attempt(conn,owner,attempt_id)
+    if conn.execute('SELECT 1 FROM student_attempt_drafts WHERE attempt_id=?', (attempt_id,)).fetchone():
+        fail('Сначала завершите проверку или удалите её черновик перед повторным распознаванием.', 'draft_conflict', 409)
     if row['revision']!=expected_revision or row['status'] not in ('submitted','needs_review'):
         fail('Работа изменилась. Обновите список.','revision_conflict',409)
     if row['expires_at']<=time.time():fail('Срок хранения сканов истёк. Верните работу ученику для повторной загрузки.','student_files_expired',409)
@@ -247,6 +255,8 @@ def update(owner, attempt_id, value):
         if type(value.get('revision')) is not int or row['revision']!=value['revision']:
             fail('Работа изменилась на другом устройстве. Обновите её.','revision_conflict',409)
         if row['status']=='processing':fail('Дождитесь завершения распознавания.','student_processing',409)
+        from utils import student_drafts, student_notifications
+        saved_draft=student_drafts.check(conn, row, value)
         action=value.get('action')
         if action=='return':
             feedback=value.get('feedback','')
@@ -254,6 +264,10 @@ def update(owner, attempt_id, value):
             latest=conn.execute('SELECT id FROM student_attempts WHERE assignment_id=? AND student_id=? ORDER BY number DESC LIMIT 1',(row['assignment_id'],row['student_id'])).fetchone()
             if latest['id']!=attempt_id or row['status']=='returned':fail('Откройте последнюю попытку.','revision_conflict',409)
             conn.execute("UPDATE student_attempts SET status='returned',feedback=?,revision=revision+1,updated_at=? WHERE id=?",(feedback.strip(),timestamp(),attempt_id))
+            if saved_draft:
+                conn.execute('UPDATE student_attempts SET answers=? WHERE id=?',
+                             (json.dumps(json.loads(saved_draft['payload'])['answers'],ensure_ascii=False),attempt_id))
+            student_notifications.enqueue(conn, owned_attempt(conn, owner, attempt_id))
         elif action=='confirm':
             if value.get('reviewed') is not True:fail('Подтвердите, что сверили сканы и баллы.','review_required')
             if row['status'] not in ('submitted','needs_review'):fail('Эту попытку уже завершили.','revision_conflict',409)
@@ -277,6 +291,7 @@ def update(owner, attempt_id, value):
             review_store.audit(conn,review_store.owned(conn,owner,review_id),'student_confirm')
             conn.execute("UPDATE student_attempts SET status='confirmed',answers=?,feedback=?,review_id=?,revision=revision+1,updated_at=? WHERE id=?",(json.dumps(payload['answers'],ensure_ascii=False),payload['comment'],review_id,now,attempt_id))
         else:fail('Неизвестное действие.')
+        conn.execute('DELETE FROM student_attempt_drafts WHERE attempt_id=?', (attempt_id,))
         return attempt_view(conn,owned_attempt(conn,owner,attempt_id),True)
 
 
@@ -305,4 +320,6 @@ def return_review(owner,review_id,value):
         aid=uuid.uuid4().hex;now=timestamp()
         conn.execute('''INSERT INTO student_attempts(id,owner_id,user_id,assignment_id,student_id,number,request_key,fingerprint,files,expires_at,status,feedback,review_id,base_revision,created_at,updated_at)
             VALUES(?,?,?,?,?,1,?,?,?,?,'returned',?,?,?,?,?)''',(aid,owner,link['user_id'],review['assignment_id'],review['student_id'],uuid.uuid4().hex,'return:'+review_id,'[]',time.time()+RETENTION,feedback.strip(),review_id,review['revision'],now,now))
+        from utils import student_notifications
+        student_notifications.enqueue(conn, owned_attempt(conn, owner, aid))
         return attempt_view(conn,owned_attempt(conn,owner,aid),True)

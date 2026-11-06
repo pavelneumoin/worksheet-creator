@@ -30,6 +30,8 @@ LABELS['solution_review'] = 'Анализируем ход решения'
 LANES['material_form'] = 'compile'
 LABELS['material_form'] = 'Готовим бланк ответов A4'
 LABELS['roster_recognize'] = 'Распознаём список учеников'
+LANES.update(voice_transcribe='ai', voice_generate='ai')
+LABELS.update(voice_transcribe='Распознаём голосовой запрос', voice_generate='Создаём лист по теме')
 LEASE_SECONDS = 45
 RETENTION_SECONDS = 7 * 86400
 
@@ -146,7 +148,7 @@ def submit(owner, kind, request_key, payload, image_paths=(), require_worker=Tru
                 raise AIServiceError('У вас уже есть задача. Дождитесь её результата — он появится в разделе «Задачи».', 'owner_job_limit', 429)
             if conn.execute("SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running')").fetchone()[0] >= 30:
                 raise AIServiceError('Сейчас много запросов. Попробуйте через несколько минут.', 'queue_full', 429)
-            if kind in ('recognize', 'variant') and conn.execute('SELECT COUNT(*) FROM materials WHERE owner_id=?', (owner,)).fetchone()[0] + payload.get('variant_count', 1) > 500:
+            if kind in ('recognize', 'variant', 'voice_generate') and conn.execute('SELECT COUNT(*) FROM materials WHERE owner_id=?', (owner,)).fetchone()[0] + payload.get('variant_count', 1) > 500:
                 raise AIServiceError('В профиле можно хранить до 500 листов. Освободите место для новых вариантов.', 'materials_limit', 409)
             # Validate the saved snapshot in the same transaction as enqueueing.
             material_id = payload.get('material_id')
@@ -278,6 +280,9 @@ def complete(job, output, active_connection=None):
             result = {'worksheet': payload['worksheet'], 'source': payload.get('source', 'manual'),
                       'material_id': material['id'] if attached else None, 'attached': attached,
                       **result_links(conn.execute('SELECT * FROM artifacts WHERE id=?', (job_id,)).fetchone())}
+        elif current['kind'] == 'voice_transcribe':
+            from utils.voice_sheet import brief
+            result={'text':brief(output.get('text'))}
         elif current['kind'] == 'roster_recognize':
             from utils import roster_store
             result = roster_store.complete(job_id, payload['class_id'], output)

@@ -54,7 +54,7 @@ def fail_restored_reviews(conn):
 
 def revoke_bot_state(conn):
     # Older archives predate bot login. Never restore login links or replay replies.
-    for table in ('demo_sessions', 'bot_login_tokens', 'bot_inbox', 'bot_runs', 'bot_drafts', 'bot_actions', 'bot_context', 'bot_print_queue', 'school_invites', 'student_invites'):
+    for table in ('demo_sessions', 'bot_login_tokens', 'bot_inbox', 'bot_runs', 'bot_drafts', 'bot_actions', 'bot_context', 'bot_print_queue', 'school_invites', 'student_invites', 'student_notifications'):
         if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
             conn.execute('DELETE FROM ' + table)
     if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='student_attempts'").fetchone():

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'app/backend'))
 from dotenv import load_dotenv
 load_dotenv(ROOT / '.env', override=False)
-from utils import bot_login, bot_quick, bot_workflows, db, job_store, max_bot
+from utils import bot_login, bot_quick, bot_workflows, db, job_store, max_bot, student_notifications
 
 
 def main():
@@ -41,6 +41,7 @@ def main():
         while not stop:
             job_store.heartbeat(worker, 'bot')
             try:
+                student_notifications.poll(client)
                 bot_quick.poll(client)
                 bot_workflows.poll_print_queue(client)
             except Exception as exc:

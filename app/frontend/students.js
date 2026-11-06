@@ -1,7 +1,14 @@
 "use strict";
-let studentAttemptDirty=false;
-function guardStudentLeave(){if(!studentAttemptDirty)return true;if(!window.confirm("В проверке есть несохранённые изменения. Выйти без сохранения?"))return false;studentAttemptDirty=false;return true;}
-window.addEventListener("beforeunload",e=>{if(studentAttemptDirty){e.preventDefault();e.returnValue="";}});
+let studentAttemptDirty=false, studentEditor=null;
+function resetStudentEditor(){studentEditor?.dispose();studentEditor=null;studentAttemptDirty=false;syncClosingConfirmation();}
+async function flushStudentDraft(){if(studentEditor)await studentEditor.flush();studentAttemptDirty=!!studentEditor?.dirty;}
+function guardStudentLeave(action){
+  if(!studentEditor?.dirty)return true;
+  flushStudentDraft().then(()=>action?.()).catch(e=>notice(e.message+" Правки остаются на экране.",true));return false;
+}
+window.addEventListener("beforeunload",e=>{if(studentEditor?.dirty){e.preventDefault();e.returnValue="";}});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)flushStudentDraft().catch(()=>{});});
+window.addEventListener("online",()=>flushStudentDraft().catch(()=>{}));
 const pupilStatuses={submitted:"У учителя",processing:"Распознавание",needs_review:"Ожидает проверки",confirmed:"Проверено",returned:"На исправление"};
 const pupilView=node("section",undefined,"pupil-view");pupilView.id="studentView";pupilView.hidden=true;document.querySelector("main").append(pupilView);
 const pupilNav=classButton("Кабинет ученика",()=>busy("Открываем работы",openStudentHome),"nav-button");pupilNav.id="studentNav";document.querySelector(".topbar nav").append(pupilNav);
@@ -15,11 +22,11 @@ function renderStudentAccess(){
   pupilNav.disabled=studentInboxNav.disabled=!state.auth?.authenticated;
   if(pendingStudentInvite&&state.auth?.authenticated){queueMicrotask(()=>busy("Открываем приглашение",openStudentHome));}
 }
-function pupilScreen(title){showView("student",false);pupilView.replaceChildren(node("h1",title));window.scrollTo({top:0});}
+function pupilScreen(title){resetStudentEditor();showView("student",false);pupilView.replaceChildren(node("h1",title));window.scrollTo({top:0});}
 function pupilFileLink(label,url){const a=node("a",label,"button secondary");a.href=url;a.target="_blank";a.rel="noopener";return a;}
 function pupilStat(label,value){const card=node("div",undefined,"pupil-stat");card.append(node("strong",value),node("span",label));return card;}
 async function openStudentHome(){
-  if(!guardStudentLeave())return;
+  await flushStudentDraft();
   const data=(await request("/api/v2/student/assignments")).assignments;
   pupilScreen("Мои работы");
   const results=data.filter(a=>a.result),score=results.reduce((s,a)=>s+a.result.score,0),total=results.reduce((s,a)=>s+a.result.max_score,0);
@@ -32,7 +39,7 @@ async function openStudentHome(){
   if(!data.length)list.append(node("p","Работы появятся после подключения к классу.","empty-state"));pupilView.append(list);
 }
 async function openStudentAssignment(id){
-  if(!guardStudentLeave())return;
+  await flushStudentDraft();
   const a=(await request("/api/v2/student/assignments/"+id)).assignment;pupilScreen(a.title);
   pupilView.prepend(classButton("← Мои работы",()=>busy("Открываем работы",openStudentHome),"ghost"));
   pupilView.append(node("p",`${a.class_name} · ${a.student_code}${a.due_date?" · до "+a.due_date:""}`,"quiet"),pupilFileLink("Рабочий лист PDF",a.pdf_url));
@@ -40,7 +47,7 @@ async function openStudentAssignment(id){
   const last=a.attempts[0];if(last?.feedback){const feedback=node("div",undefined,"panel pupil-feedback");feedback.append(node("h2",last.status==="returned"?"Что исправить":"Комментарий учителя"),node("p",last.feedback));pupilView.append(feedback);}
   if(a.result){const result=node("div",undefined,"panel");result.append(node("h2",`Результат: ${a.result.score} из ${a.result.max_score}`),node("p",a.result.comment));if(last&&["submitted","processing","needs_review"].includes(last.status))result.append(node("p","Новая попытка у учителя. Здесь показан предыдущий подтверждённый результат.","quiet"));pupilView.append(result);}
   const tasks=node("div",undefined,"pupil-tasks");
-  a.tasks.forEach((t,i)=>{const card=node("details",undefined,"panel pupil-task"),answer=a.result?.answers.find(x=>x.task_id===t.id);card.append(node("summary",`Задание ${i+1}${answer?" · "+answer.score+" / 1":""}`));const q=node("div");mathPreview(q,t.question);card.append(q);if(answer){const text=node("div");mathPreview(text,answer.text||"Ответ не записан");card.append(node("h3","Ваш ответ"),text,node("p",answer.comment|| (answer.score===1?"Выполнено верно.":"Посмотрите комментарий к работе или уточните у учителя.")));}tasks.append(card);});pupilView.append(tasks);
+  a.tasks.forEach((t,i)=>{const card=node("details",undefined,"panel pupil-task"),answer=a.result?.answers.find(x=>x.task_id===t.id);card.append(node("summary",`Задание ${i+1}${answer?" · "+answer.score+" / 1":""}`));const q=node("div");mathPreview(q,t.question);card.append(q);if(answer){const text=node("div");mathPreview(text,answer.text||"Ответ не записан");card.append(node("h3","Ваш ответ"),text,node("p",answer.comment|| (answer.score===1?"Выполнено верно.":"Посмотрите комментарий к работе или уточните у учителя.")));}const correction=last?.task_feedback?.find(x=>x.task_id===t.id);if(correction){card.append(node("h3","Что исправить"),node("p",correction.comment));card.open=true;}tasks.append(card);});pupilView.append(tasks);
   if(a.can_submit){
     const form=node("form",undefined,"panel pupil-upload"),title=node("h2",last?"Отправить исправление":"Сдать работу"),label=node("label","Фото страниц или PDF"),file=node("input");file.type="file";file.multiple=true;file.accept="image/jpeg,image/png,application/pdf";file.required=true;label.append(file);
     const camera=node("input");camera.type="file";camera.accept="image/jpeg,image/png";camera.setAttribute("capture","environment");camera.hidden=true;
@@ -59,40 +66,58 @@ async function showPupilInvite(classroom,pupil){
   const close=classButton("Закрыть",()=>dialog.close(),"ghost");dialog.append(node("h2",pupil.code),node("p","Приглашение действует 24 часа и используется один раз. Ученик входит через MAX и вводит код в разделе «Кабинет ученика»."),c,l,classButton("Скопировать приглашение",async()=>{try{await navigator.clipboard.writeText(link.value);notice("Ссылка скопирована.");}catch{link.select();}}),close);document.body.append(dialog);dialog.addEventListener("close",()=>dialog.remove());dialog.showModal();
 }
 async function openStudentInbox(){
-  if(!guardStudentLeave())return;
+  await flushStudentDraft();
   const attempts=(await request("/api/v2/student-attempts")).attempts;pupilScreen("От учеников");
   const controls=node("div",undefined,"actions"),filter=node("select");filter.setAttribute("aria-label","Состояние работы");for(const [value,label] of [["pending","Ожидают проверки"],["returned","На исправлении"],["all","Все попытки"]]){const option=node("option",label);option.value=value;filter.append(option);}controls.append(filter,classButton("Обновить",()=>busy("Обновляем работы",openStudentInbox)));pupilView.append(controls);
   const list=node("div",undefined,"pupil-cards");pupilView.append(list);
   function draw(){list.replaceChildren();for(const a of attempts.filter(a=>filter.value==="all"||(filter.value==="returned"?a.status==="returned":["submitted","processing","needs_review"].includes(a.status)))){const card=node("article",undefined,"panel pupil-work");card.append(node("span",a.class_name+" · "+a.student_code,"eyebrow"),node("h2",a.title),node("p",`Попытка ${a.number} · ${pupilStatuses[a.status]}`,"quiet"),classButton("Открыть проверку",()=>busy("Открываем работу",()=>openStudentAttempt(a.id)),"primary"));list.append(card);}if(!list.children.length)list.append(node("p","Новых работ нет.","empty-state"));}filter.addEventListener("change",draw);draw();
 }
 async function openStudentAttempt(id){
-  if(!guardStudentLeave())return;
+  await flushStudentDraft();
   const a=(await request("/api/v2/student-attempts/"+id)).attempt;pupilScreen(a.title);pupilView.prepend(classButton("← От учеников",()=>busy("Открываем работы",openStudentInbox),"ghost"));
   pupilView.append(node("p",`${a.class_name} · ${a.student_code} · попытка ${a.number} · ${pupilStatuses[a.status]}`,"quiet"));
   const actions=node("div",undefined,"actions");actions.append(classButton("Обновить",()=>busy("Обновляем работу",()=>openStudentAttempt(id))));
-  if(["submitted","needs_review"].includes(a.status)&&a.files.length)actions.append(classButton("Распознать ответы",()=>busy("Отправляем на распознавание",async()=>{if(!guardStudentLeave())return;await request(`/api/v2/student-attempts/${id}/recognize`,{...classJson("POST",{revision:a.revision}),headers:{"Content-Type":"application/json","Idempotency-Key":crypto.randomUUID()}});await openStudentAttempt(id);await refreshJobs();}),"primary"));pupilView.append(actions);
+  if(["submitted","needs_review"].includes(a.status)&&a.files.length)actions.append(classButton("Распознать ответы",()=>busy("Отправляем на распознавание",async()=>{await flushStudentDraft();await request(`/api/v2/student-attempts/${id}/recognize`,{...classJson("POST",{revision:a.revision}),headers:{"Content-Type":"application/json","Idempotency-Key":crypto.randomUUID()}});await openStudentAttempt(id);await refreshJobs();}),"primary"));pupilView.append(actions);
   if(a.error)pupilView.append(node("p",a.error,"job-error"));for(const w of a.warnings||[])pupilView.append(node("p",w,"review-warning"));
   const layout=node("div",undefined,"pupil-review-layout"),scans=node("section",undefined,"panel pupil-scans");scans.append(node("h2","Скан работы"));
   const pageSelect=node("select");pageSelect.setAttribute("aria-label","Страница скана");a.files.forEach((f,i)=>{const o=node("option",f.name);o.value=i;pageSelect.append(o);});scans.append(pageSelect);const preview=node("div",undefined,"pupil-scan-preview");scans.append(preview);
   function page(){preview.replaceChildren();const f=a.files[Number(pageSelect.value)];if(!f){preview.append(node("p","Сканы хранятся 7 дней."));return;}if(f.image){const img=node("img");img.src=f.url;img.alt=f.name;img.loading="lazy";preview.append(img);}preview.append(pupilFileLink("Открыть в полном размере",f.url));}pageSelect.addEventListener("change",page);page();
   const form=node("form",undefined,"pupil-marks"),inputs=[];
   for(const [i,t] of (a.tasks||[]).entries()){
-    const answer=a.answers[i],card=node("article",undefined,"panel");card.append(node("h3","Задание "+(i+1)));const question=node("details");question.append(node("summary","Условие и ответ"));const q=node("div"),key=node("div");mathPreview(q,t.question);mathPreview(key,t.answer);question.append(q,node("strong","Ожидаемый ответ"),key);card.append(question);
+    const answer=(a.draft?.answers||a.answers)[i],card=node("article",undefined,"panel");card.append(node("h3","Задание "+(i+1)));const question=node("details");question.append(node("summary","Условие и ответ"));const q=node("div"),key=node("div");mathPreview(q,t.question);mathPreview(key,t.answer);question.append(q,node("strong","Ожидаемый ответ"),key);card.append(question);
     const textLabel=node("label","Ответ ученика"),text=node("textarea");text.value=answer.text;text.maxLength=2000;textLabel.append(text);
     const scoreLabel=node("label","Балл"),score=node("select");for(const [v,label] of [["","Не проверено"],[0,"0"],[.25,"0,25"],[.5,"0,5"],[.75,"0,75"],[1,"1"]]){const option=node("option",label);option.value=v;score.append(option);}score.value=answer.score??"";scoreLabel.append(score);
     const noteLabel=node("label","Комментарий к заданию"),note=node("textarea");note.maxLength=500;note.value=answer.comment||"";noteLabel.append(note);card.append(textLabel,scoreLabel,noteLabel);form.append(card);inputs.push({task_id:t.id,text,score,note});
   }
-  form.addEventListener("input",()=>{studentAttemptDirty=true;});form.addEventListener("change",()=>{studentAttemptDirty=true;});
   if(!["submitted","needs_review"].includes(a.status))for(const item of inputs){item.text.readOnly=true;item.score.disabled=true;item.note.readOnly=true;}
-  const commentLabel=node("label","Комментарий к работе"),comment=node("textarea");comment.maxLength=2000;comment.value=a.feedback||"";commentLabel.append(comment);form.append(commentLabel);
+  const commentLabel=node("label","Комментарий к работе"),comment=node("textarea");comment.maxLength=2000;comment.value=a.draft?.comment??a.feedback??"";commentLabel.append(comment);form.append(commentLabel);
   if(["processing","returned"].includes(a.status))comment.readOnly=true;
+  const draftStatus=node("p",a.draft?"Черновик восстановлен":"Правки сохраняются автоматически","quiet pupil-save-status");draftStatus.setAttribute("role","status");
+  const body=()=>({revision:a.revision,comment:comment.value,answers:inputs.map(v=>({task_id:v.task_id,text:v.text.value,score:v.score.value===""?null:Number(v.score.value),comment:v.note.value,checked:true}))});
+  if(["submitted","needs_review","confirmed"].includes(a.status)){
+    const draftBar=node("div",undefined,"pupil-draft-bar"),tools=node("div",undefined,"actions");
+    studentEditor=new StudentAutosave({revision:a.draft?.revision??null,read:body,send:async value=>{
+      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+      try{return (await request(`/api/v2/student-attempts/${id}/draft`,{...classJson("PUT",value),signal:controller.signal,keepalive:true})).draft;}finally{clearTimeout(timeout);}
+    },onStatus:(status,error)=>{studentAttemptDirty=status!=="saved";syncClosingConfirmation();draftStatus.classList.toggle("review-warning",status==="error");draftStatus.textContent=status==="saved"?"Сохранено · оценка изменится после подтверждения":status==="pending"?"Сохраняем…":"Не сохранено. "+(error?.name==="AbortError"?"Нет ответа от сервера.":error?.message||"Проверьте подключение.");}});
+    form.addEventListener("input",e=>{if(e.target.type!=="checkbox")studentEditor?.edit();});
+    form.addEventListener("change",e=>{if(e.target.tagName==="SELECT")studentEditor?.edit();});
+    tools.append(classButton("Сохранить",()=>busy("Сохраняем черновик",flushStudentDraft),"ghost"),classButton("Скачать правки",()=>{
+      const url=URL.createObjectURL(new Blob([JSON.stringify(body(),null,2)],{type:"application/json"}));const link=node("a");link.href=url;link.download="Проверка-"+a.student_code+".json";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    },"ghost"),classButton("Удалить черновик",()=>busy("Удаляем черновик",async()=>{
+      if(!window.confirm("Удалить ваши правки и восстановить результат распознавания?"))return;
+      await flushStudentDraft();await request(`/api/v2/student-attempts/${id}/draft`,classJson("DELETE",{revision:a.revision,draft_revision:studentEditor.revision}));resetStudentEditor();await openStudentAttempt(id);
+    }),"ghost"));draftBar.append(draftStatus,tools);form.prepend(draftBar);
+    if(a.draft?.stale){draftStatus.textContent="Работа изменилась. Скачайте правки перед обновлением страницы.";draftStatus.classList.add("review-warning");}
+  }
+  if(a.notification){const labels={queued:"Уведомление MAX в очереди",sending:"Отправляем уведомление MAX",sent:"Уведомление отправлено в MAX",demo:"Демо: уведомление не отправляется",cancelled:"Уведомление отменено: работа или доступ изменились",unavailable:"MAX не принял уведомление. Ученику нужно открыть бота и нажать «Начать».",unknown:"MAX не подтвердил доставку. Работа доступна в кабинете ученика."};pupilView.append(node("p",labels[a.notification],"quiet"));}
   const replaceCheck=node("input");replaceCheck.type="checkbox";
   if(a.base_conflict&&a.current_review){const label=node("label",undefined,"check-row");replaceCheck.required=true;label.append(replaceCheck,node("span",`Текущий результат ${a.current_review.score??"не подтверждён"}. Я сверил(а) его и заменяю результат этой попыткой.`));form.append(label);}
   if(["submitted","needs_review"].includes(a.status)){
     const verified=node("label",undefined,"check-row"),check=node("input");check.type="checkbox";check.required=true;verified.append(check,node("span","Сканы и баллы проверены"));const confirm=node("button","Подтвердить результат","button primary");confirm.type="submit";form.append(verified,confirm);
-    form.addEventListener("submit",e=>{e.preventDefault();busy("Сохраняем результат",async()=>{await request(`/api/v2/student-attempts/${id}`,classJson("PUT",{action:"confirm",revision:a.revision,reviewed:check.checked,comment:comment.value,replace_review:replaceCheck.checked?a.current_review:null,answers:inputs.map(v=>({task_id:v.task_id,text:v.text.value,score:v.score.value===""?null:Number(v.score.value),comment:v.note.value,checked:true}))}));studentAttemptDirty=false;await openStudentAttempt(id);notice("Результат доступен ученику и включён в статистику.");});});
+    form.addEventListener("submit",e=>{e.preventDefault();busy("Сохраняем результат",async()=>{await flushStudentDraft();await request(`/api/v2/student-attempts/${id}`,classJson("PUT",{action:"confirm",revision:a.revision,draft_revision:studentEditor?.revision??null,reviewed:check.checked,comment:comment.value,replace_review:replaceCheck.checked?a.current_review:null,answers:inputs.map(v=>({task_id:v.task_id,text:v.text.value,score:v.score.value===""?null:Number(v.score.value),comment:v.note.value,checked:true}))}));resetStudentEditor();await openStudentAttempt(id);notice("Результат доступен ученику и включён в статистику.");});});
   }
-  if(a.status!=="processing"&&a.status!=="returned")form.append(classButton("Вернуть на исправление",()=>busy("Возвращаем работу",async()=>{if(!comment.value.trim())throw new Error("Напишите в комментарии, что нужно исправить.");await request(`/api/v2/student-attempts/${id}`,classJson("PUT",{action:"return",revision:a.revision,feedback:comment.value}));studentAttemptDirty=false;await openStudentAttempt(id);notice("Ученик может отправить новую попытку.");})));
+  if(a.status!=="processing"&&a.status!=="returned")form.append(classButton("Вернуть на исправление",()=>busy("Возвращаем работу",async()=>{if(!comment.value.trim())throw new Error("Напишите в комментарии, что нужно исправить.");await flushStudentDraft();await request(`/api/v2/student-attempts/${id}`,classJson("PUT",{action:"return",revision:a.revision,draft_revision:studentEditor?.revision??null,feedback:comment.value}));resetStudentEditor();await openStudentAttempt(id);notice("Работа возвращена. Уведомление поставлено в очередь MAX.");})));
   layout.append(scans,form);pupilView.append(layout);
   if(a.status!=="processing")renderSolutionAnalysis(pupilView,"student",a,!!a.files.length);
 }

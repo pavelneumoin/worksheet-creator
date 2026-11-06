@@ -98,6 +98,14 @@ def recognize(attempt_id):
 def update(attempt_id):
     return jsonify(attempt=student_store.update(g.identity['owner_id'],attempt_id,body()))
 
+@api.route('/student-attempts/<attempt_id>/draft', methods=['PUT','DELETE'])
+def draft(attempt_id):
+    from utils import student_drafts
+    if request.method == 'DELETE':
+        student_drafts.discard(g.identity['owner_id'], attempt_id, body())
+        return jsonify(ok=True)
+    return jsonify(draft=student_drafts.save(g.identity['owner_id'], attempt_id, body()))
+
 @api.post('/reviews/<review_id>/return-to-student')
 def return_review(review_id):
     return jsonify(attempt=student_store.return_review(g.identity['owner_id'],review_id,body()))

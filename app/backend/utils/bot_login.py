@@ -97,19 +97,32 @@ def event_request(update, now=None):
                   '/draft':'draft','/pdf':'compile','проверил, собрать pdf':'compile','/files':'files',
                   '/check':'check','проверить пачку':'check','/next':'review_next','следующий сомнительный':'review_next','проверка ответов':'review_next',
                   '/summary':'summary','итог урока':'summary','/repeat':'repeat','повторить ошибки':'repeat',
-                  '/cancel':'cancel','отмена':'cancel','на печать сегодня':'today'}
+                  '/cancel':'cancel','отмена':'cancel','на печать сегодня':'today',
+                  '/voice':'voice_help','лист голосом':'voice_help','/my':'student_home','мои работы':'student_home'}
         if command in commands:action=commands[command]
         else:
             attachments=body.get('attachments') or []
             if not isinstance(attachments,list) or len(attachments)>10:return None
             media=[a for a in attachments if isinstance(a,dict) and a.get('type') in ('image','file')]
-            if not media and not command.startswith('/лист '):return None
+            audio=[a for a in attachments if isinstance(a,dict) and a.get('type')=='audio']
+            if not media and not audio and not command.startswith(('/лист ','/тема ')):return None
             action='recognize';payload={'text':text[6:].strip() if command.startswith('/лист ') else text,'media':[]}
             for a in media:
                 p=a.get('payload')
                 if not isinstance(p,dict) or not isinstance(p.get('url'),str) or len(p['url'])>6000:return None
                 payload['media'].append({'url':p['url'],'type':a['type']})
             if media: action = 'chat_media'
+            if audio:
+                if len(audio)!=1 or media:return None
+                audio_payload=audio[0].get('payload')
+                if not isinstance(audio_payload,dict):return None
+                transcript=audio[0].get('transcription') or ''
+                url=audio_payload.get('url')
+                if not isinstance(transcript,str) or len(transcript)>2000:return None
+                if not isinstance(url,str) or len(url)>6000:return None
+                action='voice';payload={'url':url,'transcription':transcript}
+            elif command.startswith('/тема '):
+                action='voice_brief';payload={'text':text[6:].strip()}
         mid = body.get('mid')
         if not isinstance(mid, str) or not 1 <= len(mid) <= 200:
             return None

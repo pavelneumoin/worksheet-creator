@@ -70,7 +70,7 @@ function markDirty(value) {
 }
 function syncClosingConfirmation() {
   const method =
-    state.dirty ||
+    state.dirty || (typeof studentAttemptDirty !== "undefined" && studentAttemptDirty) ||
     (typeof hasUnsavedReview === "function" && hasUnsavedReview())
       ? "enableClosingConfirmation"
       : "disableClosingConfirmation";
@@ -125,7 +125,7 @@ function step(number) {
     $("step" + number).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function showView(view, refresh = true) {
-  if(typeof guardStudentLeave === "function" && !guardStudentLeave())return false;
+  if(typeof guardStudentLeave === "function" && !guardStudentLeave(() => showView(view, refresh)))return false;
   if (view === "home") view = "workspace";
   if (
     typeof guardReviewNavigation === "function" &&
@@ -134,6 +134,7 @@ function showView(view, refresh = true) {
     return;
   if (view !== "classes" && typeof resetReviewEditor === "function")
     resetReviewEditor();
+  if (view !== "student" && typeof resetStudentEditor === "function") resetStudentEditor();
   const changedView = state.view !== view;
   state.view = view;
   $("resumeSheet").hidden = !(
@@ -1535,10 +1536,11 @@ document.addEventListener("DOMContentLoaded", () => busy("Открываем в�
     if (state.auth?.authenticated) {
       const requested = new URLSearchParams(location.search).get("open") || "";
       if (requested === "demo") { await enterDemo(); return; }
-      if (/^(?:review|batch|assignment|report|material):[a-f0-9]{32}$/.test(requested)) {
+      if (/^(?:review|batch|assignment|report|material|student):[a-f0-9]{32}$/.test(requested)) {
         const [kind,id] = requested.split(":");
         const url = new URL(location.href); url.searchParams.delete("open"); history.replaceState(null,"",url.pathname + url.search + url.hash);
-        if (kind === "review") await openReview(id);
+        if (kind === "student") await openStudentAssignment(id);
+        else if (kind === "review") await openReview(id);
         else if (kind === "batch") await openBatch(id);
         else if (kind === "assignment") await openAssignment(id);
         else if (kind === "report") await openClassReport(id);

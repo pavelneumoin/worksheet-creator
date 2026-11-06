@@ -225,6 +225,7 @@ async function enqueueJob(kind, body, json = true) {
 }
 
 async function openJobResult(job, chosenMaterial = null) {
+  if(job.kind === "voice_transcribe"){notice("Распознанный запрос: "+job.result.text+" · Подтвердите создание листа в чате MAX.");return;}
   if(job.kind === "material_form"){const link=node("a","Скачать бланк A4","button primary");link.href=job.result.pdf_url;link.target="_blank";link.rel="noopener";bindArtifactDownload(link,job.result.artifact_id,"pdf_url","Бланк ответов.pdf");$("activityTray").append(link);notice("Бланк готов.");return;}
   if(job.kind === "solution_review") return job.result.target_kind === "student" ? openStudentAttempt(job.result.target_id) : openReview(job.result.target_id);
   if(job.kind === "student_grade") return openStudentAttempt(job.result.student_attempt_id);

@@ -4,7 +4,7 @@ function renderSolutionAnalysis(target,kind,data,hasScans){
   const current=data.solution_analysis;
   if(hasScans){box.append(classButton(current?"Повторить анализ решения":"Анализировать ход решения",()=>busy("Отправляем решение",async()=>{
     if(kind==="review")await flushReviewDraft();
-    if(kind==="student"&&studentAttemptDirty){notice("Сначала завершите проверку или обновите попытку: в форме есть несохранённые изменения.");return;}
+    if(kind==="student")await flushStudentDraft();
     await request(`/api/v2/solution-analysis/${kind}/${data.id}`,{method:"POST",headers:{"Idempotency-Key":crypto.randomUUID()}});
     await refreshJobs();notice("Анализ выполняется. Результат появится в задачах.");
   }),"secondary"));}

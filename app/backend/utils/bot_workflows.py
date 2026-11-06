@@ -289,6 +289,11 @@ def handle(client,item):
         try: client.call('POST','/answers',params={'callback_id':data['callback_id']},json={'notification':'Открываю…'})
         except Exception: pass # A failed spinner acknowledgement must not erase a valid action.
         action,data=take_action(user,data['token'])
+    if action=='voice_generate':
+        from utils.voice_sheet import brief
+        job_store.submit(owner(user),'voice_generate',item['id'],{'text':brief(data.get('text')),'_bot_user':user,'variant_count':1})
+        client.send(user,'Готовлю задания и ответы по вашему запросу. Лист сохранится в библиотеке; после проверки черновика нажмите «Проверил, собрать PDF».')
+        return
     if action=='cancel': clear_context(user);client.send(user,'Ожидание сканов отменено. Фото снова создаёт рабочий лист; /check — начать проверку.');return
     if action=='today': return today(client,user)
     if action in ('check','review_next','summary','repeat') and not data.get('assignment_id'):

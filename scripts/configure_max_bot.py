@@ -29,6 +29,8 @@ def main():
         client.call('PATCH', '/me/commands', json={'commands': [
             {'name': 'start', 'description': 'Открыть личный кабинет ЛистОК'},
             {'name': 'login', 'description': 'Получить новую ссылку для входа'},
+            {'name': 'voice', 'description': 'Создать лист по голосовому запросу'},
+            {'name': 'my', 'description': 'Мои работы и исправления ученика'},
             {'name': 'quick', 'description': 'Создать лист прямо в чате'},
             {'name': 'today', 'description': 'PDF для сегодняшних уроков'},
             {'name': 'check', 'description': 'Проверить PDF с работами класса'},

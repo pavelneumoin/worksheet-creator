@@ -69,6 +69,12 @@ def execute(job_id):
             from utils.answer_forms import compile_blank
             compile_blank(payload['worksheet'], base + '_answer_form')
             result = {'ok': True}
+        elif job['kind'] == 'voice_transcribe':
+            from utils.voice_sheet import transcribe
+            result={'text':transcribe(directory/payload['images'][0],directory)}
+        elif job['kind'] == 'voice_generate':
+            from utils.voice_sheet import generate
+            result={'worksheets':[generate(payload['text'])]}
         elif job['kind'] == 'material_form':
             from utils.answer_forms import compile_blank
             compile_blank(payload['worksheet'],'job_'+job_id)
@@ -139,7 +145,7 @@ def run_one(lane, worker_id, stop=None, timeout_override=None):
     command = [sys.executable, str(ROOT / 'scripts/run_worker.py'), '--execute', job['id']]
     count = json.loads(job['payload']).get('variant_count', 1)
     payload = json.loads(job['payload'])
-    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'answer_forms': 300, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', [])), 'batch_grade':12300,'analytics_pdf':180,'analytics_insight':300,'roster_recognize':780,'student_grade':3300,'solution_review':3600,'material_form':180}[job['kind']]
+    timeout = timeout_override if timeout_override is not None else {'recognize': 1500 + 300 * (count - 1), 'variant': 300 * count, 'compile': 180, 'answer_forms': 300, 'report_pdf': 180, 'grade': 30 + 300 * len(payload.get('images', [])), 'batch_grade':12300,'analytics_pdf':180,'analytics_insight':300,'roster_recognize':780,'student_grade':3300,'solution_review':3600,'material_form':180,'voice_transcribe':180,'voice_generate':600}[job['kind']]
     process = None
     succeeded = False
     try:

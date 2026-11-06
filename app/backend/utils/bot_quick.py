@@ -54,7 +54,7 @@ def remember(user,job):
 def draft(owner):
     with workspace_store.connection() as conn:
         row=conn.execute('SELECT * FROM bot_drafts WHERE owner_id=?',(owner,)).fetchone()
-        latest=conn.execute("SELECT j.result FROM bot_runs r JOIN jobs j ON j.id=r.job_id WHERE j.owner_id=? AND j.kind IN ('recognize','variant') AND j.status='succeeded' ORDER BY j.created_at DESC LIMIT 1",(owner,)).fetchone()
+        latest=conn.execute("SELECT j.result FROM bot_runs r JOIN jobs j ON j.id=r.job_id WHERE j.owner_id=? AND j.kind IN ('recognize','variant','voice_generate') AND j.status='succeeded' ORDER BY j.created_at DESC LIMIT 1",(owner,)).fetchone()
     # A crash between committing the material and sending its preview must not hide it.
     if latest:
         ident=json.loads(latest['result'])['material_id']
@@ -78,7 +78,7 @@ def show_draft(client,user,material):
 def deliver_files(client,user,material):
     result=material.get('result')
     if not result:raise AIServiceError('PDF ещё не готов. Проверьте черновик /draft, затем отправьте /pdf.','no_bot_pdf',409)
-    for key,title in (('pdf_url','Рабочий лист.pdf'),('keys_url','Ответы.pdf'),('teacher_url','Комплект учителя.pdf')):
+    for key,title in (('pdf_url','Рабочий лист.pdf'),('keys_url','Ответы.pdf'),('teacher_url','Комплект учителя.pdf'),('answer_form_url','Бланк ответов.pdf')):
         if result.get(key):
             name=Path(urlsplit(result[key]).path).name
             if not workspace_store.owns_file(f'max:{user}',name):raise AIServiceError('Файл недоступен.','artifact_missing',404)
@@ -88,6 +88,25 @@ def deliver_files(client,user,material):
 def handle(client,item):
     user=item['user_id'];owner=f'max:{user}';action=item['action']
     with workspace_store.connection() as conn:conn.execute('INSERT INTO users VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET first_name=excluded.first_name',(owner,item['first_name'],'max'))
+    if action=='student_home':
+        from utils import student_store, bot_workflows
+        works=student_store.overview(owner)
+        buttons=[[bot_workflows.web_button(user,item['first_name'],'student:'+a['id'],a['title'][:60])] for a in works[:8]]
+        if not buttons:
+            return client.send(user,'Подключитесь к классу по приглашению учителя в разделе «Кабинет ученика». Для входа — /start.')
+        return client.send(user,'Ваши работы. Личные ссылки для входа действуют 5 минут.',buttons=buttons)
+    if action in ('voice','voice_brief','voice_help'):
+        from utils import voice_sheet, bot_workflows
+        bot_workflows.clear_context(user)
+        if action=='voice_help':
+            return client.send(user,'Запишите голосовое до 2 минут: тема, класс, число заданий, сложность и оформление.\n\nНапример: «Математика, восьмой класс, шесть квадратных уравнений, от простых к сложным, два столбца без клеток».\n\nСначала покажу распознанный запрос. Исправить текст можно командой /тема и новым описанием.')
+        data=json.loads(item.get('payload') or '{}') if isinstance(item.get('payload'),str) else item.get('payload',{})
+        if action=='voice_brief' or data.get('transcription'):
+            return voice_sheet.preview(client,user,data.get('text') if action=='voice_brief' else data['transcription'])
+        with tempfile.TemporaryDirectory(prefix='listok-voice-') as temporary:
+            path=voice_sheet.download(data.get('url'),temporary,getattr(client,'verify',True))
+            job_store.submit(owner,'voice_transcribe',item['id'],{'_bot_user':user},[path])
+        return client.send(user,'Голосовое принято. Распознаю запрос и пришлю его для подтверждения.')
     if action in ('callback','check','review_next','summary','repeat','cancel','chat_media','today'):
         from utils import bot_workflows
         return bot_workflows.handle(client,item)
@@ -124,7 +143,10 @@ def poll(client):
     try:
         job=job_store.get_job(f"max:{item['user_id']}",item['job_id'])
         if job['status']!='succeeded':client.send(item['user_id'],'Обработка не завершена. '+(job.get('error') or 'Запрос отменён.'))
-        elif item['kind'] in ('recognize','variant'):show_draft(client,item['user_id'],workspace_store.get_material(f"max:{item['user_id']}",job['result']['material_id']))
+        elif item['kind']=='voice_transcribe':
+            from utils import voice_sheet
+            voice_sheet.preview(client,item['user_id'],job['result']['text'])
+        elif item['kind'] in ('recognize','variant','voice_generate'):show_draft(client,item['user_id'],workspace_store.get_material(f"max:{item['user_id']}",job['result']['material_id']))
         elif item['kind'] in ('batch_grade','answer_forms','report_pdf'):
             from utils import bot_workflows
             with workspace_store.connection() as conn:

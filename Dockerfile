@@ -3,7 +3,7 @@ FROM python:3.13-slim-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates texlive-latex-base texlive-latex-extra texlive-lang-cyrillic \
     texlive-xetex texlive-fonts-recommended fonts-dejavu-core fonts-liberation \
-    cm-super lmodern \
+    cm-super lmodern ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 COPY run_local.py ./
 COPY scripts ./scripts
+RUN python scripts/install_voice_model.py /opt
 COPY tests ./tests
 RUN useradd --create-home --uid 10001 listok \
     && mkdir -p /app/app/backend/static/generated /app/app/backend/uploads /app/data/jobs \

@@ -246,6 +246,17 @@ def init_db():
             FOREIGN KEY(assignment_id,student_id) REFERENCES assignment_students(assignment_id,student_id)
         );
         CREATE INDEX IF NOT EXISTS student_attempts_owner ON student_attempts(owner_id,status,updated_at);
+        CREATE TABLE IF NOT EXISTS student_attempt_drafts (
+            attempt_id TEXT PRIMARY KEY REFERENCES student_attempts(id) ON DELETE CASCADE,
+            base_revision INTEGER NOT NULL, revision TEXT NOT NULL, request_id TEXT NOT NULL,
+            payload TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS student_notifications (
+            id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL REFERENCES student_attempts(id) ON DELETE CASCADE,
+            attempt_revision INTEGER NOT NULL, user_id TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued',
+            tries INTEGER NOT NULL DEFAULT 0, due_at REAL NOT NULL, updated_at REAL NOT NULL,
+            UNIQUE(attempt_id,attempt_revision)
+        );
         CREATE TABLE IF NOT EXISTS solution_analyses (
             id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
             target_kind TEXT NOT NULL, target_id TEXT NOT NULL, base_revision INTEGER NOT NULL,

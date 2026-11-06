@@ -10,6 +10,11 @@ from utils import bot_login
 class AttachmentPending(RuntimeError):
     pass
 
+class APIError(RuntimeError):
+    def __init__(self, status):
+        self.status = status
+        super().__init__('MAX API HTTP ' + str(status))
+
 
 def app_origin():
     value = os.environ.get('MAX_APP_URL', '').rstrip('/')
@@ -51,7 +56,7 @@ class Client:
             try:
                 if response.json().get('code')=='attachment.not.ready':raise AttachmentPending()
             except ValueError:pass
-            raise RuntimeError('MAX API HTTP ' + str(response.status_code))
+            raise APIError(response.status_code)
         result = response.json()
         if not isinstance(result, dict) or result.get('success') is False:
             raise RuntimeError('MAX API rejected request')
@@ -108,7 +113,7 @@ def reply(client, item):
         return
     if item['action'] == 'help':
         body = {'text': 'ЛистОК помогает подготовить задания, варианты и PDF, назначить работу классу и собрать отчёт.\n\n'
-                        'Быстрый лист: /quick или пришлите фото. /today — комплект на сегодня. /check — проверить пачку, /next — сомнительные ответы, /summary — итог урока, /repeat — повторить ошибки. /draft — черновик, /pdf — собрать, /files — повторить PDF, /cancel — отменить ожидание сканов.\n\n'
+                        'Быстрый лист: /quick, фото или голосовое сообщение. /voice — пример, /my — кабинет ученика. /today — комплект на сегодня. /check — проверить пачку, /next — сомнительные ответы, /summary — итог урока, /repeat — повторить ошибки. /draft — черновик, /pdf — собрать, /files — повторить PDF, /cancel — отменить ожидание сканов.\n\n'
                         'Отправьте /start — получите личную ссылку для входа на 5 минут. '
                         'Откройте её и подтвердите свой профиль. В кабинете можно начать с готового примера.\n\n'
                         'Условия и ответы ИИ проверяет учитель. Оценки попадают в отчёт после вашего подтверждения.'}
@@ -123,6 +128,7 @@ def reply(client, item):
                 'attachments': [{'type': 'inline_keyboard', 'payload': {'buttons': [
                     [{'type': 'link', 'text': 'Открыть ЛистОК', 'url': url}],
                     [{'type':'message','text':'Быстрый лист'},{'type':'message','text':'На печать сегодня'}],
+                    [{'type':'message','text':'Лист голосом'},{'type':'message','text':'Мои работы'}],
                     [{'type':'message','text':'Проверить пачку'},{'type':'message','text':'Итог урока'}],
                     [{'type':'message','text':'Проверка ответов'},{'type':'message','text':'Повторить ошибки'}],
                     [{'type':'message','text':'Посмотреть демо'}]]}}]}
