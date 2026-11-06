@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import socket
 import uuid
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 import unittest
 import test_bot_login as login
 from utils import bot_login,bot_quick,job_store,workspace_store,max_bot,backup
@@ -79,5 +79,29 @@ class QuickTests(unittest.TestCase):
         bot_quick.handle(fake,self.item('draft'))
         self.assertTrue(any('Ответ:' in m[1] for m in fake.messages))
         self.assertEqual(bot_quick.draft('max:11')[1],1)
+
+class DeliveryRateTests(unittest.TestCase):
+    def test_long_preview_respects_per_conversation_limit_even_after_timeout(self):
+        clock=[100.0];sent=[]
+        def sleep(delay):clock[0]+=delay
+        response=Mock(status_code=200)
+        response.json.return_value={'message':{'body':{'mid':'test'}}}
+        def request(*args,**kwargs):
+            sent.append((kwargs['params']['user_id'],clock[0]))
+            if len(sent)==3:raise TimeoutError('Delivery is ambiguous')
+            return response
+        with patch.dict('os.environ',{'MAX_BOT_TOKEN':'test-only'}), patch('utils.max_bot.time.monotonic',side_effect=lambda:clock[0]), patch('utils.max_bot.time.sleep',side_effect=sleep):
+            client=max_bot.Client()
+            try:
+                with patch.object(client.session,'request',side_effect=request):
+                    client.send(11,'first');client.send(11,'second')
+                    with self.assertRaises(TimeoutError):client.send(11,'third')
+                    client.send(22,'independent conversation')
+                    client.send(11,'fourth')
+            finally:client.close()
+        same=[stamp for user,stamp in sent if user==11]
+        self.assertEqual(len(same),4) # The failed request was not automatically retried.
+        for start in same:self.assertLessEqual(sum(start<=stamp<start+1 for stamp in same),2)
+        self.assertEqual(sent[2][1],sent[3][1]) # Other recipients are not delayed.
 
 if __name__=='__main__':unittest.main()

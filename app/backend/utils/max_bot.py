@@ -28,8 +28,23 @@ class Client:
         self.session = requests.Session()
         self.session.headers['Authorization'] = token
         self.verify = os.environ.get('MAX_CA_BUNDLE_FILE', '').strip() or True
+        self._message_times = {}
 
     def call(self, method, path, **kwargs):
+        # MAX allows two messages per second in one conversation. The single
+        # delivery worker reuses this client for previews, files and login replies.
+        if method == 'POST' and path == '/messages':
+            params = kwargs.get('params', {})
+            recipient = ('user', str(params['user_id'])) if 'user_id' in params else ('chat', str(params.get('chat_id')))
+            now = time.monotonic()
+            previous = self._message_times.get(recipient)
+            if previous is not None and previous + .55 > now:
+                time.sleep(previous + .55 - now)
+                now = time.monotonic()
+            # Reserve before the request: an ambiguous timeout may still be delivered.
+            self._message_times[recipient] = now
+            if len(self._message_times) > 1024:
+                self._message_times = {key: stamp for key, stamp in self._message_times.items() if now - stamp < 1}
         response = self.session.request(method, 'https://platform-api2.max.ru' + path,
                                         verify=self.verify, timeout=(5, 10), allow_redirects=False, **kwargs)
         if response.status_code != 200:
