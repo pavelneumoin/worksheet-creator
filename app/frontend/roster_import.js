@@ -24,13 +24,15 @@ function renderLocalRosterImport(target, classroom) {
       const added=after.students.filter(s=>!ids.has(s.id));
       if(added.length!==rows.length)throw new Error("Список изменился на другом устройстве. Обновите класс; повторно коды не создавались.");
       mapping=added.map((s,i)=>[s.code,rows[i]]);classState.current=after;
+      const countLabel=target.querySelector('.class-heading .quiet');
+      if(countLabel)countLabel.textContent=`Учеников: ${after.student_count} · Активных работ: ${after.assignment_count}`;
       const download=classButton("Скачать таблицу имён и кодов",()=>{
         const cell=s=>'"'+(/^[=+@\-\t\r]/.test(s)?"'":"")+s.replaceAll('"','""')+'"';
         const csv="\uFEFF"+[["Код ученика","ФИО"],...mapping].map(row=>row.map(cell).join(";")).join("\r\n");
         const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})),a=node("a");
         a.href=url;a.download="Ученики — "+classroom.name.replace(/[<>:\"/\\|?*]/g,"_")+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
       },"primary");
-      result.replaceChildren(node("p",`Готово: ${mapping.length} учеников. Скачайте таблицу до перехода на другую страницу — имена нигде не сохраняются.`),download,classButton("Таблица сохранена — открыть класс",()=>busy("Открываем класс",()=>openClass(classroom.id))));
+      result.replaceChildren(node("p",`Кодов создано: ${mapping.length}. Скачайте таблицу до перехода на другую страницу — имена нигде не сохраняются.`),download,classButton("Таблица сохранена — открыть класс",()=>busy("Открываем класс",()=>openClass(classroom.id))));
       input.value="";label.hidden=true;submit.hidden=true;preview.hidden=true;
     });
     if(!mapping){submit.disabled=false;input.disabled=false;}
