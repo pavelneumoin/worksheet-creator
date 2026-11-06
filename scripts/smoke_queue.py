@@ -5,6 +5,7 @@ import sys
 import tempfile
 import uuid
 from zipfile import ZipFile
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'app/backend'))
@@ -41,7 +42,10 @@ def main():
             assert {'worksheet.md','answers.md','listok.css','README.txt'}==set(package.namelist())
         assert not job_store.job_directory(job['id']).exists()
         classroom = class_store.create_class('smoke', {'name':'Report smoke'})
-        classroom = class_store.add_students('smoke', classroom['id'], {'revision':classroom['revision'],'count':2})
+        # FA kerning can become an extra space in PDF text extraction. Keep that
+        # case deterministic instead of occasionally failing on a random UUID.
+        with patch('utils.class_store.uuid.uuid4', side_effect=[uuid.UUID('f39ae5fa63'+'0'*22), uuid.UUID('6fa7b395ad'+'0'*22)]):
+            classroom = class_store.add_students('smoke', classroom['id'], {'revision':classroom['revision'],'count':2})
         assignment, _ = class_store.assign('smoke', classroom['id'], {'revision':classroom['revision'],'edition_id':job['id'],
             'title':'Private report smoke','request_key':uuid.uuid4().hex})
         export, _ = job_store.submit('smoke','report_pdf',uuid.uuid4().hex,{'assignment_id':assignment['id']},require_worker=False)
@@ -51,7 +55,9 @@ def main():
         report_path = Path(directory)/'generated'/export['result']['pdf_url'].rsplit('/',1)[-1]
         from pypdf import PdfReader
         text = '\n'.join(page.extract_text() or '' for page in PdfReader(report_path).pages)
-        assert 'Private report smoke' in text and 'Прочерк означает' in text and classroom['students'][0]['code'] in text
+        assert 'Private report smoke' in text and 'Прочерк означает' in text
+        compact = ''.join(text.split())
+        assert all(student['code'] in compact for student in classroom['students']), repr(text)
         assert workspace_store.owns_file('smoke',report_path.name)
         assert not workspace_store.owns_file('other',report_path.name)
         assert not job_store.job_directory(export['id']).exists()
