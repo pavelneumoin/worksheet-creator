@@ -54,8 +54,8 @@ function renderLocalRosterImport(target, classroom, recognized = null, jobId = n
   files.type = "file"; files.accept = "image/jpeg,image/png"; files.multiple = true;
   photoLabel.append(files);
   const photoInfo = node("p", "До 3 фото PNG/JPEG · до 100 учеников · до 15 МБ на фото и 20 МБ всего. Снимите только столбец с именами.", "quiet");
-  const privacy = node("p", "По кнопке фото отправятся в GigaChat. На нашем сервере фото удаляются после обработки, временный результат — после создания кодов или через 15 минут. Имена не входят в базу учеников и резервные копии.", "quiet");
-  const recognize = classButton("Распознать фото в GigaChat", async () => {
+  const privacy = node("p", "Фото обрабатывает внешний сервис распознавания. На нашем сервере фото удаляются после обработки, временный список — после создания кодов или через 15 минут. В базе учеников сохраняются только коды.", "quiet");
+  const recognize = classButton("Распознать список", async () => {
     const selected = Array.from(files.files);
     if (!selected.length || selected.length > 3 || selected.some(f => f.size > 15 * 1024 * 1024) || selected.reduce((s,f) => s+f.size, 0) > 20 * 1024 * 1024)
       return notice("Выберите от 1 до 3 фото: до 15 МБ каждое, всего до 20 МБ.", true);

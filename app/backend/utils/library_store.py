@@ -5,12 +5,13 @@ import uuid
 from utils.gigachat_client import AIServiceError
 from utils.worksheet import text_field, validate_worksheet
 from utils.workspace_store import connection, material_row, missing, timestamp
+from utils.demo_space import same_realm, realm
 
 PAGE_SIZE = 12
 
 
 def publication_row(conn, owner, row, detail=False):
-    if row is None:
+    if row is None or not same_realm(owner, row['owner_id']):
         missing()
     rating = conn.execute('SELECT AVG(stars),COUNT(*) FROM library_ratings WHERE publication_id=?',
                           (row['id'],)).fetchone()
@@ -40,7 +41,7 @@ def list_publications(owner, query='', subject='', sort='rating', page=1):
         raise AIServiceError('Выберите предмет и порядок материалов.', 'invalid_filter', 400)
     if type(page) is not int or not 1 <= page <= 10000:
         raise AIServiceError('Неверная страница библиотеки.', 'invalid_page', 400)
-    filters, params = ['1=1'], []
+    filters, params = (['p.owner_id LIKE ?'], [realm(owner)+'%']) if realm(owner) else (["p.owner_id NOT LIKE 'demo:%'"], [])
     if query:
         # instr treats %, _ and quotes literally, including Cyrillic casefold.
         filters.append('instr(p.search_text, ?) > 0'); params.append(query)
@@ -107,7 +108,7 @@ def rate(owner, publication_id, stars):
     with connection() as conn:
         conn.execute('BEGIN IMMEDIATE')
         row = conn.execute('SELECT * FROM library_publications WHERE id=?', (publication_id,)).fetchone()
-        if row is None:
+        if row is None or not same_realm(owner, row['owner_id']):
             missing()
         if row['owner_id'] == owner:
             raise AIServiceError('Свою публикацию оценивать нельзя.', 'own_rating', 403)
@@ -121,7 +122,7 @@ def copy_to_materials(owner, publication_id):
     with connection() as conn:
         conn.execute('BEGIN IMMEDIATE')
         row = conn.execute('SELECT * FROM library_publications WHERE id=?', (publication_id,)).fetchone()
-        if row is None:
+        if row is None or not same_realm(owner, row['owner_id']):
             missing()
         if conn.execute('SELECT COUNT(*) FROM materials WHERE owner_id=?', (owner,)).fetchone()[0] >= 500:
             raise AIServiceError('Достигнут предел: 500 материалов. Удалите ненужные листы.', 'materials_limit', 409)

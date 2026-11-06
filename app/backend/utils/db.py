@@ -30,6 +30,14 @@ def init_db():
             csrf TEXT NOT NULL, expires_at INTEGER NOT NULL
         );
         CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
+        CREATE TABLE IF NOT EXISTS demo_spaces (
+            real_owner TEXT PRIMARY KEY REFERENCES users(id), demo_owner TEXT NOT NULL UNIQUE REFERENCES users(id),
+            manifest TEXT NOT NULL, created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS demo_sessions (
+            session_hash TEXT PRIMARY KEY REFERENCES sessions(token_hash) ON DELETE CASCADE,
+            demo_owner TEXT NOT NULL REFERENCES users(id)
+        );
         CREATE TABLE IF NOT EXISTS bot_login_tokens (
             token_hash TEXT PRIMARY KEY, owner_id TEXT NOT NULL,
             first_name TEXT NOT NULL, expires_at INTEGER NOT NULL

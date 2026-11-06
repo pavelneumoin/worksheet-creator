@@ -41,7 +41,7 @@ function templatePicker(select) {
 
 const studioPreview=node("section",undefined,"studio-preview");
 studioPreview.setAttribute("aria-label","Схема выбранного макета");
-studioPreview.append(node("p","ВАШ МАКЕТ","eyebrow"),node("h3","Лист, который хочется решать"));
+studioPreview.append(node("h3","Макет листа"));
 const studioPaper=node("div",undefined,"studio-paper");studioPaper.setAttribute("aria-hidden","true");
 const studioPreviewCaption=node("p",undefined,"preview-caption");
 const studioPreviewWarning=node("p",undefined,"preview-warning");studioPreviewWarning.setAttribute("role","status");

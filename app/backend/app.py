@@ -45,6 +45,8 @@ from batch_api import api as batch_api
 app.register_blueprint(batch_api)
 from school_api import api as school_api
 app.register_blueprint(school_api)
+from demo_api import api as demo_api
+app.register_blueprint(demo_api)
 
 
 @app.before_request

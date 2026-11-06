@@ -221,7 +221,8 @@ def download_file(ticket, filename):
         now = int(time.time())
         row = conn.execute('''SELECT a.pdf,a.answers,a.tex,a.marp,a.teacher FROM download_tickets d
                               JOIN sessions s ON s.token_hash=d.session_hash
-                              JOIN artifacts a ON a.id=d.artifact_id AND a.owner_id=s.owner_id
+                              LEFT JOIN demo_sessions dm ON dm.session_hash=s.token_hash
+                              JOIN artifacts a ON a.id=d.artifact_id AND a.owner_id=COALESCE(dm.demo_owner,s.owner_id)
                               WHERE d.token_hash=? AND d.expires_at>? AND s.expires_at>?''',
                            (token_hash(ticket), now, now)).fetchone()
         if row is None or filename not in tuple(row):

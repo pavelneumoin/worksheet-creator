@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="/studio.css" />
     <link rel="stylesheet" href="/compact.css" />
     <link rel="stylesheet" href="/review_focus.css" />
+    <link rel="stylesheet" href="/refinement.css" />
     <script defer src="/vendor/katex/katex.min.js"></script>
     <script defer src="/jobs.js"></script>
     <script defer src="/script.js"></script>
@@ -27,6 +28,7 @@
     <script defer src="/studio.js"></script>
     <script defer src="/batch.js"></script>
     <script defer src="/analytics.js"></script>
+    <script defer src="/demo.js"></script>
     <script defer src="/mobile.js"></script>
   </head>
   <body>
@@ -46,10 +48,17 @@
           <button class="nav-button" id="classesNav">Классы</button>
           <button class="nav-button" id="scheduleNav">Расписание</button>
         </nav>
-        <span class="edition" id="accountName">ЛатехТим</span>
+        <div class="account-tools"><button id="demoEnter" class="button demo-launch" hidden>Посмотреть демо</button><span class="edition" id="accountName">ЛатехТим</span></div>
       </div>
     </header>
     <main class="page">
+      <section id="demoBar" class="demo-bar" hidden aria-label="Демонстрационный кабинет">
+        <div class="demo-bar-heading"><div><span class="demo-badge">ДЕМО</span><strong>Учебный кабинет</strong></div><button id="demoExit" class="button ghost">В мой кабинет</button></div>
+        <details id="demoGuide"><summary>Сценарий проверки <span>материалы · классы · результаты</span></summary><div id="demoSteps" class="demo-steps"></div>
+          <div class="demo-files"><strong>Файлы для загрузки</strong><a class="button secondary" href="/api/v2/demo-space/files/fractions.png" download>Фото заданий</a><a class="button secondary" href="/api/v2/demo-space/files/roster.png" download>Список учеников</a><a id="demoScanDownload" class="button secondary">PDF с ответами</a></div>
+          <p class="demo-note">Все данные учебные. Результаты подготовлены заранее; загрузка новых файлов запускает обычное распознавание.</p>
+        </details>
+      </section>
       <div
         id="notice"
         class="notice"
@@ -59,9 +68,6 @@
       ></div>
       <details id="jobsPanel" class="jobs-panel" hidden>
         <summary>Задачи <span id="jobsSummary" role="status"></span></summary>
-        <p class="quiet">
-          Можно закрыть приложение. Результат сохраним в вашем кабинете.
-        </p>
         <p id="jobsConnection" class="quiet" role="status" hidden></p>
         <div id="submissionRetry" class="job-retry" hidden>
           <p>
@@ -92,13 +98,10 @@
         <div id="classesHome">
           <div class="section-title">
             <div>
-              <p class="eyebrow">КАБИНЕТ УЧИТЕЛЯ</p>
               <h1>Мои классы</h1>
-              <p class="quiet">
-                Ученики, рабочие листы и сроки — в одном месте.
-              </p>
             </div>
           </div>
+          <details class="class-create-disclosure"><summary class="button primary">＋ Новый класс</summary>
           <form id="newClassForm" class="panel class-create">
             <label for="newClassName"
               >Название класса<input
@@ -109,6 +112,7 @@
             /></label>
             <button class="button primary" type="submit">Создать класс</button>
           </form>
+          </details>
           <label class="class-filter"
             >Показывать<select id="classArchiveFilter">
               <option value="active">Мои классы</option>
@@ -215,14 +219,10 @@
       <section id="scheduleView" hidden>
         <div class="section-title">
           <div>
-            <p class="eyebrow">УЧЕБНЫЙ КАЛЕНДАРЬ</p>
             <h1>Расписание работ</h1>
-            <p class="quiet">
-              Дата проведения и сохранённая версия каждого листа.
-            </p>
           </div>
         </div>
-        <div class="panel schedule-panel">
+        <div class="schedule-layout"><div class="panel schedule-panel">
           <div class="month-controls">
             <button
               id="previousMonth"
@@ -244,23 +244,15 @@
             class="month-grid"
             aria-label="Работы по дням месяца"
           ></div>
-          <p class="quiet">
-            Точка под датой — есть назначенная работа. Откройте её в списке
-            ниже.
-          </p>
         </div>
-        <div id="scheduleList" class="saved-list"></div>
+        <div class="schedule-agenda"><div class="agenda-heading"><h2 id="scheduleDayTitle">Работы на месяц</h2><button id="scheduleAllDays" class="button ghost" hidden>Весь месяц</button></div><div id="scheduleList" class="saved-list"></div></div></div>
         <button id="scheduleClasses" class="button secondary">
           Назначить работу классу
         </button>
       </section>
       <section id="workspace" hidden>
         <div class="workspace-heading">
-          <p class="eyebrow">МАСТЕРСКАЯ УЧИТЕЛЯ</p>
-          <h1>Хороший урок начинается здесь.</h1>
-          <p class="quiet">
-            Добавьте задания. Лист, ответы и варианты — соберём вместе.
-          </p>
+          <h1>Создать рабочий лист</h1>
         </div>
         <ol class="steps" aria-label="Этапы создания листа">
           <li class="current" data-step="1"><span>1</span>Материал</li>
@@ -394,10 +386,6 @@
                   <option value="4">Четыре: исходный и три аналогичных</option>
                 </select></label
               >
-              <p class="quiet">
-                Ответы подготовим для каждого варианта. Перед печатью их можно
-                проверить и исправить.
-              </p>
               <div class="actions">
                 <button class="button primary" id="recognizeBtn">
                   Подготовить задания →</button
@@ -407,11 +395,7 @@
               </div>
               <div class="demo-strip">
                 <div>
-                  <strong>Сначала попробовать?</strong>
-                  <p>
-                    Откройте готовый пример — фотографии и подключение ИИ не
-                    нужны.
-                  </p>
+                  <strong>Готовый образец</strong>
                 </div>
                 <button class="button secondary" id="demoBtn">
                   Открыть пример
@@ -617,8 +601,7 @@
               <div class="panel-heading">
                 <span class="section-number">✓</span>
                 <div>
-                  <h2 id="resultTitle">Можно готовиться к уроку</h2>
-                  <p>Откройте лист и ответы перед печатью.</p>
+                  <h2 id="resultTitle">Рабочий лист готов</h2>
                 </div>
               </div>
               <div class="download-actions">
@@ -650,11 +633,7 @@
                 </p>
               </details>
               <div class="variant-panel">
-                <h3>Для другого варианта или уровня</h3>
-                <p>
-                  Исходный лист сохранится. Новый вариант нужно проверить
-                  отдельно.
-                </p>
+                <h3>Новый вариант</h3>
                 <label class="variant-count"
                   >Новых вариантов<select id="resultVariantCount">
                     <option>1</option>
@@ -721,11 +700,7 @@
       <section id="savedView" hidden>
         <div class="saved-heading">
           <div>
-            <p class="eyebrow">ПРОДОЛЖИТЬ РАБОТУ</p>
             <h1>Мои материалы</h1>
-            <p class="lead">
-              Ваш кабинет: черновики, папки и сохранённые версии для печати.
-            </p>
           </div>
           <button class="button primary" id="newSheetBtn">
             ＋ Создать лист
@@ -772,12 +747,7 @@
         <div id="libraryBrowse">
           <div class="saved-heading library-heading">
             <div>
-              <p class="eyebrow">УЧИТЕЛЯ ДЕЛЯТСЯ ОПЫТОМ</p>
               <h1>Библиотека материалов</h1>
-              <p class="lead">
-                Найдите основу для своего урока. Сохраните к себе, измените под
-                класс и распечатайте.
-              </p>
             </div>
             <button id="shareFromSaved" class="button secondary">
               Поделиться листом
@@ -806,7 +776,7 @@
               >
               <label
                 >Показывать<select id="librarySort">
-                  <option value="rating">Сначала с высокой оценкой</option>
+                  <option value="rating">По оценке</option>
                   <option value="new">Сначала новые</option>
                   <option value="copies">Чаще берут за основу</option>
                   <option value="mine">Мои публикации</option>

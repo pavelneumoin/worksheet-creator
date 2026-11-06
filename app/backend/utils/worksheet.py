@@ -152,7 +152,7 @@ def parse_ai_worksheet(content, subject):
         result.update(schema_version=1, subject=subject)
         return validate_worksheet(result)
     except (ValueError, AIServiceError) as exc:
-        raise AIServiceError("Не удалось разобрать задания в ответе ИИ. Попробуйте более чёткое фото или меньший фрагмент.",
+        raise AIServiceError("Не удалось прочитать задания. Загрузите более чёткое фото или меньший фрагмент.",
                              "ai_invalid_response", 502) from exc
 
 

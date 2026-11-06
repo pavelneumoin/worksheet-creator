@@ -34,6 +34,7 @@ def main():
             {'name': 'check', 'description': 'Проверить PDF с работами класса'},
             {'name': 'next', 'description': 'Следующий сомнительный ответ'},
             {'name': 'summary', 'description': 'Итог урока и отчёт класса'},
+            {'name': 'demo', 'description': 'Учебные материалы, классы и статистика'},
             {'name': 'repeat', 'description': 'Лист по ошибкам класса'},
             {'name': 'cancel', 'description': 'Отменить ожидание сканов'},
             {'name': 'draft', 'description': 'Посмотреть последний черновик'},

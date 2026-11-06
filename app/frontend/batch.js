@@ -3,10 +3,10 @@ const batchState={current:null,assignment:null};
 const batchView=node("section");batchView.id="batchView";batchView.hidden=true;document.querySelector("main").append(batchView);
 const batchNav=node("button","Проверка работ","nav-button");batchNav.id="batchNav";batchNav.prepend(studioIcon("M9 11l3 3L22 4M21 12v8H3V3h14"));$("classesNav").before(batchNav);
 batchNav.addEventListener("click",()=>busy("Открываем проверку",openBatchHome));
-function batchHeading(title,sub) {const div=node("div",undefined,"section-title");const body=node("div");body.append(node("p","ПОСЛЕ УРОКА","eyebrow"),node("h1",title),node("p",sub,"quiet"));div.append(body);return div;}
+function batchHeading(title,sub) {const div=node("div",undefined,"section-title");const body=node("div");body.append(node("h1",title));if(sub)body.append(node("p",sub,"quiet"));div.append(body);return div;}
 async function openBatchHome(assignmentId = null, classId = null) {
   if(!state.auth?.authenticated){notice("Сначала войдите через MAX.",true);return;}
-  showView("batch",false);batchView.replaceChildren(batchHeading("Проверить работы класса","Один PDF из МФУ. Распознаем ответы, вы подтвердите результат."));
+  showView("batch",false);batchView.replaceChildren(batchHeading("Проверка работ"));
   const classes=(await request("/api/v2/classes")).classes.filter(c=>!c.archived||c.id===classId);
   if(!classes.length){batchView.append(node("p","Сначала создайте класс и назначьте готовый лист.","empty-state"),classButton("Перейти к классам",()=>showView("classes"),"primary"));return;}
   const form=node("form",undefined,"panel batch-upload"),grid=node("div",undefined,"form-grid");

@@ -92,7 +92,7 @@ def event_request(update, now=None):
         text = body.get('text') or ''
         if not isinstance(text,str) or len(text)>16000:return None
         command = text.strip().lower()
-        commands={'/start':'login','/login':'login','начать':'login','войти':'login','/help':'help',
+        commands={'/start':'login','/login':'login','начать':'login','войти':'login','/help':'help','/demo':'demo_login','посмотреть демо':'demo_login',
                   '/today':'today','сегодня':'today','/quick':'quick_help','быстрый лист':'quick_help',
                   '/draft':'draft','/pdf':'compile','проверил, собрать pdf':'compile','/files':'files',
                   '/check':'check','проверить пачку':'check','/next':'review_next','следующий сомнительный':'review_next','проверка ответов':'review_next',

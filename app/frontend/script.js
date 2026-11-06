@@ -887,7 +887,7 @@ function renderLibrary() {
         "p",
         filtered
           ? "Измените запрос или фильтры. Свои листы можно опубликовать из «Моих материалов»."
-          : "В библиотеке будут листы, которые учителя решили открыть коллегам. Оценки появятся после отзывов.",
+          : "Публикаций пока нет.",
       ),
     );
     target.append(empty);
@@ -1081,14 +1081,14 @@ async function refreshStatus() {
     const ai = state.status.ai_ready;
     $("recognizeBtn").disabled = !ai;
     $("aiCaption").textContent = ai
-      ? "Распознаем задания и подготовим ответы для проверки."
-      : "ИИ пока не подключён. Можно работать с примером.";
+      ? ""
+      : "Распознавание временно недоступно.";
     $("statusTitle").textContent = state.status.latex_ready
       ? "Печать доступна"
       : "PDF ещё не настроен";
     $("statusText").textContent = ai
       ? "Задания можно распознать по фото."
-      : "Готовые примеры доступны без GigaChat.";
+      : "Доступны готовые примеры.";
     $("statusDot").classList.toggle("ready", state.status.latex_ready);
   } catch (e) {
     notice(e.message, true);
@@ -1179,11 +1179,12 @@ function renderAccount() {
     : "Откройте приложение из своего бота MAX.";
   const local = state.auth?.user?.kind === "local";
   $("accountName").textContent = loggedIn
-    ? local
+    ? state.auth?.demo ? "Демо-кабинет" : local
       ? "Локальная проверка"
       : (state.auth.user.first_name || "Профиль") + " · MAX"
     : "ЛатехТим";
   $("logoutBtn").hidden = !loggedIn || local;
+  if (typeof renderDemoAccess === "function") renderDemoAccess();
 }
 $("fileInput").addEventListener("change", (e) => {
   addFiles([...e.target.files]);
@@ -1513,11 +1514,13 @@ $("classesNav").disabled = true;
 $("scheduleNav").disabled = true;
 updateCount();
 refreshStatus();
-busy("Открываем ваш профиль", async () => {
+document.addEventListener("DOMContentLoaded", () => busy("Открываем ваш профиль", async () => {
   try {
     await prepareMax();
+    if (state.auth?.demo && typeof loadDemoGuide === "function") await loadDemoGuide();
     if (state.auth?.authenticated) {
       const requested = new URLSearchParams(location.search).get("open") || "";
+      if (requested === "demo") { await enterDemo(); return; }
       if (/^(?:review|batch|assignment|report|material):[a-f0-9]{32}$/.test(requested)) {
         const [kind,id] = requested.split(":");
         const url = new URL(location.href); url.searchParams.delete("open"); history.replaceState(null,"",url.pathname + url.search + url.hash);
@@ -1532,4 +1535,4 @@ busy("Открываем ваш профиль", async () => {
     renderAccount();
     throw error;
   }
-});
+}), {once:true});

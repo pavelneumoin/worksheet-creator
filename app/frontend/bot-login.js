@@ -3,7 +3,7 @@
   const params = new URLSearchParams(location.hash.slice(1));
   const token = params.getAll("token").length === 1 ? params.get("token") : null;
   const requested = params.getAll("next").length === 1 ? params.get("next") : "";
-  const next = /^(?:review|batch|assignment|report|material):[a-f0-9]{32}$/.test(requested) ? requested : "";
+  const next = requested === "demo" || /^(?:review|batch|assignment|report|material):[a-f0-9]{32}$/.test(requested) ? requested : "";
   history.replaceState(null, "", location.pathname);
   const status = document.getElementById("loginStatus");
   const button = document.getElementById("confirmLogin");

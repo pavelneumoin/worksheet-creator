@@ -53,6 +53,12 @@ def load_session():
                                   WHERE token_hash=? AND expires_at>?''', (token_hash(raw), int(time.time()))).fetchone()
             if row and (row['kind'] != 'local' or local_allowed()):
                 g.identity = dict(row)
+                demo = conn.execute('''SELECT d.demo_owner FROM demo_sessions d JOIN demo_spaces p
+                    ON p.demo_owner=d.demo_owner AND p.real_owner=? WHERE d.session_hash=?''',
+                    (row['owner_id'],row['token_hash'])).fetchone()
+                if demo:
+                    g.identity.update(real_owner_id=row['owner_id'],owner_id=demo['demo_owner'],
+                                      first_name='Демо-кабинет',demo=True)
     # Unknown routes remain 404, without exposing any data.
     if request.endpoint is None or request.endpoint in PUBLIC_ENDPOINTS or not request.path.startswith('/api/'):
         return
@@ -67,20 +73,26 @@ def load_session():
 
 def session_json(identity):
     return {'authenticated': True, 'user': {'first_name': identity['first_name'], 'kind': identity['kind']},
-            'csrf_token': identity['csrf']}
+            'csrf_token': identity['csrf'], 'demo': bool(identity.get('demo'))}
 
 
-def issue_session(owner, name, kind):
+def issue_session(owner, name, kind, preserve_demo=False):
     raw, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
     now = int(time.time())
+    demo = None
     with connection() as conn:
         conn.execute('DELETE FROM sessions WHERE expires_at<=?', (now,))
         conn.execute('INSERT INTO users VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET first_name=excluded.first_name', (owner, name, kind))
         old = request.cookies.get(COOKIE, '')
         if old:
+            if preserve_demo:
+                demo=conn.execute('''SELECT d.demo_owner FROM demo_sessions d JOIN sessions s ON s.token_hash=d.session_hash
+                    JOIN demo_spaces p ON p.demo_owner=d.demo_owner AND p.real_owner=s.owner_id
+                    WHERE s.token_hash=? AND s.owner_id=? AND s.expires_at>?''',(token_hash(old),owner,now)).fetchone()
             conn.execute('DELETE FROM sessions WHERE token_hash=?', (token_hash(old),))
         conn.execute('INSERT INTO sessions VALUES (?,?,?,?)', (token_hash(raw), owner, csrf, now + TTL))
-    response = jsonify(session_json({'first_name': name, 'kind': kind, 'csrf': csrf}))
+        if demo:conn.execute('INSERT INTO demo_sessions VALUES(?,?)',(token_hash(raw),demo['demo_owner']))
+    response = jsonify(session_json({'first_name': 'Демо-кабинет' if demo else name, 'kind': kind, 'csrf': csrf, 'demo':bool(demo)}))
     response.set_cookie(COOKIE, raw, max_age=TTL, httponly=True, secure=not local_mode(),
                         samesite='Lax' if local_mode() else 'None', path='/')
     return response
@@ -123,7 +135,7 @@ def login_max():
         raise AIServiceError('Бот MAX пока не подключён.', 'max_not_configured', 503)
     data = request.get_json(silent=True)
     user = validate_init_data(data.get('init_data') if isinstance(data, dict) else None, token)
-    return issue_session(f"max:{user['id']}", user['first_name'], 'max')
+    return issue_session(f"max:{user['id']}", user['first_name'], 'max', preserve_demo=True)
 
 
 @auth.post('/local')

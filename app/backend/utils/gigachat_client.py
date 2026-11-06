@@ -33,6 +33,12 @@ def _configuration():
 
 
 def get_ai_status():
+    if os.environ.get('LISTOK_AI_PROVIDER', 'gigachat') == 'deepseek':
+        from utils.deepseek_client import configuration
+        key, model, _ = configuration()
+        return {'ai_ready': bool(key), 'ai_configured': bool(key), 'ai_model': model,
+                'ai_provider': 'DeepSeek', 'ai_connection_verified': False,
+                'ai_message': 'Сервис обработки настроен.' if key else 'Сервис обработки пока не подключён.'}
     credentials, _, model = _configuration()
     sdk_available = importlib.util.find_spec("gigachat") is not None
     configured = bool(credentials)
@@ -48,6 +54,12 @@ def get_ai_status():
 
 
 def _create_client(model=None):
+    provider = os.environ.get('LISTOK_AI_PROVIDER', 'gigachat')
+    if provider == 'deepseek':
+        from utils.deepseek_client import DeepSeekClient
+        return DeepSeekClient(model)
+    if provider != 'gigachat':
+        raise AIServiceError('Проверьте настройки сервиса обработки.', 'ai_configuration_error', 503)
     credentials, scope, configured_model = _configuration()
     if not credentials:
         raise AIServiceError("ИИ не подключён. Настройте ключ GigaChat или откройте ручной пример.",
@@ -265,6 +277,9 @@ $3\,\text{{м/с}}^2$, $6\,\text{{Н}}$. Текст условия вне фор
 
 
 def _provider_failure(exc):
+    if os.environ.get('LISTOK_AI_PROVIDER') == 'deepseek':
+        logger.warning('AI request failed (%s)', type(exc).__name__)
+        return AIServiceError('Сервис обработки временно недоступен. Повторите запрос позже.', 'ai_provider_error', 502)
     logger.warning("GigaChat request failed (%s)", type(exc).__name__)
     if "timeout" in type(exc).__name__.lower():
         return AIServiceError("GigaChat не ответил вовремя. Повторите запрос позже.",

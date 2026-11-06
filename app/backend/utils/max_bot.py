@@ -100,7 +100,7 @@ class Client:
 
 
 def reply(client, item):
-    if item['action'] not in ('help','login'):
+    if item['action'] not in ('help','login','demo_login'):
         from utils import bot_quick
         from utils.gigachat_client import AIServiceError
         try:bot_quick.handle(client,item)
@@ -116,6 +116,7 @@ def reply(client, item):
         origin = app_origin()
         token = bot_login.issue(item['user_id'], item['first_name'])
         url = origin + '/bot-login.html#token=' + token
+        if item['action']=='demo_login':url+='&next=demo'
         body = {'text': 'ЛистОК — от задания до рабочего листа и отчёта.\n\n'
                         'Откройте свой кабинет по кнопке. Ссылка действует 5 минут и только один раз; '
                         'не пересылайте её. Для нового входа отправьте /start.',
@@ -123,7 +124,11 @@ def reply(client, item):
                     [{'type': 'link', 'text': 'Открыть ЛистОК', 'url': url}],
                     [{'type':'message','text':'Быстрый лист'},{'type':'message','text':'На печать сегодня'}],
                     [{'type':'message','text':'Проверить пачку'},{'type':'message','text':'Итог урока'}],
-                    [{'type':'message','text':'Проверка ответов'},{'type':'message','text':'Повторить ошибки'}]]}}]}
+                    [{'type':'message','text':'Проверка ответов'},{'type':'message','text':'Повторить ошибки'}],
+                    [{'type':'message','text':'Посмотреть демо'}]]}}]}
+        if item['action']=='demo_login':
+            body['text']='Демо-кабинет: готовые листы, классы, сканы и статистика школы. Все данные учебные.\n\nЛичная ссылка действует 5 минут.'
+            body['attachments'][0]['payload']['buttons']=[[{'type':'link','text':'Открыть демо-кабинет','url':url}]]
     result = client.call('POST', '/messages', params={'user_id': item['user_id'], 'disable_link_preview': 'true'}, json=body)
     if not isinstance(result.get('message'), dict):
         raise RuntimeError('MAX API did not confirm message')

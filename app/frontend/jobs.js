@@ -23,31 +23,33 @@ function renderJobs() {
       ? "в работе"
       : "в очереди"
     : done
-      ? "готово: " + done
-      : "";
+      ? done + " готово"
+      : currentJobs.some(j => j.status === "failed") ? "Требует внимания" : "";
   $("submissionRetry").hidden = !pendingSubmission;
   $("retrySubmission").onclick = () =>
     busy("Повторяем отправку", sendPendingJob);
   $("jobsList").replaceChildren();
   for (const job of currentJobs.slice(0, 8)) {
-    const card = node("article", undefined, "job-card");
-    const heading = node("h3", job.label);
+    const card = node("article", undefined, "job-card job-" + job.status);
+    const labels = {recognize:"Распознавание заданий",variant:"Новый вариант",compile:"Рабочий лист PDF",grade:"Проверка ответов",batch_grade:"Проверка PDF",roster_recognize:"Список учеников",answer_forms:"Бланки ответов",analytics_pdf:"Отчёт PDF",report_pdf:"Отчёт по работе",analytics_insight:"Рекомендации"};
+    const heading = node("h3", labels[job.kind] || job.label);
+    const info = node("div", undefined, "job-info");
     const status =
       job.status === "queued"
         ? "В очереди · место " + job.position
         : job.status === "running"
-          ? "Выполняется. Можно продолжить работу с другими материалами."
+          ? "Выполняется"
           : job.status === "succeeded"
             ? job.kind === "roster_recognize" ? "Список готов · откройте в течение 15 минут" : "Готово и сохранено"
             : job.status === "cancelled"
               ? "Отменено до начала обработки"
               : job.error || "Обработка не завершилась. Повторите действие.";
-    card.append(
+    info.append(
       heading,
       node("p", status, job.status === "failed" ? "job-error" : "quiet"),
     );
     if (job.result?.warning)
-      card.append(node("p", job.result.warning, "job-error"));
+      info.append(node("p", job.result.warning, "job-error"));
     const actions = node("div", undefined, "actions");
     if (job.status === "succeeded" && job.result?.materials?.length > 1) {
       for (const material of job.result.materials)
@@ -58,7 +60,7 @@ function renderJobs() {
         );
     } else if (job.status === "succeeded")
       actions.append(
-        jobButton("Открыть результат", () => openJobResult(job), "primary"),
+        jobButton("Открыть", () => openJobResult(job), "primary"),
       );
     if (job.status === "queued")
       actions.append(
@@ -76,7 +78,7 @@ function renderJobs() {
     if (!["queued", "running"].includes(job.status))
       actions.append(
         jobButton(
-          "Убрать из списка",
+          "Скрыть",
           async () => {
             await request("/api/v2/jobs/" + job.id + "/acknowledge", {
               method: "POST",
@@ -86,7 +88,7 @@ function renderJobs() {
           "ghost",
         ),
       );
-    card.append(actions);
+    card.append(info, actions);
     $("jobsList").append(card);
   }
   if (currentJobs.length > 8)

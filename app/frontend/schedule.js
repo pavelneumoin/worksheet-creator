@@ -1,4 +1,5 @@
 "use strict";
+let scheduleData = [], scheduleSelectedDate = null;
 $("scheduleMonth").value = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Europe/Moscow",
   year: "numeric",
@@ -10,6 +11,8 @@ async function refreshSchedule() {
   if (!/^\d{4}-\d{2}$/.test(month))
     throw new Error("Выберите месяц расписания.");
   const data = await request("/api/v2/schedule?month=" + month);
+  scheduleData = data.assignments;
+  if (scheduleSelectedDate && !scheduleSelectedDate.startsWith(month)) scheduleSelectedDate = null;
   const [year, number] = month.split("-").map(Number);
   const count = new Date(year, number, 0).getDate();
   const offset = (new Date(year, number - 1, 1).getDay() + 6) % 7;
@@ -30,7 +33,12 @@ async function refreshSchedule() {
     const assignments = data.assignments.filter(
       (a) => a.scheduled_date === date,
     );
-    const cell = node("span", String(day), "calendar-day");
+    const cell = node("button", String(day), "calendar-day");
+    cell.type = "button";
+    cell.dataset.date = date;
+    cell.setAttribute("aria-pressed", String(date === scheduleSelectedDate));
+    if(date === today) cell.setAttribute("aria-current", "date");
+    cell.addEventListener("click", () => {scheduleSelectedDate = date; renderScheduleAgenda();});
     if (date === today) cell.classList.add("today");
     if (assignments.length) cell.classList.add("has-work");
     cell.setAttribute(
@@ -40,9 +48,16 @@ async function refreshSchedule() {
     );
     grid.append(cell);
   }
+  renderScheduleAgenda();
+}
+function renderScheduleAgenda() {
+  document.querySelectorAll("#monthGrid [data-date]").forEach(cell => cell.setAttribute("aria-pressed", String(cell.dataset.date === scheduleSelectedDate)));
+  $("scheduleDayTitle").textContent = scheduleSelectedDate ? assignmentDate(scheduleSelectedDate) : "Работы на месяц";
+  $("scheduleAllDays").hidden = !scheduleSelectedDate;
+  const assignments = scheduleData.filter(a => !scheduleSelectedDate || a.scheduled_date === scheduleSelectedDate);
   const list = $("scheduleList");
   list.replaceChildren();
-  for (const a of data.assignments) {
+  for (const a of assignments) {
     const card = node("article", undefined, "saved-card schedule-work");
     card.append(
       node(
@@ -63,15 +78,16 @@ async function refreshSchedule() {
     );
     list.append(card);
   }
-  if (!data.assignments.length)
+  if (!assignments.length)
     list.append(
       node(
         "p",
-        "На этот месяц работ пока нет. При назначении листа классу укажите дату проведения.",
+        scheduleSelectedDate ? "На этот день работ нет" : "На этот месяц работ нет",
         "empty-state",
       ),
     );
 }
+$("scheduleAllDays").addEventListener("click", () => {scheduleSelectedDate=null;renderScheduleAgenda();});
 $("scheduleNav").addEventListener("click", () => showView("schedule"));
 $("scheduleClasses").addEventListener("click", () => showView("classes"));
 $("scheduleMonth").addEventListener("change", () =>

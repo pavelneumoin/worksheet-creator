@@ -4,12 +4,16 @@ from utils.workspace_store import connection
 
 
 def uploaded(file_id):
+    if file_id.startswith('inline:'):
+        return
     with connection() as conn:
         conn.execute('CREATE TABLE IF NOT EXISTS provider_uploads (file_id TEXT PRIMARY KEY, created_at REAL NOT NULL)')
         conn.execute('INSERT OR IGNORE INTO provider_uploads VALUES (?,?)', (file_id, time.time()))
 
 
 def deleted(file_id):
+    if file_id.startswith('inline:'):
+        return
     with connection() as conn:
         conn.execute('DELETE FROM provider_uploads WHERE file_id=?', (file_id,))
 

@@ -51,6 +51,9 @@ def join(user,value):
         digest=hashlib.sha256(code.strip().encode()).hexdigest()
         invite=conn.execute('SELECT * FROM school_invites WHERE token_hash=? AND expires_at>?',(digest,time.time())).fetchone()
         if not invite:fail('Приглашение недействительно или уже использовано.','invalid_invite',400)
+        from utils.demo_space import same_realm
+        owner=conn.execute('SELECT owner_id FROM schools WHERE id=?',(invite['school_id'],)).fetchone()[0]
+        if not same_realm(user,owner):fail('Это приглашение относится к другому кабинету.','invalid_invite',400)
         if conn.execute('SELECT COUNT(*) FROM school_members WHERE school_id=?',(invite['school_id'],)).fetchone()[0]>=100:fail('В школе уже 100 участников.','school_limit',409)
         conn.execute('INSERT INTO school_members VALUES(?,?,?,?)',(invite['school_id'],user,'teacher',timestamp()))
         conn.execute('DELETE FROM school_invites WHERE token_hash=?',(digest,))
