@@ -1,0 +1,19 @@
+#cloud-config
+# Replace the public key only. Never put provider tokens into instance metadata.
+users:
+  - name: listok
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    ssh_authorized_keys:
+      - REPLACE_WITH_ADMIN_PUBLIC_SSH_KEY
+ssh_pwauth: false
+disable_root: true
+package_update: true
+packages:
+  - ca-certificates
+  - git
+  - docker.io
+  - docker-compose-v2
+runcmd:
+  - [systemctl, enable, --now, docker]
