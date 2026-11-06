@@ -478,11 +478,13 @@ async function openReview(id, ready = null) {
   await flushReviewDraft();
   clearTimeout(reviewState.timer);
   const r = ready || (await request("/api/v2/reviews/" + id)).review;
+  if(reviewState.queueContext?.reviewId!==id)reviewState.queueContext=null;
   if(reviewState.batchContext?.assignmentId!==r.assignment_id)reviewState.batchContext=null;
   resetReviewEditor();
   reviewState.current = r;
   classScreen("reviewView");
   const target = $("reviewView");
+  target.classList.toggle("queue-review-screen",!!reviewState.queueContext?.item);
   target.replaceChildren(
     reviewButton(
       "← К отчёту класса",
@@ -896,7 +898,8 @@ function renderReviewForm(target, r) {
   form.append(controls);
   target.append(form);
   refreshTotal();
-  mountReviewFocus(form, fields, controls, r, refreshTotal);
+  if(reviewState.queueContext?.reviewId===r.id)mountBatchQueueFocus(form,fields,controls,r,refreshTotal);
+  else mountReviewFocus(form, fields, controls, r, refreshTotal);
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     busy("Подтверждаем результат", async () => {
@@ -906,7 +909,10 @@ function renderReviewForm(target, r) {
         classJson("PUT", body("confirm")),
       );
       resetReviewEditor();
-      if(reviewState.batchContext?.assignmentId===r.assignment_id){
+      if(reviewState.queueContext?.reviewId===r.id){
+        await openBatchQueue(reviewState.queueContext.id);
+        notice("Результат подтверждён. Продолжайте проверку пачки.");
+      } else if(reviewState.batchContext?.assignmentId===r.assignment_id){
         await openBatch(reviewState.batchContext.id);
         notice("Результат учтён в статистике. Продолжайте со следующим учеником.");
       }else{

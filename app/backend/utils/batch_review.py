@@ -107,17 +107,24 @@ def attach(owner,batch_id,value):
         if row['expires_at']<=time.time(): review_store.fail('Срок хранения сканов истёк.','batch_expired',410)
         pages=json.loads(row['pages'])
         if any(i>=len(pages) or pages[i]['review_id'] for i in indices): review_store.fail('Эти страницы уже использованы или ещё не готовы.','pages_used',409)
-        a=review_store.context(conn,owner,row['assignment_id'],value.get('student_id'))
-        paths=[photo(batch_id,i) for i in sorted(indices)]
-        if any(not p.is_file() for p in paths): review_store.fail('Сканы больше не доступны.','batch_photo_missing',404)
-        from utils.job_store import fingerprint
-        review_id=uuid.uuid4().hex
-        review_store.enqueue(conn,owner,review_id,{'assignment_id':a['id'],'student_id':value['student_id']},fingerprint('review_photo',{},paths))
-        merged=grading_ai.merge_pages(a['worksheet']['tasks'],[pages[i] for i in sorted(indices)])
-        result=review_store.complete(conn,owner,review_id,merged,paths)
-        for i in indices:pages[i]['review_id']=review_id
+        result=attach_pages(conn,owner,row,pages,value.get('student_id'),indices)
         conn.execute('UPDATE review_batches SET pages=?,revision=revision+1 WHERE id=?',(json.dumps(pages,ensure_ascii=False),batch_id))
         return result
+
+
+def attach_pages(conn,owner,row,pages,student_id,indices,created=None):
+    """Caller holds the write reservation and persists updated page links."""
+    a=review_store.context(conn,owner,row['assignment_id'],student_id)
+    paths=[photo(row['id'],i) for i in sorted(indices)]
+    if any(not p.is_file() for p in paths): review_store.fail('Сканы больше не доступны.','batch_photo_missing',404)
+    from utils.job_store import fingerprint
+    review_id=uuid.uuid4().hex
+    if created is not None: created.append(review_id)
+    review_store.enqueue(conn,owner,review_id,{'assignment_id':a['id'],'student_id':student_id},fingerprint('review_photo',{},paths))
+    merged=grading_ai.merge_pages(a['worksheet']['tasks'],[pages[i] for i in sorted(indices)])
+    result=review_store.complete(conn,owner,review_id,merged,paths)
+    for i in indices:pages[i]['review_id']=review_id
+    return result
 
 def maintain(conn):
     for row in conn.execute('SELECT id FROM review_batches WHERE photo_count>0 AND expires_at<?',(time.time(),)).fetchall():

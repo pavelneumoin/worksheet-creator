@@ -283,6 +283,14 @@ def remove(owner, review_id, revision, draft_revision=None):
         if row['status'] in ('confirmed', 'processing'):
             fail('Подтверждённую или выполняющуюся проверку удалить нельзя.', 'review_locked', 409)
         conn.execute('DELETE FROM reviews WHERE id=?', (review_id,))
+        for batch in conn.execute('SELECT id,pages FROM review_batches WHERE owner_id=? AND assignment_id=?',
+                                  (owner,row['assignment_id'])).fetchall():
+            pages=json.loads(batch['pages'])
+            if any(p.get('review_id')==review_id for p in pages):
+                for p in pages:
+                    if p.get('review_id')==review_id:p['review_id']=None
+                conn.execute('UPDATE review_batches SET pages=?,revision=revision+1 WHERE id=?',
+                             (json.dumps(pages,ensure_ascii=False),batch['id']))
         # File deletion stays under the DB write reservation shared with backup.
         for i in range(row['photo_count']):
             photo_path(review_id, i).unlink(missing_ok=True)

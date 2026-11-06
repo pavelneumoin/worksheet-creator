@@ -40,11 +40,13 @@ async function openBatchHome(assignmentId = null, classId = null) {
   });});await loadWorks();
 }
 async function openBatch(id) {
+  await flushReviewDraft();reviewState.queueContext=null;
   const b=(await request("/api/v2/batches/"+id)).batch;batchState.current=b;
   showView("batch",false);batchView.replaceChildren(batchHeading(b.title,b.class_name+" · сопоставление страниц"),classButton("← Все пачки",()=>busy("Открываем пачки",openBatchHome),"ghost"));
   if(!b.pages.length){batchView.append(node("p",b.expired?"Срок хранения сканов истёк.":b.error||"Страницы обрабатываются. Результат появится в разделе «Задачи».","empty-state"));return;}
   const used=b.pages.filter(p=>p.review_id).length;
   batchView.append(node("p",`Сопоставлено ${used} из ${b.pages.length} страниц. Баллы учитываются после подтверждения.`,"batch-progress"));
+  batchView.append(classButton("Очередь сомнительных ответов",()=>busy("Открываем очередь",()=>openBatchQueue(id)),"primary"));
   batchView.append(classButton("Результаты класса",()=>busy("Открываем отчёт",()=>openClassReport(b.assignment_id)),"secondary"));
   const form=node("form",undefined,"panel batch-mapping"),label=node("label","Код ученика"),select=node("select");select.id="batchStudent";
   const empty=node("option","Выберите ученика");empty.value="";select.append(empty);

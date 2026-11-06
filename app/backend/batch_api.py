@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 from flask import Blueprint,g,jsonify,request,send_file
 from class_api import body
-from utils import batch_review,class_store,job_store
+from utils import batch_review,batch_queue,class_store,job_store
 from utils.workspace_store import connection
 from utils.gigachat_client import AIServiceError,get_ai_status
 
@@ -37,6 +37,15 @@ def detail(batch_id):
 
 @api.post('/batches/<batch_id>/attach')
 def attach(batch_id):return jsonify(batch_review.attach(g.identity['owner_id'],batch_id,body()))
+
+@api.get('/batches/<batch_id>/queue')
+def queue(batch_id):
+    job_store.maintain()
+    return jsonify(queue=batch_queue.get(g.identity['owner_id'],batch_id))
+
+@api.post('/batches/<batch_id>/queue/prepare')
+def prepare_queue(batch_id):
+    return jsonify(queue=batch_queue.prepare(g.identity['owner_id'],batch_id,body()))
 
 @api.get('/batches/<batch_id>/photos/<int:index>')
 def photo(batch_id,index):
