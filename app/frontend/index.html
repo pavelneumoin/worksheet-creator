@@ -58,15 +58,24 @@
           <button class="nav-button" id="classesNav">Классы</button>
           <button class="nav-button" id="scheduleNav">Расписание</button>
         </nav>
-        <div class="account-tools"><button id="demoEnter" class="button demo-launch" hidden>Посмотреть демо</button><button id="feedbackNav" class="nav-button feedback-nav" type="button">★ Отзывы</button><span class="edition" id="accountName">ЛатехТим</span></div>
+        <div class="account-tools">
+          <div class="account-profile" aria-label="Личный кабинет">
+            <span class="account-avatar" aria-hidden="true">Л</span>
+            <span class="account-profile-copy"><small>Личный кабинет</small><strong class="edition" id="accountName">ЛатехТим</strong></span>
+          </div>
+          <div class="account-actions">
+            <button id="demoEnter" class="button demo-launch" hidden><span aria-hidden="true">◈</span><span>Открыть демо</span></button>
+            <button id="feedbackNav" class="nav-button feedback-nav" type="button"><span aria-hidden="true">★</span><span>Отзывы</span></button>
+          </div>
+        </div>
       </div>
     </header>
     <main class="page">
       <section id="demoBar" class="demo-bar" hidden aria-label="Демонстрационный кабинет">
-        <div class="demo-bar-heading"><div><span class="demo-badge">ДЕМО</span><strong>Учебный кабинет</strong></div><button id="demoExit" class="button ghost">В мой кабинет</button></div>
-        <details id="demoGuide"><summary>Сценарий проверки <span>материалы · классы · результаты</span></summary><div id="demoSteps" class="demo-steps"></div>
-          <div class="demo-files"><strong>Файлы для загрузки</strong><a class="button secondary" href="/api/v2/demo-space/files/fractions.png" download>Фото заданий</a><a class="button secondary" href="/api/v2/demo-space/files/roster.png" download>Список учеников</a><a id="demoScanDownload" class="button secondary">PDF с ответами</a></div>
-          <p class="demo-note">Все данные учебные. Результаты подготовлены заранее; загрузка новых файлов запускает обычное распознавание.</p>
+        <div class="demo-bar-heading"><div class="demo-heading-copy"><span class="demo-badge">ДЕМО</span><span><strong>Учебный кабинет</strong><small>Готовый сценарий для знакомства с сервисом</small></span></div><button id="demoExit" class="button ghost"><span aria-hidden="true">←</span><span>В мой кабинет</span></button></div>
+        <details id="demoGuide"><summary><span>Маршрут проверки</span><span>8 готовых экранов</span></summary><div id="demoSteps" class="demo-steps"></div>
+          <div class="demo-files"><strong>Материалы для пробного сценария</strong><a class="button secondary" href="/api/v2/demo-space/files/fractions.png" download>Фото заданий</a><a class="button secondary" href="/api/v2/demo-space/files/roster.png" download>Список учеников</a><a id="demoScanDownload" class="button secondary">PDF с ответами</a></div>
+          <p class="demo-note">Все данные учебные и уже подготовлены. Нажимайте на карточки по порядку — так проще увидеть весь путь учителя.</p>
         </details>
       </section>
       <div
