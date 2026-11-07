@@ -14,6 +14,7 @@ from utils.gigachat_client import AIServiceError, normalize_cyrillic_units
 from utils.math_markup import canonical_delimiters, math_typography
 
 MAX_TASKS = 30
+SUBJECTS = ("math", "physics", "chemistry", "other")
 
 
 def invalid(message):
@@ -33,8 +34,8 @@ def validate_worksheet(value):
     if not isinstance(value, dict) or value.get("schema_version") != 1:
         invalid("Неизвестный формат рабочего листа.")
     subject = value.get("subject", "math")
-    if subject not in ("math", "physics"):
-        invalid("Выберите математику или физику.")
+    if subject not in SUBJECTS:
+        invalid("Выберите математику, физику, химию или другой предмет.")
     raw_tasks = value.get("tasks")
     if not isinstance(raw_tasks, list) or not 1 <= len(raw_tasks) <= MAX_TASKS:
         invalid(f"В листе должно быть от 1 до {MAX_TASKS} заданий.")
@@ -225,7 +226,15 @@ DEMO_TASKS = {
     "physics": ("Движение, сила тока и плотность", [
         (r"Тело движется с начальной скоростью $v_0=2\,\text{м/с}$ и ускорением $a=3\,\text{м/с}^2$. Найдите путь за $t=4\,\text{с}$ по формуле $s=v_0t+\frac{at^2}{2}$.", r"$32\,\text{м}$"),
         (r"Напряжение $U=12\,\text{В}$, сопротивление $R=4\,\text{Ом}$. Найдите силу тока по формуле $I=\frac{U}{R}$.", r"$3\,\text{А}$"),
-        (r"Масса образца $m=540\,\text{г}$, объём $V=200\,\text{см}^3$. Найдите плотность $\rho=\frac{m}{V}$.", r"$2{,}7\,\text{г/см}^3$")])}
+        (r"Масса образца $m=540\,\text{г}$, объём $V=200\,\text{см}^3$. Найдите плотность $\rho=\frac{m}{V}$.", r"$2{,}7\,\text{г/см}^3$")]),
+    "chemistry": ("Химия: формулы и количество вещества", [
+        (r"Определите количество вещества воды массой $m=18\,\text{г}$ по формуле $n=\frac{m}{M}$, если $M(\mathrm{H_2O})=18\,\text{г/моль}$.", r"$1\,\text{моль}$"),
+        (r"Запишите формулу оксида углерода(IV).", r"$\mathrm{CO_2}$"),
+        (r"Укажите тип связи в молекуле $\mathrm{H_2O}$.", "Ковалентная полярная")]),
+    "other": ("Учебный лист: задания для проверки", [
+        ("Запишите первое задание для своего урока и проверьте ответ перед печатью.", "Требуется проверка учителя"),
+        ("Добавьте пример или фрагмент правила по теме урока.", "Требуется проверка учителя")]),
+}
 
 
 def demo_worksheet(subject):

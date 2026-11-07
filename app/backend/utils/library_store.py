@@ -37,7 +37,7 @@ def get_publication(owner, publication_id):
 
 def list_publications(owner, query='', subject='', sort='rating', page=1):
     query = text_field(query, 'Поиск', 160).casefold()
-    if subject not in ('', 'math', 'physics') or sort not in ('rating', 'new', 'copies', 'mine'):
+    if subject not in ('', 'math', 'physics', 'chemistry', 'other') or sort not in ('rating', 'new', 'copies', 'mine'):
         raise AIServiceError('Выберите предмет и порядок материалов.', 'invalid_filter', 400)
     if type(page) is not int or not 1 <= page <= 10000:
         raise AIServiceError('Неверная страница библиотеки.', 'invalid_page', 400)

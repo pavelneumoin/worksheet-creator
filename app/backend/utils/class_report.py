@@ -12,7 +12,7 @@ def filters(value):
         class_store.validate_date(result[key], title)
     if result['from_date'] and result['to_date'] and result['from_date'] > result['to_date']:
         class_store.fail('Начало периода не может быть позже конца.')
-    if result['subject'] not in ('', 'math', 'physics') or result['status'] not in ('', 'active', 'closed'):
+    if result['subject'] not in ('', 'math', 'physics', 'chemistry', 'other') or result['status'] not in ('', 'active', 'closed'):
         class_store.fail('Выберите предмет и состояние работы из списка.')
     result['q'] = class_store.label(result['q'], 'Тема или название', 160, required=False)
     if not isinstance(result['student_id'], str):

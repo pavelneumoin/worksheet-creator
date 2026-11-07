@@ -79,6 +79,8 @@ function renderClassOverview(target, c) {
         ["", "Все предметы"],
         ["math", "Математика"],
         ["physics", "Физика"],
+        ["chemistry", "Химия"],
+        ["other", "Другой предмет"],
       ],
     ],
     [
@@ -217,7 +219,7 @@ function renderClassOverview(target, c) {
     card.append(
       node(
         "p",
-        (work.subject === "physics" ? "Физика" : "Математика") +
+        subjectLabel(work.subject) +
           " · " +
           (work.status === "closed" ? "Закрыта" : "Назначена"),
         "eyebrow",

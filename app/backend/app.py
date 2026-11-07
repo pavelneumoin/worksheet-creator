@@ -19,6 +19,7 @@ from utils.db import init_db, save_worksheet, get_history
 from utils.gigachat_client import (
     AIServiceError, get_ai_status, process_image_with_gigachat, generate_similar_worksheet,
 )
+from utils.worksheet import demo_worksheet
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
@@ -49,6 +50,8 @@ from demo_api import api as demo_api
 app.register_blueprint(demo_api)
 from student_api import api as student_api
 app.register_blueprint(student_api)
+from feedback_api import api as feedback_api
+app.register_blueprint(feedback_api)
 
 
 @app.before_request
@@ -75,7 +78,7 @@ def response_headers(response):
     return response
 
 MAX_FILES = 10
-SUBJECTS = {"math", "physics"}
+SUBJECTS = {"math", "physics", "chemistry", "other"}
 ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg"}
 DEMO_MESSAGE = "Учебный пример подготовлен вручную. ИИ не использовался."
 DEMOS = {
@@ -159,7 +162,7 @@ def unexpected_error(exc):
 
 def _subject(value):
     if value not in SUBJECTS:
-        raise AIServiceError("Выберите математику или физику.", "invalid_subject", 400)
+        raise AIServiceError("Выберите математику, физику, химию или другой предмет.", "invalid_subject", 400)
     return value
 
 
@@ -208,6 +211,9 @@ def status():
 @app.route("/api/demo")
 def demo():
     subject = _subject(request.args.get("subject", "math"))
+    if subject not in DEMOS:
+        worksheet = demo_worksheet(subject)
+        return jsonify({**worksheet, "source": "manual_demo", "message": DEMO_MESSAGE, "requires_review": True})
     return jsonify({
         **DEMOS[subject], "subject": subject, "source": "manual_demo",
         "message": DEMO_MESSAGE, "requires_review": True,

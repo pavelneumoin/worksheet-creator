@@ -115,8 +115,8 @@ def report_pdf():
 def recognize():
     job_store.validate_key(request.headers.get('Idempotency-Key'))
     discipline = request.form.get('subject', 'math')
-    if discipline not in ('math', 'physics'):
-        raise AIServiceError('Выберите математику или физику.', 'invalid_subject', 400)
+    if discipline not in ('math', 'physics', 'chemistry', 'other'):
+        raise AIServiceError('Выберите математику, физику, химию или другой предмет.', 'invalid_subject', 400)
     text = request.form.get('text', '').strip()
     files = [file for file in request.files.getlist('files') if file.filename]
     if not text and not files:

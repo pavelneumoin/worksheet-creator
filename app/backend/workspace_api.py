@@ -18,8 +18,8 @@ api = Blueprint("workspace", __name__, url_prefix="/api/v2")
 
 
 def subject(value):
-    if value not in ("math", "physics"):
-        raise AIServiceError("Выберите математику или физику.", "invalid_subject", 400)
+    if value not in ("math", "physics", "chemistry", "other"):
+        raise AIServiceError("Выберите математику, физику, химию или другой предмет.", "invalid_subject", 400)
     return value
 
 

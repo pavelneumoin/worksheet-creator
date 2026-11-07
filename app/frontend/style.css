@@ -12,6 +12,40 @@
   font-size: 15px;
   line-height: 1.6;
 }
+
+/* Teacher feedback: a calm, readable surface for the pre-submission pilot. */
+.feedback-nav{color:#6b4ac2!important;background:#f6f1ff!important;white-space:nowrap}
+.feedback-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:28px;padding:46px 0 28px}
+.feedback-heading h1{max-width:680px;margin-bottom:10px}
+.feedback-summary-card{min-width:190px;padding:20px;border:1px solid #e2d9f4;border-radius:18px;background:#fff;display:flex;flex-direction:column;gap:5px;box-shadow:0 8px 24px #31274008}
+.feedback-summary-card strong{font-size:28px;color:var(--ink)}
+.feedback-summary-card span:last-child{font-size:12px;color:var(--muted)}
+.feedback-stars-static,.feedback-stars-readonly{color:#d8b33f;letter-spacing:2px;font-size:19px;white-space:nowrap}
+.feedback-layout{display:grid;grid-template-columns:minmax(320px,.8fr) minmax(0,1.2fr);gap:24px;align-items:start;padding-bottom:45px}
+.feedback-form,.feedback-list-panel{display:flex;flex-direction:column;gap:15px}
+.feedback-form h2,.feedback-list-panel h2{font-size:21px;margin:0}
+.feedback-form>label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:13px;font-weight:600}
+.feedback-form>input,.feedback-form textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:#fbfbfd;padding:10px 12px;color:var(--ink);resize:vertical}
+.feedback-form>input{min-height:44px}.feedback-form textarea{font-size:14px;line-height:1.5}
+.feedback-stars{display:inline-flex;gap:3px;align-items:center}
+.feedback-star{border:0;background:transparent;color:#d6d2dc;font-size:28px;line-height:1;padding:0 2px;min-width:32px;cursor:pointer;transition:color .15s,transform .15s}
+.feedback-star:hover,.feedback-star.selected{color:#d5a92d;transform:translateY(-1px)}
+.feedback-stars-readonly{display:flex;margin:6px 0 12px}.feedback-stars-readonly .feedback-star{font-size:18px;color:#d5a92d;padding:0}
+.feedback-check{display:flex!important;flex-direction:row!important;align-items:center;gap:8px!important;color:var(--ink)!important;font-weight:500!important}.feedback-check input{accent-color:var(--accent);width:18px;height:18px}
+.feedback-list-heading{display:flex;justify-content:space-between;gap:15px;align-items:start}.feedback-list-heading h2{margin-bottom:2px}
+.feedback-recommend-badge,.feedback-recommend{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f7f1d8;color:#806218;font-size:11px;white-space:nowrap}
+.feedback-list{display:grid;gap:12px;max-height:690px;overflow:auto;padding-right:3px}.feedback-card{border:1px solid var(--border);border-radius:14px;padding:15px 16px;background:#fff}
+.feedback-card-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.feedback-card-head strong{font-size:14px}.feedback-card-head time{font-size:11px;color:var(--muted)}
+.feedback-quote{border-left:3px solid #ddd3f0;padding:3px 0 3px 10px;margin-top:9px}.feedback-quote span{font-size:11px;font-weight:700;color:var(--muted)}.feedback-quote p{margin:1px 0 0;white-space:pre-wrap;font-size:13px;line-height:1.45}
+.feedback-quote.liked{border-color:#77b59b}.feedback-quote.inconvenient{border-color:#e0b068}.feedback-quote.improve{border-color:#b69be8}.feedback-empty{padding:28px 0;text-align:center}
+@media(max-width:760px){.feedback-heading{display:block;padding:25px 0 18px}.feedback-heading h1{font-size:28px}.feedback-summary-card{margin-top:17px;min-width:0}.feedback-layout{grid-template-columns:1fr;gap:15px}.feedback-form,.feedback-list-panel{padding:19px 17px}.feedback-list{max-height:none}.feedback-nav{display:none!important}}
+
+.latex-keyboard{margin-top:12px;padding:12px 13px;border:1px solid #e5dff0;border-radius:12px;background:#faf8fe}
+.latex-keyboard-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:9px;color:#5d4b7b;font-size:12px}.latex-keyboard-heading span{color:var(--muted);font-size:11px;font-weight:400}
+.latex-keyboard-groups{display:flex;flex-wrap:wrap;gap:8px}.latex-keyboard-group{display:flex;align-items:center;gap:4px;padding:4px 5px;border:1px solid #e9e3f2;border-radius:9px;background:#fff}.latex-keyboard-group>span{padding:0 5px;color:#8a7d99;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}.latex-keyboard-group button{min-width:32px;height:30px;padding:3px 8px;border:1px solid #ded5ed;border-radius:7px;background:#fff;color:#4e3973;font-size:13px;line-height:1}.latex-keyboard-group button:hover,.latex-keyboard-group button:focus-visible{border-color:#8b68da;background:#f4effd;color:#6845bd}
+.saved-list{align-items:stretch}.saved-card{display:flex;flex-direction:column;min-height:250px}.saved-card .material-actions{margin-top:auto!important}.saved-card .cabinet-tools{margin-top:14px}
+.template-picker{gap:10px!important;margin:8px 0 18px!important}.template-choice{min-height:126px!important;padding:12px!important;border-radius:12px!important}.template-choice strong{margin-top:7px}.template-choice small{line-height:1.35}.studio-paper{border-radius:12px}
+@media(max-width:760px){.latex-keyboard{padding:10px}.latex-keyboard-heading{align-items:flex-start;flex-direction:column;gap:2px}.latex-keyboard-groups{gap:6px}.latex-keyboard-group{max-width:100%;overflow-x:auto}.latex-keyboard-group button{min-height:34px}.template-picker{grid-template-columns:1fr 1fr!important}.template-choice{min-height:112px!important;padding:9px!important}.template-choice small{font-size:10px}}
 * {
   box-sizing: border-box;
 }
@@ -293,7 +327,8 @@ legend,
   color: var(--muted);
 }
 .segmented {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 .segmented label {
@@ -313,6 +348,10 @@ legend,
   border-radius: 9px;
   cursor: pointer;
   font-size: 14px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .segmented input:checked + span {
   border-color: var(--accent);
@@ -1131,6 +1170,14 @@ select {
   }
   .segmented span {
     font-size: 12px;
+  }
+  .segmented {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .segmented span {
+    min-height: 44px;
+    padding: 9px 6px;
   }
 }
 

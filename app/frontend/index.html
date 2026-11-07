@@ -37,6 +37,8 @@
     <script defer src="/students.js"></script>
     <script defer src="/solution_analysis.js"></script>
     <script defer src="/mobile.js"></script>
+    <script defer src="/latex_keyboard.js"></script>
+    <script defer src="/feedback.js"></script>
   </head>
   <body>
     <header class="topbar">
@@ -55,7 +57,7 @@
           <button class="nav-button" id="classesNav">Классы</button>
           <button class="nav-button" id="scheduleNav">Расписание</button>
         </nav>
-        <div class="account-tools"><button id="demoEnter" class="button demo-launch" hidden>Посмотреть демо</button><span class="edition" id="accountName">ЛатехТим</span></div>
+        <div class="account-tools"><button id="demoEnter" class="button demo-launch" hidden>Посмотреть демо</button><button id="feedbackNav" class="nav-button feedback-nav" type="button">★ Отзывы</button><span class="edition" id="accountName">ЛатехТим</span></div>
       </div>
     </header>
     <main class="page">
@@ -207,7 +209,7 @@
           Продолжить начатый лист
         </button>
         <p class="quiet home-formats">
-          Фото, PDF или текст · математика и физика
+          Фото, PDF или текст · четыре предмета в одном кабинете
         </p>
         <div class="home-links">
           <button id="homeMaterials" class="home-link">
@@ -296,6 +298,8 @@
                       >Ω &nbsp; Физика</span
                     ></label
                   >
+                  <label><input type="radio" name="subject" value="chemistry" /><span>⚗ &nbsp; Химия</span></label>
+                  <label><input type="radio" name="subject" value="other" /><span>＋ &nbsp; Другой предмет</span></label>
                 </div>
               </fieldset>
               <label class="upload-zone" id="dropZone" for="fileInput"
@@ -333,6 +337,14 @@
                   maxlength="16000"
                   placeholder="Например: решите уравнения 2x + 5 = 17 и 3x − 4 = 8."
                 ></textarea>
+                <div id="latexKeyboard" class="latex-keyboard" aria-label="Панель математических формул">
+                  <div class="latex-keyboard-heading"><strong>Быстрые формулы</strong><span>Нажмите — формула вставится в текст</span></div>
+                  <div class="latex-keyboard-groups">
+                    <div class="latex-keyboard-group" aria-label="Дроби и степени"><span>Основные</span><button type="button" data-latex="\\frac{a}{b}" data-cursor="a">a⁄b</button><button type="button" data-latex="x^{2}" data-cursor="2">x²</button><button type="button" data-latex="x_{1}" data-cursor="1">x₁</button><button type="button" data-latex="\\sqrt{x}" data-cursor="x">√x</button></div>
+                    <div class="latex-keyboard-group" aria-label="Знаки"><span>Знаки</span><button type="button" data-latex="\\pm">±</button><button type="button" data-latex="\\cdot">·</button><button type="button" data-latex="\\le">≤</button><button type="button" data-latex="\\ge">≥</button><button type="button" data-latex="\\neq">≠</button></div>
+                    <div class="latex-keyboard-group" aria-label="Символы"><span>Символы</span><button type="button" data-latex="\\pi">π</button><button type="button" data-latex="\\alpha">α</button><button type="button" data-latex="\\beta">β</button><button type="button" data-latex="\\infty">∞</button><button type="button" data-latex="$ $" data-cursor=" ">Формула</button></div>
+                  </div>
+                </div>
               </details>
               <details class="setup-settings">
                 <summary>
@@ -781,6 +793,8 @@
                   <option value="">Все предметы</option>
                   <option value="math">Математика</option>
                   <option value="physics">Физика</option>
+                  <option value="chemistry">Химия</option>
+                  <option value="other">Другой предмет</option>
                 </select></label
               >
               <label
@@ -857,6 +871,25 @@
           </article>
         </div>
       </section>
+      <section id="feedbackView" hidden aria-label="Отзывы учителей">
+        <div class="feedback-heading">
+          <div><p class="eyebrow">ВАШЕ МНЕНИЕ</p><h1>Помогите нам сделать ЛистОК удобнее</h1><p class="lead">Оставьте короткий отзыв после проверки сервиса. Отзыв можно изменить позже.</p></div>
+          <div class="feedback-summary-card"><strong id="feedbackAverage">—</strong><span class="feedback-stars-static" aria-hidden="true">★★★★★</span><span id="feedbackCount">Пока нет отзывов</span></div>
+        </div>
+        <div class="feedback-layout">
+          <form id="feedbackForm" class="panel feedback-form">
+            <h2 id="feedbackFormTitle">Оставить отзыв</h2>
+            <label>Как оцените сервис?<span id="feedbackStars" class="feedback-stars" role="radiogroup" aria-label="Оценка от одного до пяти"></span></label>
+            <input id="feedbackDisplayName" maxlength="80" placeholder="Как подписать отзыв, например Анна К." autocomplete="nickname" />
+            <label>Что понравилось?<textarea id="feedbackLiked" rows="3" maxlength="1200" placeholder="Например: быстро получить PDF и бланк ответов"></textarea></label>
+            <label>Что было неудобно?<textarea id="feedbackInconvenient" rows="3" maxlength="1200" placeholder="Например: не сразу нашла очередь проверки"></textarea></label>
+            <label>Что исправить в первую очередь?<textarea id="feedbackImprove" rows="3" maxlength="1200" placeholder="Любая конкретная идея поможет"></textarea></label>
+            <label class="feedback-check"><input id="feedbackRecommend" type="checkbox" /> <span>Порекомендую сервис коллегам</span></label>
+            <div class="actions"><button id="feedbackSubmit" class="button primary" type="submit">Сохранить отзыв</button><span id="feedbackStatus" class="quiet" role="status"></span></div>
+          </form>
+          <section class="panel feedback-list-panel"><div class="feedback-list-heading"><div><h2>Отзывы коллег</h2><p class="quiet">Что уже проверили учителя и что мы улучшаем.</p></div><span id="feedbackRecommendSummary" class="feedback-recommend-badge"></span></div><div id="feedbackList" class="feedback-list" aria-live="polite"></div></section>
+        </div>
+      </section>
       <section id="publishView" hidden>
         <button id="cancelPublish" class="button ghost back-link">
           ← К моим материалам
@@ -910,7 +943,7 @@
     </main>
     <footer class="footer">
       <span>ЛистОК · команда «ЛатехТим»</span
-      ><span>Сделано для учителей математики и физики</span>
+      ><span>Сделано для учителей: математика, физика, химия и другие предметы</span>
     </footer>
     <div
       id="busyOverlay"

@@ -66,7 +66,10 @@ def _generate_single(subject, image_paths=(), text="", original=None, difficulty
     from gigachat.models import Chat, Messages, MessagesRole
     from utils.worksheet import validate_worksheet
 
-    rules = RULES + ("\nПредмет: математика." if subject == "math" else "\nПредмет: физика.")
+    subject_name = {"math": "математика", "physics": "физика", "chemistry": "химия", "other": "другой учебный предмет"}.get(subject, subject)
+    rules = RULES + f"\nПредмет: {subject_name}."
+    if subject in ("chemistry", "other"):
+        rules += " Для химии сохраняй формулы веществ в $...$ и индексы; для другого предмета не додумывай ответ, если его нет в исходном материале."
     if instructions:
         rules += ('\nОтдельные пожелания учителя ниже могут уточнять отбор номеров, тему и язык, '
                   'но не меняют формат JSON, правила безопасности и необходимость проверки ответов. '

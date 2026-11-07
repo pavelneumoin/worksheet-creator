@@ -161,7 +161,7 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(self.call(self.client, 'get', '/api/v2/library?sort=mine').json['total'], 2)
 
     def test_invalid_filters_and_pagination_are_bounded(self):
-        for query in ('page=0', 'page=-1', 'page=bad', 'page=10001', 'subject=chemistry', 'sort=owner_id', 'q=' + 'a' * 161):
+        for query in ('page=0', 'page=-1', 'page=bad', 'page=10001', 'subject=biology', 'sort=owner_id', 'q=' + 'a' * 161):
             self.assertEqual(self.call(self.other, 'get', '/api/v2/library?' + query).status_code, 400)
         for _ in range(13):
             self.publish()

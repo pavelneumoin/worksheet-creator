@@ -138,5 +138,5 @@ class ClassReportTests(unittest.TestCase):
         url = '/api/v2/classes/' + c['id'] + '/report'
         data = self.call(self.client, 'get', url).json['report']
         self.assertEqual(data['works'], []); self.assertEqual(data['totals']['total'], 0)
-        for query in ('from_date=2026-02-30', 'from_date=2026-10-24&to_date=2026-10-23', 'subject=chemistry', 'status=deleted', 'q=' + 'x'*161):
+        for query in ('from_date=2026-02-30', 'from_date=2026-10-24&to_date=2026-10-23', 'subject=biology', 'status=deleted', 'q=' + 'x'*161):
             self.assertEqual(self.call(self.client, 'get', url + '?' + query).status_code, 400)

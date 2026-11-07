@@ -91,7 +91,7 @@ def generate(text):
 но не более 12. Каждый ответ вычисли и проверь подстановкой/размерностью.
 Нельзя оставлять неразрешимые задачи из-за отсутствующего рисунка: дай необходимые данные словами.
 Выдумывать исходные числа для новых задач разрешено. Не добавляй персональные данные.
-Добавь в JSON subject: "math" или "physics", grade: строка класса (если указан),
+Добавь в JSON subject: "math", "physics", "chemistry" или "other", grade: строка класса (если указан),
 settings: {"columns":1 или 2,"field":"grid" или "none","grid_height":3,"variant":"1"}.
 По умолчанию один столбец, клетчатое поле. Если просят без поля — field="none".
 При неоднозначном названии темы укажи принятое толкование в note первого задания.
@@ -106,7 +106,7 @@ settings: {"columns":1 или 2,"field":"grid" или "none","grid_height":3,"va
                 try:
                     import re
                     data=json.loads(re.sub(r'^```(?:json)?\s*|\s*```$','',choice.message.content.strip()))
-                    if not isinstance(data,dict) or data.get('subject') not in ('math','physics'):
+                    if not isinstance(data,dict) or data.get('subject') not in ('math','physics','chemistry','other'):
                         raise ValueError()
                     sheet=parse_ai_worksheet(choice.message.content,data['subject'])
                     if not 1<=len(sheet['tasks'])<=12:raise ValueError()

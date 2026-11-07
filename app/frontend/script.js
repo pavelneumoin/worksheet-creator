@@ -1,5 +1,10 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
+function subjectLabel(value, upper = false) {
+  const labels = {math: "Математика", physics: "Физика", chemistry: "Химия", other: "Другой предмет"};
+  const result = labels[value] || "Другой предмет";
+  return upper ? result.toLocaleUpperCase("ru-RU") : result;
+}
 const storageKey = "listok.materials.v1";
 const state = {
   sheet: null,
@@ -154,6 +159,7 @@ function showView(view, refresh = true) {
     analytics: "analyticsView",
     school: "schoolView",
     student: "studentView",
+    feedback: "feedbackView",
   }))
     if ($(id)) $(id).hidden = view !== name;
   for (const name of ["batch","analytics","school"]) $(name+"Nav")?.classList.toggle("active",view===name);
@@ -165,6 +171,7 @@ function showView(view, refresh = true) {
   $("libraryNav").classList.toggle("active", view === "library");
   $("classesNav").classList.toggle("active", view === "classes");
   $("scheduleNav").classList.toggle("active", view === "schedule");
+  $("feedbackNav")?.classList.toggle("active", view === "feedback");
   $("mobileMoreNav")?.classList.toggle("active", ["schedule", "analytics", "school", "library"].includes(view));
   if (view === "schedule" && refresh)
     busy("Загружаем расписание", refreshSchedule);
@@ -175,6 +182,7 @@ function showView(view, refresh = true) {
     showLibraryList();
     busy("Загружаем библиотеку", () => refreshLibrary());
   }
+  if (view === "feedback" && refresh && typeof refreshFeedback === "function") busy("Загружаем отзывы", refreshFeedback);
   if (window.WebApp?.BackButton) {
     if (view !== "workspace" || state.step > 1) window.WebApp.BackButton.show();
     else window.WebApp.BackButton.hide();
@@ -609,7 +617,7 @@ function renderSaved() {
     card.append(
       node(
         "span",
-        item.worksheet.subject === "math" ? "МАТЕМАТИКА" : "ФИЗИКА",
+        subjectLabel(item.worksheet.subject, true),
         "eyebrow",
       ),
       node("h2", item.worksheet.title),
@@ -910,7 +918,7 @@ function renderLibrary() {
     card.append(
       node(
         "p",
-        (item.subject === "math" ? "МАТЕМАТИКА" : "ФИЗИКА") +
+        subjectLabel(item.subject, true) +
           (item.grade ? " · " + item.grade : ""),
         "eyebrow",
       ),
@@ -960,7 +968,7 @@ function renderPublication(item) {
   $("libraryBrowse").hidden = true;
   $("libraryDetail").hidden = false;
   $("detailSubject").textContent =
-    (item.subject === "math" ? "МАТЕМАТИКА" : "ФИЗИКА") +
+    subjectLabel(item.subject, true) +
     (item.grade ? " · " + item.grade : "");
   $("detailTitle").textContent = item.title;
   $("detailAuthor").textContent =
@@ -1182,6 +1190,7 @@ function renderAccount() {
   $("libraryNav").disabled = !loggedIn;
   $("classesNav").disabled = !loggedIn;
   $("scheduleNav").disabled = !loggedIn;
+  $("feedbackNav").disabled = !loggedIn;
   $("localLoginBtn").hidden = !state.auth?.local_available;
   $("maxLoginLink").hidden = !state.auth?.max_url;
   if (state.auth?.max_url) $("maxLoginLink").href = state.auth.max_url;

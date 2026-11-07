@@ -49,7 +49,8 @@ def overview_csv(data):
              'Выбранный ученик', 'Статус ученика', 'Баллы ученика', 'Сформирован']]
     for work in data['works']:
         s, individual = work['summary'], work['student_result']
-        rows.append([data['class_name'], work['title'], work['topic'], 'Физика' if work['subject'] == 'physics' else 'Математика',
+        subject_labels = {'math': 'Математика', 'physics': 'Физика', 'chemistry': 'Химия', 'other': 'Другой предмет'}
+        rows.append([data['class_name'], work['title'], work['topic'], subject_labels.get(work['subject'], 'Другой предмет'),
                      work['edition_code'], 'Закрыта' if work['status'] == 'closed' else 'Назначена', work['scheduled_date'], work['due_date'],
                      s['total'], s['submitted'], s['confirmed'], s['not_submitted'], s['needs_review'], s['processing'], s['failed'],
                      s['maximum'], decimal(s['average']), decimal(s['percent']), s['pending_corrections'],

@@ -113,13 +113,17 @@ def handle(client,item):
     if action=='quick_help':
         from utils.bot_workflows import clear_context
         clear_context(user)
-        client.send(user,'Быстрый лист: пришлите до 10 фотографий одним сообщением, один PDF или /лист и текст заданий. Поддерживаются математика и физика. Черновик и ответы покажу прямо здесь, после вашей проверки пришлю PDF. Всё сохраняется в вашей личной библиотеке.\n\n/today — листы на сегодня\n/draft — последний черновик\n/files — повторить готовые PDF\n/start — открыть кабинет')
+        client.send(user,'Быстрый лист: пришлите до 10 фотографий одним сообщением, один PDF или /лист и текст заданий. Поддерживаются математика, физика, химия и другие предметы. Черновик и ответы покажу прямо здесь, после вашей проверки пришлю PDF. Всё сохраняется в вашей личной библиотеке.\n\n/today — листы на сегодня\n/draft — последний черновик\n/files — повторить готовые PDF\n/start — открыть кабинет')
     elif action=='recognize':
         payload=json.loads(item.get('payload') or '{}') if isinstance(item.get('payload'),str) else item.get('payload',{})
         with tempfile.TemporaryDirectory(prefix='listok-bot-') as temporary:
             paths=download(payload.get('media',[]),Path(temporary),getattr(client,'verify',True))
             settings=validate_worksheet({'schema_version':1,'tasks':[{'question':'Настройки'}]})['settings']
-            job,_=job_store.submit(owner,'recognize',item['id'],{'_bot_user':user,'text':payload.get('text',''),'subject':'physics' if 'физик' in payload.get('text','').lower() else 'math','settings':settings,'variant_count':1,'instructions':'Сохрани все условия исходных заданий. Не придумывай нечитаемые фрагменты.'},paths)
+            prompt_text = payload.get('text','').lower()
+            quick_subject = ('physics' if 'физик' in prompt_text else
+                             'chemistry' if 'хим' in prompt_text else
+                             'other' if any(word in prompt_text for word in ('другой предмет', 'история', 'биолог', 'русск')) else 'math')
+            job,_=job_store.submit(owner,'recognize',item['id'],{'_bot_user':user,'text':payload.get('text',''),'subject':quick_subject,'settings':settings,'variant_count':1,'instructions':'Сохрани все условия исходных заданий. Не придумывай нечитаемые фрагменты.'},paths)
         remember(user,job);client.send(user,'Принял задания. Подготовлю черновик и ответы здесь; в личную библиотеку сохраню автоматически.')
     elif action=='draft':
         material,_=draft(owner);show_draft(client,user,material)

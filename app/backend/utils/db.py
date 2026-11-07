@@ -263,6 +263,23 @@ def init_db():
             content TEXT NOT NULL, created_at TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS solution_analyses_target ON solution_analyses(owner_id,target_kind,target_id,created_at);
+        CREATE TABLE IF NOT EXISTS feedback_entries (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            display_name TEXT NOT NULL, stars INTEGER NOT NULL CHECK(stars BETWEEN 1 AND 5),
+            liked TEXT NOT NULL DEFAULT '', inconvenient TEXT NOT NULL DEFAULT '',
+            improve TEXT NOT NULL DEFAULT '', recommend INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(owner_id)
+        );
+        CREATE INDEX IF NOT EXISTS feedback_entries_updated ON feedback_entries(updated_at DESC);
+        CREATE TABLE IF NOT EXISTS feedback_entries (
+            id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            display_name TEXT NOT NULL, stars INTEGER NOT NULL CHECK(stars BETWEEN 1 AND 5),
+            liked TEXT NOT NULL DEFAULT '', inconvenient TEXT NOT NULL DEFAULT '',
+            improve TEXT NOT NULL DEFAULT '', recommend INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            UNIQUE(owner_id)
+        );
+        CREATE INDEX IF NOT EXISTS feedback_entries_updated ON feedback_entries(updated_at DESC);
     ''')
     if 'owner_id' not in {row[1] for row in c.execute('PRAGMA table_info(history)')}:
         c.execute('ALTER TABLE history ADD COLUMN owner_id TEXT')
