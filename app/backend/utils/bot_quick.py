@@ -93,10 +93,13 @@ def handle(client,item):
     if action=='student_home':
         from utils import student_store, bot_workflows
         works=student_store.overview(owner)
-        buttons=[[bot_workflows.web_button(user,item['first_name'],'student:'+a['id'],a['title'][:60])] for a in works[:8]]
+        buttons=[]
+        for a in works[:8]:
+            status = ' · ждёт работу' if a.get('can_submit') else ' · открыть'
+            buttons.append([bot_workflows.web_button(user,item['first_name'],'student:'+a['id'],a['title'][:52]+status)])
         if not buttons:
-            return client.send(user,'Подключитесь к классу по приглашению учителя в разделе «Кабинет ученика». Для входа — /start.')
-        return client.send(user,'Ваши работы. Личные ссылки для входа действуют 5 минут.',buttons=buttons)
+            return client.send(user,'🎓 Кабинет ученика\n\nПока нет подключённых работ. Откройте «Кабинет ученика» по приглашению учителя в мини-приложении — затем здесь появятся задания, результаты и исправления.')
+        return client.send(user,'🎓 Кабинет ученика\n\nВаши работы сохранены здесь. Откройте нужную: отправьте решение, посмотрите результат или исправьте работу по замечаниям учителя.\n\nСсылки действуют 5 минут.',buttons=buttons)
     if action in ('voice','voice_brief','voice_help'):
         from utils import voice_sheet, bot_workflows
         bot_workflows.clear_context(user)

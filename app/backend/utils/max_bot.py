@@ -9,6 +9,27 @@ from utils import bot_login
 
 VIDEO_GUIDE_URL = 'https://vkvideo.ru/video-236910937_456239017'
 
+
+def _main_menu(url):
+    """Compact, teacher-first MAX menu with a clear student entry point."""
+    return [
+        [{'type': 'link', 'text': 'Открыть кабинет', 'url': url}],
+        [{'type': 'message', 'text': 'Быстрый лист'}, {'type': 'message', 'text': 'Лист голосом'}],
+        [{'type': 'message', 'text': 'На печать сегодня'}, {'type': 'message', 'text': 'Проверить пачку'}],
+        [{'type': 'message', 'text': 'Мои работы'}, {'type': 'message', 'text': 'Итог урока'}],
+        [{'type': 'message', 'text': 'Посмотреть демо'}, {'type': 'message', 'text': 'Помощь'}],
+        [{'type': 'link', 'text': 'Видеоинструкция', 'url': VIDEO_GUIDE_URL}],
+    ]
+
+
+def _help_menu():
+    return [
+        [{'type': 'message', 'text': 'Открыть кабинет'}, {'type': 'message', 'text': 'Посмотреть демо'}],
+        [{'type': 'message', 'text': 'Быстрый лист'}, {'type': 'message', 'text': 'Лист голосом'}],
+        [{'type': 'message', 'text': 'Мои работы'}, {'type': 'message', 'text': 'На печать сегодня'}],
+        [{'type': 'link', 'text': 'Видеоинструкция', 'url': VIDEO_GUIDE_URL}],
+    ]
+
 class AttachmentPending(RuntimeError):
     pass
 
@@ -114,28 +135,24 @@ def reply(client, item):
         except AIServiceError as exc:client.send(item['user_id'],str(exc))
         return
     if item['action'] == 'help':
-        body = {'text': 'ЛистОК помогает подготовить задания, варианты и PDF, назначить работу классу и собрать отчёт.\n\n'
-                        'Быстрый лист: /quick, фото или голосовое сообщение. /voice — пример, /my — кабинет ученика. /today — комплект на сегодня. /check — проверить пачку, /next — сомнительные ответы, /summary — итог урока, /repeat — повторить ошибки. /draft — черновик, /pdf — собрать, /files — повторить PDF, /cancel — отменить ожидание сканов.\n\n'
-                        'Отправьте /start — получите личную ссылку для входа на 5 минут. '
-                        'Откройте её и подтвердите свой профиль. В кабинете можно начать с готового примера.\n\n'
-                        'Видеоинструкция: ' + VIDEO_GUIDE_URL + '\n\n'
-                        'Условия и ответы ИИ проверяет учитель. Оценки попадают в отчёт после вашего подтверждения.'}
+        body = {'text': 'ЛистОК — спокойный маршрут от задания до результата.\n\n'
+                        '1. Создайте лист: пришлите фото, PDF или голосовое описание.\n'
+                        '2. Проверьте черновик и ответы прямо в MAX.\n'
+                        '3. Получите лист для класса, ответы и бланк быстрой проверки.\n'
+                        '4. После урока отправьте один PDF из МФУ — сомнительные ответы будут собраны в очередь.\n\n'
+                        'Для ученика: «Мои работы» — отправить решение, увидеть результат и получить задание на исправление.\n'
+                        'Для учителя: «Проверить пачку» и «Итог урока». Оценки попадают в отчёт только после подтверждения учителя.',
+                'attachments': [{'type': 'inline_keyboard', 'payload': {'buttons': _help_menu()}}]}
     else:
         origin = app_origin()
         token = bot_login.issue(item['user_id'], item['first_name'])
         url = origin + '/bot-login.html#token=' + token
         if item['action']=='demo_login':url+='&next=demo'
-        body = {'text': 'ЛистОК — от задания до рабочего листа и отчёта.\n\n'
-                        'Откройте свой кабинет по кнопке. Ссылка действует 5 минут и только один раз; '
-                        'не пересылайте её. Для нового входа отправьте /start.',
-                'attachments': [{'type': 'inline_keyboard', 'payload': {'buttons': [
-                    [{'type': 'link', 'text': 'Открыть ЛистОК', 'url': url}],
-                    [{'type':'message','text':'Быстрый лист'},{'type':'message','text':'На печать сегодня'}],
-                    [{'type':'message','text':'Лист голосом'},{'type':'message','text':'Мои работы'}],
-                    [{'type':'message','text':'Проверить пачку'},{'type':'message','text':'Итог урока'}],
-                    [{'type':'message','text':'Проверка ответов'},{'type':'message','text':'Повторить ошибки'}],
-                    [{'type':'link','text':'Видеоинструкция','url':VIDEO_GUIDE_URL}],
-                    [{'type':'message','text':'Посмотреть демо'}]]}}]}
+        body = {'text': 'Здравствуйте, ' + str(item['first_name'])[:60] + '! 👋\n\n'
+                        'Это ЛистОК — кабинет учителя и помощник для ученика в одном диалоге.\n'
+                        'Выберите действие ниже или откройте полный кабинет.\n\n'
+                        'Ссылка для входа действует 5 минут и используется один раз.',
+                'attachments': [{'type': 'inline_keyboard', 'payload': {'buttons': _main_menu(url)}}]}
         if item['action']=='demo_login':
             body['text']='Демо-кабинет: готовые листы, классы, сканы и статистика школы. Все данные учебные.\n\nЛичная ссылка действует 5 минут.'
             body['attachments'][0]['payload']['buttons']=[[{'type':'link','text':'Открыть демо-кабинет','url':url}]]
