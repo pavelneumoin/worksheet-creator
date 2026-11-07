@@ -18,7 +18,7 @@ async function switchDemo(path) {
 async function enterDemo() {
   if (state.auth?.demo) {
     const url = new URL(location.href);url.searchParams.delete("open");history.replaceState(null,"",url.pathname+url.search);
-    await loadDemoGuide();$("demoGuide").open=true;return;
+    await loadDemoGuide();$("demoGuide").open=false;return;
   }
   await switchDemo("enter");
 }
@@ -45,7 +45,8 @@ async function loadDemoGuide() {
   for(const [n,title,caption,action] of actions){const button=node("button",undefined,"demo-step");button.type="button";const body=node("span");body.append(node("strong",title),node("small",caption));button.append(node("b",n),body,node("span","↗","demo-arrow"));button.addEventListener("click",()=>busy("Открываем пример",async()=>{await action();$("demoGuide").open=false;}));steps.append(button);}
   const link=$("demoScanDownload");link.href=d.sample_pdf.pdf_url;link.target="_blank";link.rel="noopener";
   bindArtifactDownload(link,d.sample_pdf.artifact_id,"pdf_url","ЛистОК — учебные ответы.pdf");
-  $("demoGuide").open=true;
+  // Keep the demo compact on every new tab; the reviewer opens the route on demand.
+  $("demoGuide").open=false;
   renderDemoAccess();
 }
 $("demoEnter").addEventListener("click",()=>busy("Готовим демо-кабинет",enterDemo));
