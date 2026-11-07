@@ -7,6 +7,8 @@ from urllib.parse import urlsplit
 import requests
 from utils import bot_login
 
+VIDEO_GUIDE_URL = 'https://vkvideo.ru/video-236910937_456239017'
+
 class AttachmentPending(RuntimeError):
     pass
 
@@ -116,6 +118,7 @@ def reply(client, item):
                         'Быстрый лист: /quick, фото или голосовое сообщение. /voice — пример, /my — кабинет ученика. /today — комплект на сегодня. /check — проверить пачку, /next — сомнительные ответы, /summary — итог урока, /repeat — повторить ошибки. /draft — черновик, /pdf — собрать, /files — повторить PDF, /cancel — отменить ожидание сканов.\n\n'
                         'Отправьте /start — получите личную ссылку для входа на 5 минут. '
                         'Откройте её и подтвердите свой профиль. В кабинете можно начать с готового примера.\n\n'
+                        'Видеоинструкция: ' + VIDEO_GUIDE_URL + '\n\n'
                         'Условия и ответы ИИ проверяет учитель. Оценки попадают в отчёт после вашего подтверждения.'}
     else:
         origin = app_origin()
@@ -131,6 +134,7 @@ def reply(client, item):
                     [{'type':'message','text':'Лист голосом'},{'type':'message','text':'Мои работы'}],
                     [{'type':'message','text':'Проверить пачку'},{'type':'message','text':'Итог урока'}],
                     [{'type':'message','text':'Проверка ответов'},{'type':'message','text':'Повторить ошибки'}],
+                    [{'type':'link','text':'Видеоинструкция','url':VIDEO_GUIDE_URL}],
                     [{'type':'message','text':'Посмотреть демо'}]]}}]}
         if item['action']=='demo_login':
             body['text']='Демо-кабинет: готовые листы, классы, сканы и статистика школы. Все данные учебные.\n\nЛичная ссылка действует 5 минут.'
