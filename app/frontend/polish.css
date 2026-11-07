@@ -1,0 +1,193 @@
+/* Final compact control polish. Loaded after feature-specific styles so the
+   same button rhythm survives desktop, narrow embeds and MAX mobile views. */
+.segmented {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  max-width: none;
+  padding: 5px;
+  border-radius: 12px;
+  background: #f3f2f7;
+}
+.segmented > label { min-width: 0; }
+.segmented > label > .subject-choice {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 62px;
+  padding: 8px 5px !important;
+  border: 1px solid transparent !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  color: #5f5a6e;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.segmented > label > .subject-choice .subject-symbol {
+  display: block;
+  color: #7350d1;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+.segmented > label > .subject-choice .subject-name {
+  display: block;
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+.segmented input:checked + .subject-choice {
+  color: #6845c7;
+  border-color: #e2d8f7 !important;
+  background: #fff !important;
+  box-shadow: 0 3px 10px #39265d12;
+}
+.segmented input:focus-visible + .subject-choice { outline: 3px solid #bca8ef; }
+
+.saved-card .material-actions {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+  gap: 8px !important;
+  align-items: stretch;
+}
+.saved-card .material-actions > .button,
+.saved-card .material-actions > .material-more > summary {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.saved-card .material-actions > .button {
+  padding-inline: 10px;
+  font-size: 12px;
+}
+.saved-card .material-more > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  color: #655d72;
+  background: #f4f2f8;
+  border: 1px solid transparent;
+}
+.saved-card .material-more > summary:hover,
+.saved-card .material-more[open] > summary {
+  color: #6845c7;
+  background: #eee9fa;
+}
+
+.mobile-menu { z-index: 70; }
+.mobile-menu-item {
+  min-height: 56px;
+  padding: 13px 14px;
+  border: 1px solid transparent;
+  transition: background .16s, border-color .16s;
+}
+.mobile-menu-item:hover,
+.mobile-menu-item:focus-visible { border-color: #e2d8f7; background: #f8f5fd; }
+
+.video-guide-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px 24px;
+  align-items: start;
+  margin-top: 28px;
+  padding: 20px 22px;
+  border: 1px solid #e4dcef;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fbf9ff, #f5f1fd);
+}
+.video-guide-card h2 { margin: 0 0 6px; font-size: 20px; }
+.video-guide-card .eyebrow { margin-bottom: 7px; }
+.video-guide-card .quiet { margin: 0; max-width: 520px; }
+.video-guide-details { min-width: 142px; }
+.video-guide-details > summary { list-style: none; }
+.video-guide-details > summary::-webkit-details-marker { display: none; }
+.video-guide-details[open] > summary { display: none; }
+.video-guide-frame {
+  width: min(680px, 70vw);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #211936;
+  box-shadow: 0 8px 24px #33204e18;
+}
+.video-guide-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+.video-guide-link { display: inline-flex; margin-top: 9px; font-size: 12px; font-weight: 600; }
+@media (max-width: 760px) {
+  .video-guide-card { grid-template-columns: 1fr; gap: 13px; margin-top: 20px; padding: 17px; }
+  .video-guide-details { min-width: 0; }
+  .video-guide-details > summary { width: 100%; }
+  .video-guide-frame { width: 100%; }
+}
+
+@media (max-width: 760px) {
+  .topbar { position: sticky !important; inset: auto !important; width: 100% !important; }
+  .topbar-inner {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    gap: 8px !important;
+    padding: 11px 14px 8px !important;
+  }
+  .topbar nav {
+    position: fixed !important;
+    inset: auto 0 0 !important;
+    z-index: 60;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px !important;
+    width: 100% !important;
+    overflow: visible !important;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid #e8e5ed;
+    background: #fffffffa;
+    box-shadow: 0 -5px 24px #30223d0d;
+  }
+  .topbar nav :is(#createNav, #savedNav, #batchNav, #classesNav, #mobileMoreNav) {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 52px;
+    padding: 5px 2px !important;
+    border-radius: 11px;
+    font-size: 0;
+    overflow: hidden;
+  }
+  .topbar nav :is(#createNav, #savedNav, #batchNav, #classesNav, #mobileMoreNav)::after {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+    line-height: 1.15;
+  }
+  #createNav::after { content: 'Создать'; }
+  #savedNav::after { content: 'Библиотека'; }
+  #batchNav::after { content: 'Проверка'; }
+  #classesNav::after { content: 'Классы'; }
+  #mobileMoreNav::after { content: 'Ещё'; }
+  .topbar nav .nav-button svg { width: 19px; height: 19px; flex: none; }
+  #savedNav .nav-label, #savedNav #savedCount { display: none !important; }
+  .account-tools { min-width: 0; }
+  .account-tools .feedback-nav { display: none; }
+  .segmented { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  .segmented > label > .subject-choice { min-height: 56px; }
+  .segmented > label > .subject-choice .subject-name { font-size: 11px; }
+  .saved-card .material-actions { gap: 6px !important; }
+}
+@media (max-width: 360px) {
+  .topbar nav { padding-inline: 5px !important; }
+  .topbar nav :is(#createNav, #savedNav, #batchNav, #classesNav, #mobileMoreNav)::after { font-size: 9px; }
+  .saved-card .material-actions { gap: 5px !important; }
+  .saved-card .material-actions > .button,
+  .saved-card .material-actions > .material-more > summary { padding-inline: 7px; font-size: 11px; }
+}

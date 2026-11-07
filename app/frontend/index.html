@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="/batch_queue.css" />
     <link rel="stylesheet" href="/teacher_flow.css" />
     <link rel="stylesheet" href="/students.css" />
+    <link rel="stylesheet" href="/polish.css" />
     <script defer src="/vendor/katex/katex.min.js"></script>
     <script defer src="/jobs.js"></script>
     <script defer src="/script.js"></script>
@@ -224,6 +225,26 @@
         <p class="quiet home-private">
           Созданные листы сохраняются в вашем личном кабинете.
         </p>
+        <section class="video-guide-card" aria-labelledby="videoGuideTitle">
+          <div>
+            <p class="eyebrow">КОРОТКАЯ ИНСТРУКЦИЯ</p>
+            <h2 id="videoGuideTitle">Как пользоваться ЛистОК</h2>
+            <p class="quiet">Пять минут: от материала и печати до проверки и статистики класса.</p>
+          </div>
+          <details class="video-guide-details">
+            <summary class="button secondary">Смотреть видео</summary>
+            <div class="video-guide-frame">
+              <iframe
+                src="https://vkvideo.ru/video_ext.php?oid=-236910937&amp;id=456239017&amp;hash=d6f26642885d70b9&amp;hd=3"
+                title="Видеоинструкция ЛистОК"
+                loading="lazy"
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock;"
+                allowfullscreen
+              ></iframe>
+            </div>
+            <a class="video-guide-link" href="https://vkvideo.ru/video-236910937_456239017" target="_blank" rel="noopener">Открыть видео в VK ↗</a>
+          </details>
+        </section>
       </section>
       <section id="scheduleView" hidden>
         <div class="section-title">
@@ -292,14 +313,12 @@
                       name="subject"
                       value="math"
                       checked
-                    /><span>𝑥² &nbsp; Математика</span></label
+                    /><span class="subject-choice"><strong class="subject-symbol">𝑥²</strong><span class="subject-name">Математика</span></span></label
                   ><label
-                    ><input type="radio" name="subject" value="physics" /><span
-                      >Ω &nbsp; Физика</span
-                    ></label
+                    ><input type="radio" name="subject" value="physics" /><span class="subject-choice"><strong class="subject-symbol">Ω</strong><span class="subject-name">Физика</span></span></label
                   >
-                  <label><input type="radio" name="subject" value="chemistry" /><span>⚗ &nbsp; Химия</span></label>
-                  <label><input type="radio" name="subject" value="other" /><span>＋ &nbsp; Другой предмет</span></label>
+                  <label><input type="radio" name="subject" value="chemistry" /><span class="subject-choice"><strong class="subject-symbol">⚗</strong><span class="subject-name">Химия</span></span></label>
+                  <label><input type="radio" name="subject" value="other" /><span class="subject-choice"><strong class="subject-symbol">＋</strong><span class="subject-name">Другой предмет</span></span></label>
                 </div>
               </fieldset>
               <label class="upload-zone" id="dropZone" for="fileInput"

@@ -3,6 +3,13 @@
 **5 минут 48 секунд · Full HD · без голоса.** Настоящие экраны учебного кабинета,
 крупные подписи и отдельный текст для озвучки.
 
+**Версия с голосом в VK:** [смотреть видео](https://vkvideo.ru/video-236910937_456239017).
+Для встраивания на сайт используйте:
+
+```html
+<iframe src="https://vkvideo.ru/video_ext.php?oid=-236910937&amp;id=456239017&amp;hash=d6f26642885d70b9&amp;hd=3" width="1280" height="720" allow="autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock;" frameborder="0" allowfullscreen></iframe>
+```
+
 [![Видеоинструкция ЛистОК](images/video-guide.png)](https://github.com/pavelneumoin/worksheet-creator/releases/download/listok-2026.11.07-guide2/listok-guide-silent.mp4)
 
 - [Скачать MP4](https://github.com/pavelneumoin/worksheet-creator/releases/download/listok-2026.11.07-guide2/listok-guide-silent.mp4)

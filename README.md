@@ -17,6 +17,7 @@
 [Документация проекта PDF](docs/project/listok-project.pdf)
 
 **[Видеоинструкция — 5:48](docs/VIDEO_GUIDE.md)** ·
+[Видео с голосом в VK](https://vkvideo.ru/video-236910937_456239017) ·
 [Текст для озвучки](docs/VIDEO_NARRATION.md). Весь путь учителя, ученика и завуча
 на экранах учебного кабинета.
 

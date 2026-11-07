@@ -13,6 +13,8 @@ from utils import class_store, job_store, latex, workspace_store
 from utils.gigachat_client import AIServiceError
 from utils.worksheet import validate_worksheet
 
+VIDEO_GUIDE_URL = 'https://vkvideo.ru/video-236910937_456239017'
+
 
 def media_url(value):
     try:
@@ -113,7 +115,7 @@ def handle(client,item):
     if action=='quick_help':
         from utils.bot_workflows import clear_context
         clear_context(user)
-        client.send(user,'Быстрый лист: пришлите до 10 фотографий одним сообщением, один PDF или /лист и текст заданий. Поддерживаются математика, физика, химия и другие предметы. Черновик и ответы покажу прямо здесь, после вашей проверки пришлю PDF. Всё сохраняется в вашей личной библиотеке.\n\n/today — листы на сегодня\n/draft — последний черновик\n/files — повторить готовые PDF\n/start — открыть кабинет')
+        client.send(user,'Быстрый лист: пришлите до 10 фотографий одним сообщением, один PDF или /лист и текст заданий. Поддерживаются математика, физика, химия и другие предметы. Черновик и ответы покажу прямо здесь, после вашей проверки пришлю PDF. Всё сохраняется в вашей личной библиотеке.\n\nВидеоинструкция: '+VIDEO_GUIDE_URL+'\n\n/today — листы на сегодня\n/draft — последний черновик\n/files — повторить готовые PDF\n/start — открыть кабинет')
     elif action=='recognize':
         payload=json.loads(item.get('payload') or '{}') if isinstance(item.get('payload'),str) else item.get('payload',{})
         with tempfile.TemporaryDirectory(prefix='listok-bot-') as temporary:
