@@ -485,6 +485,12 @@ async function openReview(id, ready = null) {
   resetReviewEditor();
   reviewState.current = r;
   classScreen("reviewView");
+  // A review opened from the batch belongs to the checking workflow. Keep
+  // that context visible in both the desktop rail and the mobile bar.
+  if (reviewState.batchContext) {
+    $("batchNav")?.classList.add("active");
+    $("classesNav")?.classList.remove("active");
+  }
   const target = $("reviewView");
   target.classList.toggle("queue-review-screen",!!reviewState.queueContext?.item);
   target.replaceChildren(
