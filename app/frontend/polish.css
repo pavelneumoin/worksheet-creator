@@ -325,14 +325,57 @@
 .demo-files strong { width: 100%; margin: 0 0 2px; color: #665b76; font-size: 11px; }
 .demo-files .button { min-height: 38px; border-radius: 9px; font-size: 11px; }
 .demo-note { margin-bottom: 0; color: #898097; }
+
+/* Keep long formulas and edit cards inside the phone viewport. KaTeX can
+   contain an unbroken token; grid items need an explicit zero minimum so it
+   cannot widen the whole workspace. */
+.task-list,
+.task-card,
+.task-content,
+.task-content > *,
+.math-preview,
+#step2,
+#step3 { min-width: 0; }
+.task-card,
+.task-content,
+.math-preview { max-width: 100%; }
+.task-card { overflow: hidden; }
+.task-content { overflow-wrap: anywhere; }
+.math-preview { width: 100%; box-sizing: border-box; }
+
+/* A compact action stack is easier to scan and tap on a phone. */
+@media (max-width: 760px) {
+  #step2 .actions.split { display: grid; grid-template-columns: 1fr; }
+  #step2 .actions.split > .button { width: 100%; }
+  .task-card-header { gap: 8px; flex-wrap: wrap; }
+  .task-card-header button { margin-left: auto; }
+}
+
 @media (max-width: 760px) {
   .account-tools { display: flex; align-items: flex-end; gap: 5px; min-width: 0; }
-  .account-profile { gap: 6px; padding: 0; border: 0; background: none; }
-  .account-avatar { width: 27px; height: 27px; border-radius: 9px; font-size: 11px; }
+  .account-profile {
+    gap: 5px;
+    min-width: 0;
+    padding: 4px 7px 4px 5px;
+    border: 1px solid #e8e0f4;
+    border-radius: 10px;
+    background: #fbf9ff;
+  }
+  .account-avatar { width: 24px; height: 24px; border-radius: 8px; font-size: 10px; }
   .account-profile-copy small { display: none; }
-  .account-profile-copy .edition { display: block !important; max-width: 88px; color: #71697f; font-size: 10px; text-align: right; }
+  .account-profile-copy { min-width: 0; }
+  .account-profile-copy .edition {
+    display: block !important;
+    max-width: 78px;
+    overflow: hidden;
+    color: #71697f;
+    font-size: 10px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .account-actions { display: flex; align-items: center; gap: 5px; }
-  .account-actions .demo-launch { min-height: 38px; padding: 8px 9px; font-size: 10px; }
+  .account-actions .demo-launch { min-height: 38px; padding: 8px 9px; font-size: 10px; border-radius: 10px; }
   .account-actions .demo-launch > span:first-child { display: none; }
   .demo-bar { padding: 16px 15px 14px; border-radius: 15px; }
   .demo-bar-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
