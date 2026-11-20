@@ -8,6 +8,17 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Build and test local Astryx components
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build:ui
+          npm run test:ui
+          node --test tests/*.test.cjs
+          git diff --exit-code -- app/frontend/vendor/astryx
       - name: Build Python and TeX image
         run: docker build -t listok:night7 .
       - name: Offline regression tests
@@ -30,14 +41,8 @@ jobs:
           name: listok-print-samples
           path: print-samples/*.pdf
           retention-days: 90
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
       - name: Parse exported Marp with the real renderer
         run: |
-          npm ci --ignore-scripts --no-audit --no-fund
-          node --test tests/frontend_requests.test.cjs tests/frontend_downloads.test.cjs tests/frontend_roster.test.cjs tests/frontend_review_focus.test.cjs tests/frontend_batch_queue.test.cjs tests/frontend_student_autosave.test.cjs
           for file in app/frontend/*.js; do node --check "$file"; done
           docker run --name marp-samples --network none listok:night7 python scripts/prepare_marp_samples.py
           docker cp marp-samples:/app/output ./output

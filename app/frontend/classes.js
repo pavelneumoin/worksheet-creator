@@ -279,8 +279,8 @@ function renderRoster(target, c) {
       });
     });
     if (c.students.length) {
-      const more = node("details", undefined, "panel");
-      more.append(node("summary", "Добавить учеников"), form);
+      const more = node("details", undefined, "panel roster-add-disclosure");
+      more.append(node("summary", "Создать коды без списка"), form);
       target.append(more);
     } else target.append(form);
   }

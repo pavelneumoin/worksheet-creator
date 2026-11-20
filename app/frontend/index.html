@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#8742ee" />
+    <meta name="theme-color" content="#6753cd" />
     <title>ЛистОК — готовимся к уроку</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
@@ -20,6 +20,9 @@
     <link rel="stylesheet" href="/students.css" />
     <link rel="stylesheet" href="/polish.css" />
     <link rel="stylesheet" href="/final_ui.css" />
+    <link rel="stylesheet" href="/workspace.css" />
+    <link rel="stylesheet" href="/analytics_v2.css" />
+    <link rel="stylesheet" href="/vendor/astryx/listok-ui.css" />
     <script defer src="/vendor/katex/katex.min.js"></script>
     <script defer src="/jobs.js"></script>
     <script defer src="/script.js"></script>
@@ -41,6 +44,8 @@
     <script defer src="/mobile.js"></script>
     <script defer src="/latex_keyboard.js"></script>
     <script defer src="/feedback.js"></script>
+    <script defer src="/workspace.js"></script>
+    <script defer src="/vendor/astryx/listok-ui.js"></script>
   </head>
   <body>
     <header class="topbar">
@@ -902,14 +907,14 @@
       </section>
       <section id="feedbackView" hidden aria-label="Отзывы учителей">
         <div class="feedback-heading">
-          <div><p class="eyebrow">ВАШЕ МНЕНИЕ</p><h1>Помогите нам сделать ЛистОК удобнее</h1><p class="lead">Оставьте короткий отзыв после проверки сервиса. Отзыв можно изменить позже.</p></div>
+          <div><h1>Отзывы о ЛистОК</h1><p class="lead">Оценки, замечания и предложения учителей.</p></div>
           <div class="feedback-summary-card"><strong id="feedbackAverage">—</strong><span class="feedback-stars-static" aria-hidden="true">★★★★★</span><span id="feedbackCount">Пока нет отзывов</span></div>
         </div>
         <div class="feedback-layout">
           <form id="feedbackForm" class="panel feedback-form">
             <h2 id="feedbackFormTitle">Оставить отзыв</h2>
             <label>Как оцените сервис?<span id="feedbackStars" class="feedback-stars" role="radiogroup" aria-label="Оценка от одного до пяти"></span></label>
-            <input id="feedbackDisplayName" maxlength="80" placeholder="Как подписать отзыв, например Анна К." autocomplete="nickname" />
+            <label>Имя в отзыве<input id="feedbackDisplayName" maxlength="80" placeholder="Например, Анна К." autocomplete="nickname" /></label>
             <label>Что понравилось?<textarea id="feedbackLiked" rows="3" maxlength="1200" placeholder="Например: быстро получить PDF и бланк ответов"></textarea></label>
             <label>Что было неудобно?<textarea id="feedbackInconvenient" rows="3" maxlength="1200" placeholder="Например: не сразу нашла очередь проверки"></textarea></label>
             <label>Что исправить в первую очередь?<textarea id="feedbackImprove" rows="3" maxlength="1200" placeholder="Любая конкретная идея поможет"></textarea></label>

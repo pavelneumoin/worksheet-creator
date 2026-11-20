@@ -1,0 +1,17 @@
+{
+  "description": "Locally bundled Astryx React islands for the ListOK formula editor and variant picker",
+  "build": "npm ci --ignore-scripts && npm run build:ui",
+  "source": "https://github.com/meta/astryx",
+  "dependencies": {
+    "@astryxdesign/cli": "0.7.16",
+    "@astryxdesign/core": "0.7.16",
+    "@astryxdesign/theme-neutral": "0.7.16",
+    "@stylexjs/stylex": "0.19.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "files": [
+    "listok-ui.js",
+    "listok-ui.css"
+  ]
+}

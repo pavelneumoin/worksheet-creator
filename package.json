@@ -1,8 +1,25 @@
 {
   "name": "listok-export-checks",
   "private": true,
-  "description": "Pinned tooling for verifying exported Marp worksheets",
-  "devDependencies": { "@marp-team/marp-core": "4.4.0" },
-  "overrides": { "katex": "0.18.2", "@xmldom/xmldom": "0.9.12" },
-  "scripts": { "check:marp": "node scripts/check_marp.cjs" }
+  "description": "Pinned build tooling for ListOK UI and worksheet exports",
+  "devDependencies": {
+    "@astryxdesign/cli": "0.7.16",
+    "@astryxdesign/core": "0.7.16",
+    "@astryxdesign/theme-neutral": "0.7.16",
+    "@marp-team/marp-core": "4.4.0",
+    "@stylexjs/stylex": "0.19.2",
+    "esbuild": "0.28.2",
+    "postcss": "8.5.31",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "overrides": {
+    "katex": "0.18.2",
+    "@xmldom/xmldom": "0.9.12"
+  },
+  "scripts": {
+    "check:marp": "node scripts/check_marp.cjs",
+    "build:ui": "node scripts/build_ui.mjs",
+    "test:ui": "node --test ui/formula.test.mjs"
+  }
 }

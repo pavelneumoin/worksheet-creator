@@ -172,7 +172,9 @@ function showView(view, refresh = true) {
   $("classesNav").classList.toggle("active", view === "classes");
   $("scheduleNav").classList.toggle("active", view === "schedule");
   $("feedbackNav")?.classList.toggle("active", view === "feedback");
-  $("mobileMoreNav")?.classList.toggle("active", ["schedule", "analytics", "school", "library"].includes(view));
+  $("studentNav")?.classList.toggle("active", view === "student" && state.studentMode !== "teacher");
+  $("studentInboxNav")?.classList.toggle("active", view === "student" && state.studentMode === "teacher");
+  $("mobileMoreNav")?.classList.toggle("active", ["schedule", "analytics", "school", "library", "student", "feedback"].includes(view));
   if (view === "schedule" && refresh)
     busy("Загружаем расписание", refreshSchedule);
   if (view === "classes" && refresh) busy("Загружаем классы", refreshClasses);
@@ -614,29 +616,32 @@ function renderSaved() {
   }
   for (const item of items) {
     const card = node("article", undefined, "saved-card");
+    const top = node("div", undefined, "material-topline");
+    top.append(node("span", subjectLabel(item.worksheet.subject), "material-subject"),
+      node("span", item.result ? "PDF готов" : "Черновик", "material-badge " + (item.result ? "status-ready" : "status-draft")));
     card.append(
-      node(
-        "span",
-        subjectLabel(item.worksheet.subject, true),
-        "eyebrow",
-      ),
+      top,
       node("h2", item.worksheet.title),
       node(
         "p",
         taskCount(item.worksheet.tasks.length) +
           " · " +
-          new Date(item.updated).toLocaleDateString("ru-RU"),
+          new Date(item.updated).toLocaleDateString("ru-RU"), "material-meta",
       ),
-      node("span", item.result ? "PDF готов" : "Черновик", "material-badge"),
     );
+    const tags = node("div", undefined, "material-tags");
     if (item.publication_id)
-      card.append(
-        node("span", "В библиотеке", "material-badge publication-badge"),
+      tags.append(
+        node("span", "Открыт коллегам", "material-badge publication-badge"),
       );
+    if (item.archived) tags.append(node("span", "В архиве", "material-badge"));
+    if (tags.children.length) card.append(tags);
     if (item.origin)
       card.append(node("p", "Основа: " + item.origin.author, "quiet"));
-    if (item.folder) card.append(node("p", "Папка: " + item.folder, "quiet"));
-    if (item.archived) card.append(node("span", "В архиве", "material-badge"));
+    if (item.folder) {
+      const folder = node("p", item.folder, "material-folder");
+      folder.prepend(studioIcon("M3 7V4h6l2 3h10v13H3z")); card.append(folder);
+    }
     const actions = node("div", undefined, "actions material-actions");
     const open = node("button", "Открыть", "button primary");
     const remove = node("button", "Удалить", "button ghost material-delete");
@@ -706,7 +711,9 @@ function renderSaved() {
       actions.append(assign);
     }
     const more = node("details", undefined, "material-more");
-    const moreLabel = node("summary", "Ещё");
+    const moreLabel = node("summary", "⋯");
+    moreLabel.setAttribute("aria-label", "Действия с листом «" + item.worksheet.title + "»");
+    moreLabel.title = "Действия с листом";
     const moreActions = node("div", undefined, "material-more-actions");
     moreActions.append(share, remove); more.append(moreLabel, moreActions);
     actions.append(more);
@@ -1235,12 +1242,15 @@ $("demoBtn").addEventListener("click", () =>
     loadSheet(result.worksheet, result.source);
   }),
 );
+function appendWorksheetSource(form, files, text, mode) {
+  if (mode !== "text") files.forEach((file) => form.append("files", file));
+  if (mode !== "files") form.append("text", text);
+}
 $("recognizeBtn").addEventListener("click", () =>
   busy("Передаём задания в обработку", async () => {
     const form = new FormData();
-    state.files.forEach((file) => form.append("files", file));
+    appendWorksheetSource(form, state.files, $("sourceText").value, state.sourceMode);
     form.append("subject", subject());
-    form.append("text", $("sourceText").value);
     form.append("instructions", $("teacherInstructions").value);
     form.append("settings", JSON.stringify(initialSettings()));
     form.append("variant_count", $("setupVariants").value);
