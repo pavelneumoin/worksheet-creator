@@ -307,6 +307,7 @@ function renderTasks() {
       header = node("div", undefined, "task-card-header");
     header.append(node("span", "ЗАДАНИЕ " + (index + 1)));
     const remove = node("button", "Удалить");
+    remove.prepend(listokIcon("trash"));
     remove.type = "button";
     remove.setAttribute("aria-label", "Удалить задание " + (index + 1));
     remove.disabled = state.sheet.tasks.length === 1;
@@ -387,14 +388,20 @@ function renderTasks() {
   });
   $("addTaskBtn").disabled = state.sheet.tasks.length >= 30;
 }
+function setSaveButtonLabel(label, saved = false) {
+  $("saveBtn").replaceChildren(
+    listokIcon(saved ? "check" : "save"),
+    node("span", label),
+  );
+}
 function loadSheet(data, source, id = null, origin = null) {
   state.sheet = structuredClone(data);
   state.source = source;
   state.savedId = id;
   state.origin = origin;
-  $("saveBtn").textContent = id
+  setSaveButtonLabel(id
     ? "Сохранить изменения"
-    : "Сохранить в мои материалы";
+    : "Сохранить в мои материалы");
   state.revision = null;
   invalidate();
   markDirty(!id);
@@ -509,7 +516,7 @@ async function renderResult() {
   $("saveSheetPdf").download="Рабочий лист.pdf";
   $("downloadAnswerForm").hidden=!state.result.answer_form_url;
   if(state.result.answer_form_url)$("downloadAnswerForm").href=state.result.answer_form_url;
-  $("saveBtn").textContent=state.savedId&&!state.dirty?"Сохранено в библиотеке":"Сохранить изменения";
+  setSaveButtonLabel(state.savedId&&!state.dirty?"Сохранено в библиотеке":"Сохранить изменения", !!state.savedId&&!state.dirty);
   $("saveBtn").disabled=!!state.savedId&&!state.dirty;
   $("pdfPreview").src = state.result.pdf_url + "#toolbar=0";
   for (const [id, key, name] of [
@@ -547,7 +554,7 @@ async function saveCurrent(copy = false) {
   if (copy || !id) state.result = null;
   markDirty(false);
   $("saveStatus").textContent = "Сохранено в профиле";
-  $("saveBtn").textContent = "Сохранить изменения";
+  setSaveButtonLabel("Сохранить изменения");
   await refreshMaterials();
   return state.savedId;
 }
@@ -640,11 +647,12 @@ function renderSaved() {
       card.append(node("p", "Основа: " + item.origin.author, "quiet"));
     if (item.folder) {
       const folder = node("p", item.folder, "material-folder");
-      folder.prepend(studioIcon("M3 7V4h6l2 3h10v13H3z")); card.append(folder);
+      folder.prepend(listokIcon("folder")); card.append(folder);
     }
     const actions = node("div", undefined, "actions material-actions");
     const open = node("button", "Открыть", "button primary");
     const remove = node("button", "Удалить", "button ghost material-delete");
+    remove.prepend(listokIcon("trash"));
     open.addEventListener("click", () => {
       if (
         state.dirty &&
@@ -703,6 +711,7 @@ function renderSaved() {
         else await preparePublication(item.id);
       }),
     );
+    share.prepend(listokIcon("share"));
     actions.append(open);
     if (item.edition_count) {
       const assign = node("button", "Назначить", "button secondary");
@@ -711,7 +720,8 @@ function renderSaved() {
       actions.append(assign);
     }
     const more = node("details", undefined, "material-more");
-    const moreLabel = node("summary", "⋯");
+    const moreLabel = node("summary");
+    moreLabel.append(listokIcon("ellipsis"));
     moreLabel.setAttribute("aria-label", "Действия с листом «" + item.worksheet.title + "»");
     moreLabel.title = "Действия с листом";
     const moreActions = node("div", undefined, "material-more-actions");
@@ -1006,7 +1016,8 @@ function renderPublicationRating(item) {
   $("ratingStars").hidden = item.is_owner;
   if (item.is_owner) return;
   for (let stars = 1; stars <= 5; stars++) {
-    const button = node("button", "★", "star-button");
+    const button = node("button", undefined, "star-button");
+    button.append(listokIcon("star"));
     button.type = "button";
     button.classList.toggle("filled", stars <= (item.my_rating || 0));
     button.setAttribute("aria-label", "Оценить на " + stars + " из 5");
@@ -1061,7 +1072,8 @@ function renderFiles() {
       image.src = URL.createObjectURL(file);
       state.urls.push(image.src);
     }
-    const remove = node("button", "×");
+    const remove = node("button");
+    remove.append(listokIcon("close"));
     remove.setAttribute("aria-label", "Убрать файл " + (index + 1));
     remove.addEventListener("click", () => {
       state.files.splice(index, 1);

@@ -2,7 +2,7 @@
 :root{--ink:#242638;--muted:#727587;--border:#e5e7ef;--paper:#f6f7fb;--accent:#7150d1}
 body{color:var(--ink)}
 .button,input,select,textarea{font-family:inherit}
-.button{font-size:13px;border-radius:11px;min-height:44px;box-shadow:none!important}
+.button{font-size:13px;border-radius:11px;min-height:44px}
 .button:focus-visible,summary:focus-visible{outline:3px solid #b5a0ed;outline-offset:3px}
 .page{padding-top:28px}
 .panel{box-shadow:none;border-radius:16px}

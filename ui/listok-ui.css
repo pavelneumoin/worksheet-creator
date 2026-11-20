@@ -3,10 +3,10 @@
 [data-listok-astryx] [data-astryx-theme].listok-astryx-theme {
   --font-family-body: var(--listok-font, "Manrope", "Segoe UI", sans-serif);
   --font-family-heading: var(--font-family-body);
-  --color-accent: #7352cc;
-  --color-text-accent: #6243b7;
-  --color-icon-accent: #7352cc;
-  --color-accent-muted: #f0eafa;
+  --color-accent: #6753cd;
+  --color-text-accent: #624bb2;
+  --color-icon-accent: #6753cd;
+  --color-accent-muted: #f3effc;
   --color-border: #e3e3ed;
   --color-border-emphasized: #cdcbdc;
   --color-text-primary: #252535;
@@ -17,14 +17,14 @@
   color-scheme: light;
 }
 #latexKeyboard.latex-keyboard--astryx { margin-top: 14px; padding: 0; border: 0; background: none; box-shadow: none; border-radius: 0; }
-[data-listok-astryx] .listok-formula { min-width: 0; padding: 14px; background: #f8f8fc; border: 1px solid #e9e7f0; border-radius: 14px; }
+[data-listok-astryx] .listok-formula { min-width: 0; padding: 16px; background: #fff; border: 1px solid #e4e8ef; border-radius: 14px; }
 [data-listok-astryx] .listok-formula-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 [data-listok-astryx] .listok-formula-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; white-space: nowrap; }
 [data-listok-astryx] .listok-formula-title > span { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 7px; color: #7352cc; background: #eee7fa; font: italic 21px Georgia, serif; }
 [data-listok-astryx] .listok-formula-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
-[data-listok-astryx] [data-astryx-theme] .listok-formula-grid > .astryx-button { width: 100%; min-height: 67px; height: auto; border-radius: 10px; padding: 9px 3px; background: #fff; border: 1px solid #e4e7ec; box-shadow: 0 1px 2px #29203d03; }
+[data-listok-astryx] [data-astryx-theme] .listok-formula-grid > .astryx-button { position: relative; width: 100%; min-height: 72px; height: auto; border-radius: 11px; padding: 11px 3px; background: #fafbfe; border: 1px solid #e6e9f0; box-shadow: none; }
 [data-listok-astryx] [data-astryx-theme] .listok-formula-grid > .astryx-button:hover { border-color: #d3c6ed; background: #faf7ff; }
-[data-listok-astryx] [data-astryx-theme] .listok-formula-grid > .astryx-button[aria-pressed="true"] { border-color: #9475d9; background: #f2ecfd; color: #5c3da8; box-shadow: 0 0 0 1px #9475d9; }
+[data-listok-astryx] [data-astryx-theme] .listok-formula-grid > .astryx-button[aria-pressed="true"] { border-color: #9d8ad7; background: #f3effc; color: #624bb2; box-shadow: inset 0 0 0 .5px #9d8ad7; }
 [data-listok-astryx] .listok-formula-key { display: flex; align-items: center; flex-direction: column; gap: 6px; }
 [data-listok-astryx] .listok-formula-key > span:last-child { font-family: var(--font-family-body); font-size: 10px; line-height: 1.2; font-weight: 600; white-space: normal; }
 [data-listok-astryx] .listok-formula-preview { display: inline-block; font-size: 16px; line-height: 1.45; }
@@ -32,9 +32,9 @@
 [data-listok-astryx] .listok-symbol-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
 [data-listok-astryx] [data-astryx-theme] .listok-symbol-grid > .astryx-button { width: 100%; height: 44px; min-width: 0; padding: 7px 4px; border: 1px solid #e4e7ec; border-radius: 9px; background: #fff; }
 [data-listok-astryx] [data-astryx-theme] .listok-symbol-grid > .astryx-button:hover { border-color: #d3c6ed; background: #faf7ff; }
-[data-listok-astryx] .listok-formula-composer { margin-top: 12px; padding: 14px; background: white; border: 1px solid #e6e1f0; border-radius: 11px; }
+[data-listok-astryx] .listok-formula-composer { margin-top: 14px; padding: 16px; background: #fafbfe; border: 1px solid #e5e8f0; border-radius: 12px; }
 [data-listok-astryx] .listok-formula-composer-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 13px; }
-[data-listok-astryx] .listok-formula-composer-title .astryx-button { width: 30px; height: 30px; min-height: 30px; font-size: 21px; }
+[data-listok-astryx] .listok-formula-composer-title .astryx-button { width: 40px; height: 40px; min-height: 40px; border-radius: 10px; color: #8a93a4; }
 [data-listok-astryx] .listok-formula-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 [data-listok-astryx] .listok-formula-fields.is-single { grid-template-columns: minmax(0, 1fr); }
 [data-listok-astryx] .listok-formula-fields label { font: 600 12px/1.4 var(--font-family-body); color: #656174; }
@@ -43,17 +43,21 @@
 [data-listok-astryx] .listok-formula-result { min-width: 0; max-width: 100%; padding: 10px 2px; overflow-x: auto; overflow-y: hidden; flex: 1; color: #3c3157; }
 [data-listok-astryx] .listok-formula-result.has-error { color: #b63e56; }
 [data-listok-astryx] .listok-formula-result.has-error .listok-formula-preview { font-size: 12px; }
-[data-listok-astryx] .listok-formula-composer-footer > .astryx-button { flex: 0 0 auto; min-height: 40px; padding-inline: 17px; border-radius: 9px; }
+[data-listok-astryx] .listok-formula-composer-footer > .astryx-button { flex: 0 0 auto; min-height: 44px; padding-inline: 18px; border-radius: 11px; font-weight: 600; box-shadow: 0 2px 4px #4e3d9514; }
 [data-listok-astryx] .listok-formula-status { display: block; color: #62587b; font-size: 12px; margin-top: 9px; }
 [data-listok-astryx] .listok-formula-status:empty { display: none; }
 [data-listok-astryx] .astryx-segmented-control { min-width: 0; max-width: 100%; border-radius: 9px; }
 [data-listok-astryx] .astryx-segmented-control-item { min-width: 0; font-family: var(--font-family-body); font-size: 12px; }
+[data-listok-astryx] [data-astryx-theme] .listok-formula-top .astryx-segmented-control { padding: 3px; gap: 2px; border: 1px solid #e9ebf1; background: #f6f7fa; border-radius: 10px; }
+[data-listok-astryx] [data-astryx-theme] .listok-formula-top .astryx-segmented-control-item { padding-inline: 12px; color: #8590a3; border-radius: 7px; min-height: 36px; }
+[data-listok-astryx] [data-astryx-theme] .listok-formula-top .astryx-segmented-control-item[aria-checked=true] { background: #fff; color: #536078; box-shadow: 0 1px 3px #23324d0a; }
 [data-listok-astryx] .astryx-button:focus-visible, [data-listok-astryx] .astryx-segmented-control-item:focus-visible { outline: 2px solid #8463cf; outline-offset: 3px; }
 #listokVariantPicker { width: 100%; min-width: 0; }
 .listok-variant-label { margin-bottom: 8px; }
 [data-listok-astryx] .listok-variants { display: grid; gap: 7px; }
-[data-listok-astryx] .listok-variants .astryx-segmented-control { width: 100%; }
-[data-listok-astryx] .listok-variants .astryx-segmented-control-item { min-height: 40px; font-size: 14px; }
+[data-listok-astryx] [data-astryx-theme] .listok-variants .astryx-segmented-control { width: 100%; gap: 7px; padding: 0; background: none; border: 0; border-radius: 0; }
+[data-listok-astryx] [data-astryx-theme] .listok-variants .astryx-segmented-control-item { min-height: 46px; font-size: 15px; border: 1px solid #e0e5ee; border-radius: 10px; background: #fff; color: #7e889a; box-shadow: none; }
+[data-listok-astryx] [data-astryx-theme] .listok-variants .astryx-segmented-control-item[aria-checked=true] { background: #f3effc; color: #624bb2; border-color: #9d8ad7; box-shadow: inset 0 0 0 .5px #9d8ad7; font-weight: 600; }
 [data-listok-astryx] .listok-variants-description { font-size: 11px; color: #7a7488; font-weight: 400; line-height: 1.35; }
 @media (max-width: 640px) {
   [data-listok-astryx] .listok-formula { padding: 12px; }

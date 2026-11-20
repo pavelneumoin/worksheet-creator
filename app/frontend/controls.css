@@ -1,0 +1,117 @@
+/* Shared control language: one stroke, one rhythm, one clear primary action. */
+:root { --control-accent:#5e4bb8; --control-accent-hover:#4f3e9e; --control-ink:#344054; --control-line:#dce2eb; --control-soft:#f4f5f8; --control-radius:12px; }
+.listok-icon { display:inline-block; width:20px; height:20px; flex:none; vertical-align:middle; color:inherit; }
+.page .button, .topbar .button, dialog .button,
+#studentView .button, #analyticsView .button, #schoolView .button {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:44px; padding:10px 16px; border:1px solid var(--control-line); border-radius:var(--control-radius);
+  font-size:14px; line-height:1.4; font-weight:600; letter-spacing:0; text-decoration:none;
+  background:#fff; color:var(--control-ink); box-shadow:0 1px 2px #14213d05;
+  transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s; cursor:pointer;
+}
+.page .button.primary, .topbar .button.primary, dialog .button.primary,
+#studentView .button.primary, #analyticsView .button.primary, #schoolView .button.primary {
+  color:#fff; background:var(--control-accent); border-color:var(--control-accent); box-shadow:0 2px 3px #48359114;
+}
+.page .button.primary:hover:not(:disabled), dialog .button.primary:hover:not(:disabled),
+:is(#studentView,#analyticsView,#schoolView) .button.primary:hover:not(:disabled) { background:var(--control-accent-hover); border-color:var(--control-accent-hover); transform:none; }
+.page .button.secondary:hover:not(:disabled), dialog .button.secondary:hover:not(:disabled),
+:is(#studentView,#analyticsView,#schoolView) .button.secondary:hover:not(:disabled) { background:#f8f9fc; border-color:#bfc8d8; }
+.page .button.ghost, .topbar .button.ghost, dialog .button.ghost,
+#studentView .button.ghost, #analyticsView .button.ghost, #schoolView .button.ghost { background:transparent; border-color:transparent; box-shadow:none; color:#626c7e; }
+.page .button.ghost:hover:not(:disabled), dialog .button.ghost:hover:not(:disabled),
+:is(#studentView,#analyticsView,#schoolView) .button.ghost:hover:not(:disabled) { background:#f0f2f7; color:#344054; }
+#studentView .button.pupil-filter { color:var(--pupil-muted); border-color:var(--pupil-line); background:#fff; }
+#studentView .button.pupil-filter[aria-pressed=true] { color:var(--pupil-accent); border-color:#cfc6ef; background:#f1edfc; }
+.page .button.danger, .page .button.material-delete, .page .button.school-revoke { color:#b34148; border-color:transparent; background:#fff5f4; box-shadow:none; }
+.page .button.danger:hover, .page .button.material-delete:hover, .page .button.school-revoke:hover { color:#9a2832; background:#ffe9e7; }
+.page .button:disabled, .topbar .button:disabled, dialog .button:disabled { opacity:.48; box-shadow:none; cursor:not-allowed; }
+.page .button:focus-visible, .topbar button:focus-visible, dialog button:focus-visible { outline:2px solid #8976d0; outline-offset:3px; }
+.button > .listok-icon { width:18px; height:18px; }
+.button > span:not(.file-action-copy) { min-width:0; }
+.page .actions { gap:10px; }
+.page .button.icon-only, dialog .button.icon-only, dialog .button.icon-button { width:44px; min-width:44px; height:44px; padding:10px; flex:none; }
+.brand .brand-icon { display:grid; place-items:center; transform:rotate(-5deg); background:var(--control-accent); border-radius:10px; }
+.brand-icon .listok-icon { width:24px; height:24px; stroke-width:2.5; }
+.topbar .nav-button { gap:10px; padding:8px 11px; min-height:48px; border:0; box-shadow:none; border-radius:12px; color:#626d80; background:transparent; justify-content:flex-start; }
+.topbar .nav-button > .listok-icon { width:32px; height:32px; padding:6px; border-radius:9px; background:#f5f6f9; color:#738099; }
+.topbar .nav-button.active { background:#f1eefb; color:#5743a8; }
+.topbar .nav-button.active > .listok-icon { background:var(--control-accent); color:white; }
+.topbar .nav-student-switch > .listok-icon { background:#f0f5f6; color:#557a83; }
+.account-menu .account-actions > button { border-radius:9px; padding:10px 12px; gap:10px; }
+.account-menu .account-actions .listok-icon { width:19px; height:19px; padding:0; background:none; }
+.account-menu .account-actions #feedbackNav { font-size:13px; }
+.demo-bar-heading .button { min-height:40px; padding:8px 12px; font-size:12px; background:#fff; border-color:#e2dcf0; }
+.demo-bar-heading .button .listok-icon { display:inline-block; width:16px; height:16px; }
+.workspace-heading .button { min-height:44px; font-size:13px; }
+.page .source-example { padding:8px 12px; min-height:40px; background:#f6f7fa; border-color:transparent; font-size:12px; white-space:nowrap; max-width:none; }
+.source-example .listok-icon { width:16px; height:16px; }
+.source-tabs { padding:4px; gap:4px; border:1px solid #e8ebf1; border-radius:13px; background:#f3f5f8; }
+.source-tabs .source-tab { flex:1; justify-content:center; border:1px solid transparent; background:transparent; min-height:42px; color:#748095; border-radius:9px; font-size:13px; gap:8px; }
+.source-tabs .source-tab[aria-selected=true] { border-color:#e1e5ed; background:white; color:#51419c; box-shadow:0 1px 3px #24314e09; }
+.source-tabs .source-tab .listok-icon { width:18px; height:18px; }
+.segmented > label > .subject-choice { position:relative; min-height:62px; height:100%; justify-content:flex-start; padding:12px !important; gap:10px; border-radius:12px !important; border-color:#e0e5ed !important; }
+.segmented .subject-symbol { display:grid; place-items:center; width:30px; height:30px; flex:none; border-radius:9px; background:#f1eefb; color:#7865ba !important; }
+.segmented .subject-symbol .listok-icon { width:19px; height:19px; }
+.segmented [data-subject=physics] .subject-symbol { background:#edf4fb; color:#5483b1 !important; }
+.segmented [data-subject=chemistry] .subject-symbol { background:#edf7f1; color:#4e8e70 !important; }
+.segmented [data-subject=other] .subject-symbol { background:#f1f3f6; color:#798396 !important; }
+.segmented > label > .subject-choice .subject-name { font-size:13px; font-weight:600; color:#657085; word-break:normal; overflow-wrap:normal; }
+.segmented input:checked + .subject-choice { background:#faf9ff !important; border-color:#a897d6 !important; box-shadow:0 0 0 1px #a897d6; }
+.segmented input:checked + .subject-choice .subject-name { color:#56449f; }
+.segmented input:focus-visible + .subject-choice { outline:2px solid #8976d0; outline-offset:3px; }
+.upload-zone .upload-icon { display:grid; place-items:center; width:48px; height:48px; border-radius:14px; background:#f0edfa; color:#7b67bd; }
+.upload-icon .listok-icon { width:24px; height:24px; }
+.page .camera-row .button { border-color:#e3e7ee; background:white; font-size:13px; min-height:42px; }
+.page #recognizeBtn, .page #compileBtn { min-height:48px; padding:12px 20px; border-radius:12px; }
+.page #recognizeBtn > .listok-icon { margin-left:5px; }
+.page .saved-card .material-actions > .button { min-height:44px; padding:10px 12px; font-size:13px; border-radius:10px; }
+.saved-card .material-more > summary { display:flex; align-items:center; justify-content:center; min-height:44px; width:44px; border:1px solid #e1e5ed; padding:10px; background:#fff; border-radius:10px; }
+.saved-card .material-more[open] > summary, .saved-card .material-more > summary:hover { background:#f3f1fb; border-color:#cfc4e7; color:#6751ad; }
+.saved-card .material-more > summary > svg { width:20px; height:20px; }
+.saved-card .material-more-actions { min-width:190px; padding:6px; border-radius:13px; border-color:#e3e7ee; box-shadow:0 8px 30px #28324e14; }
+.saved-card .material-more-actions .button { justify-content:flex-start; min-height:44px; border:0; box-shadow:none; padding:10px 12px; border-radius:8px; }
+.saved-card .cabinet-tools > summary { min-height:44px; padding:10px 0; }
+#step4 .result-files .button { gap:14px; min-height:86px; justify-content:flex-start; border-radius:13px; border-color:#e0e5ed; padding:16px; }
+#step4 .result-files .button > .listok-icon { width:42px; height:42px; padding:10px; border-radius:11px; background:#f2effa; color:#7b68b9; }
+#step4 .result-files .button.primary { background:#faf9ff; border-color:#cabfe6; box-shadow:none; }
+#step4 .result-files .button.primary > .listok-icon { background:#eae4f8; color:#604aa5; }
+#step4 .file-action-copy strong { font-size:14px; color:#40485b; }.file-action-copy small { line-height:1.4; }
+.task-card-header button { display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:8px; border-radius:8px; color:#9b6a6a; }
+.task-card-header button:hover { background:#fff0ee; color:#ad414a; }.task-card-header button .listok-icon { width:16px; height:16px; }
+.feedback-star .listok-icon, .star-button .listok-icon { width:25px; height:25px; fill:transparent; stroke-width:1.5; }
+.feedback-stars .feedback-star, #ratingStars .star-button { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; padding:8px; border:1px solid transparent; border-radius:10px; background:transparent; color:#c6cbd5; }
+.feedback-star.selected, .star-button.selected { color:#d59b30; }
+.feedback-star.selected .listok-icon, .star-button.filled .listok-icon { fill:#f5ce6a; stroke:#d59b30; }
+.feedback-stars .feedback-star:hover, .star-button:hover { background:#fff7e5; }
+.feedback-stars-readonly { display:inline-flex; gap:3px; }.feedback-stars-readonly .listok-icon { width:17px; height:17px; }
+.mobile-menu .mobile-menu-item { display:flex; flex-direction:row; align-items:center; gap:12px; padding:12px; border:1px solid #e7eaf0; border-radius:13px; background:#fff; margin:8px 0 0; }
+.mobile-menu-item .mobile-menu-icon { width:40px; height:40px; padding:10px; border-radius:11px; background:#f3f1f9; color:#7b6ba6; }
+.mobile-menu-item .mobile-menu-copy { display:grid; flex:1; gap:3px; min-width:0; text-align:left; }
+.mobile-menu-item > .listok-icon:last-child { width:16px; height:16px; color:#a7afbd; }
+.mobile-menu-copy strong { font-size:14px; }.mobile-menu-copy > span { font-size:12px; color:#8992a3; }
+.mobile-menu-heading .button { min-height:44px; }
+@media(max-width:1100px) { .segmented { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:760px) {
+  .topbar nav .nav-button { background:transparent; border-radius:0; }
+  .topbar nav .nav-button.active { background:transparent; color:#6048a8; }
+  .topbar nav .nav-button > .listok-icon { width:33px; height:33px; padding:6px; border-radius:10px; background:transparent; }
+  .topbar nav .nav-button.active > .listok-icon { background:#eee8fa; color:#6b50b1; }
+  .topbar nav :is(#createNav,#savedNav,#batchNav,#classesNav,#mobileMoreNav) { gap:1px; min-height:56px; }
+  .topbar nav .nav-button::after { font-size:10px; line-height:15px; }
+  .workspace-heading .button { width:44px; min-width:44px; height:44px; padding:11px; }
+  .workspace-heading .button .listok-icon { width:20px; height:20px; }
+  .page .source-example { min-height:44px; padding:8px; font-size:11px; white-space:normal; max-width:88px; gap:6px; }
+  .page .source-example .listok-icon { display:none; }
+  .source-tabs .source-tab { font-size:12px; gap:6px; min-height:44px; padding:8px 5px; }
+  .segmented > label > .subject-choice { padding:10px !important; gap:8px; min-height:60px; }
+  .segmented > label > .subject-choice .subject-name { font-size:12px; }
+  .segmented .subject-symbol { width:28px; height:28px; border-radius:8px; }
+  .page .button, #studentView .button, #analyticsView .button, #schoolView .button { min-height:44px; }
+  .page .camera-row .button { min-height:44px; }
+  #demoGuide > summary { min-height:44px; }
+  .page .demo-bar-heading .button { font-size:11px; min-height:40px; padding:7px 9px; gap:6px; }
+  .page .demo-bar-heading .button > span { display:inline; }
+  .page .saved-card .material-actions > .button { padding:10px 8px; }
+}
+@media(prefers-reduced-motion:reduce) { .page .button, .topbar .button, dialog .button { transition:none; } }

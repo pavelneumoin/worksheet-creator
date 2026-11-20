@@ -15,7 +15,7 @@
   const accountMenu = node('details', undefined, 'account-menu');
   const accountSummary = node('summary');
   accountSummary.setAttribute('aria-label', 'Меню профиля');
-  accountSummary.append(profile, studioIcon('M9 10l3 3 3-3'));
+  accountSummary.append(profile, listokIcon('chevronDown'));
   accountMenu.append(accountSummary, document.querySelector('.account-actions'));
   tools.append(accountMenu);
   accountMenu.addEventListener('click', event => {
@@ -54,7 +54,7 @@
     videoFrame.src = videoSource;
     videoDialog.showModal();
   }, 'ghost');
-  videoButton.prepend(studioIcon('M8 5l11 7-11 7z'));
+  videoButton.prepend(listokIcon('play'));
   document.querySelector('.workspace-heading').append(videoButton);
   videoDialog.addEventListener('click', event => { if (event.target === videoDialog) videoDialog.close(); });
   videoDialog.addEventListener('close', () => { videoFrame.src = 'about:blank'; });
@@ -80,12 +80,12 @@
     tabButtons.forEach((button, i) => { button.setAttribute('aria-selected', String(i === index)); button.tabIndex = i === index ? 0 : -1; });
     syncInputCounts();
   };
-  for (const [i, text, iconPath] of [[0, 'Фото или PDF', 'M4 4h16v16H4zM4 16l5-5 4 4 3-3 4 4M15 8h.01'], [1, 'Текст и формулы', 'M4 5h16M12 5v15M8 20h8']]) {
+  for (const [i, text, iconName] of [[0, 'Фото или PDF', 'photo'], [1, 'Текст и формулы', 'math']]) {
     const button = node('button', undefined, 'source-tab'); button.type = 'button';
     button.id = 'sourceTab' + i; button.setAttribute('role', 'tab');
     button.setAttribute('aria-controls', panels[i].id);
     panels[i].setAttribute('role', 'tabpanel'); panels[i].setAttribute('aria-labelledby', button.id);
-    button.append(studioIcon(iconPath), node('span', text), node('span', '', 'source-count'));
+    button.append(listokIcon(iconName), node('span', text), node('span', '', 'source-count'));
     button.addEventListener('click', () => setSource(i));
     button.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -120,7 +120,7 @@
   const variants = node('div', undefined, 'creation-variants'); variants.append(variantLabel);
   creationFooter.append(variants, $('recognizeBtn').closest('.actions'));
   $('recognizeBtn').textContent = 'Подготовить задания';
-  $('recognizeBtn').append(studioIcon('M5 12h14M13 6l6 6-6 6'));
+  $('recognizeBtn').append(listokIcon('arrowRight'));
   $('dropZone').querySelector('strong').textContent = 'Добавить фото или PDF';
   $('dropZone').querySelector('strong + span').textContent = 'Выберите файл или перетащите его сюда';
   $('inputTitle').textContent = 'Из чего создаём лист?';
@@ -132,12 +132,46 @@
     downloadKeys: ['Ответы', 'Ключ для учителя'], downloadTeacher: ['Лист с ответами', 'Комплект учителя'],
     downloadAnswerForm: ['Бланк ответов', 'A4 · для быстрой проверки'], prepareAnswerForm: ['Создать бланк', 'A4 · только ответы'],
   };
+  const fileIcons = {downloadSheet:'fileText', saveSheetPdf:'download', downloadKeys:'fileCheck', downloadTeacher:'library', downloadAnswerForm:'checklist', prepareAnswerForm:'filePlus'};
   for (const [id, [title, caption]] of Object.entries(fileCaptions)) {
     const link = $(id); if (!link) continue;
     const copy = node('span', undefined, 'file-action-copy');
     copy.append(node('strong', title), node('small', caption));
-    link.replaceChildren(studioIcon('M5 3h9l5 5v13H5zM14 3v5h5M9 13h6M9 17h4'), copy);
+    link.replaceChildren(listokIcon(fileIcons[id]), copy);
   }
+  for (const [id, icon] of Object.entries({batchNav:'checklist', analyticsNav:'chart', schoolNav:'school', studentNav:'graduationCap', studentInboxNav:'inbox'})) {
+    const button=$(id); if(!button) continue;
+    button.querySelector('svg')?.remove(); button.prepend(listokIcon(icon));
+  }
+  for (const [value,icon] of [['math','math'],['physics','atom'],['chemistry','flask'],['other','layers']]) {
+    const label=document.querySelector(`[name="subject"][value="${value}"]`)?.closest('label');
+    if(!label) continue;
+    label.dataset.subject=value; label.querySelector('.subject-symbol').replaceChildren(listokIcon(icon));
+  }
+  document.querySelector('.upload-icon').replaceChildren(listokIcon('upload',{size:24}));
+  document.querySelector('.brand-icon').replaceChildren(listokIcon('check',{size:24}));
+  for(const [id,icon,title] of [
+    ['takePhoto','camera'],['demoBtn','fileText'],['newSheetBtn','plus','Создать лист'],
+    ['addTaskBtn','plus','Добавить задание'],['saveDraftBtn','save'],['saveCopyBtn','copy'],['saveBtn','save'],
+    ['backToInput','arrowLeft','Материал'],['backToTasks','arrowLeft','Задания'],['editAgain','arrowLeft','Изменить лист'],
+    ['toSettings','arrowRight','К оформлению'],['compileBtn','printer','Собрать PDF'],
+    ['libraryBack','arrowLeft'],['cancelPublish','arrowLeft'],['shareFromSaved','share'],['copyPublication','copy'],
+    ['scheduleResult','classes'],['feedbackSubmit','message'],['publishSubmit','share']
+  ]) {
+    const button=$(id); if(!button) continue;
+    const text=title || button.textContent.trim().replace(/^[←＋+]\s*|\s*→$/g,'');
+    button.replaceChildren(listokIcon(icon),node('span',text));
+  }
+  for(const [id,icon] of [['previousMonth','arrowLeft'],['nextMonth','arrowRight']]) {
+    $(id).replaceChildren(listokIcon(icon)); $(id).classList.add('icon-only');
+  }
+  for(const [id,icon] of [['feedbackNav','star'],['demoEnter','play'],['demoExit','arrowLeft']]) {
+    const button=$(id); if(!button) continue;
+    const label=button.querySelector('span:last-child')?.textContent || button.textContent;
+    button.replaceChildren(listokIcon(icon),node('span',label));
+  }
+  const newClass=document.querySelector('.class-create-disclosure > summary');
+  newClass.replaceChildren(listokIcon('plus'),node('span','Новый класс'));
   // Accessible active-navigation state follows existing view changes.
   const syncNav = () => {
     for (const button of nav.querySelectorAll('.nav-button')) {

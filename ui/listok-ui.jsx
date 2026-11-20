@@ -71,7 +71,7 @@ function FormulaKeyboard({textarea}) {
   }
   return <section className="listok-formula" aria-label="Математический редактор">
     <div className="listok-formula-top">
-      <span className="listok-formula-title"><span aria-hidden="true">ƒ</span> Формулы</span>
+      <span className="listok-formula-title">Формулы</span>
       <SegmentedControl label="Режим математического редактора" value={mode} onChange={value => { setMode(value); setTemplateId(null); setMessage(""); }} size="sm">
         <SegmentedControlItem value="templates" label="Шаблоны" />
         <SegmentedControlItem value="symbols" label="Знаки" />
@@ -85,7 +85,7 @@ function FormulaKeyboard({textarea}) {
       {SYMBOLS.map(([value, label]) => <Button key={value} label={label} variant="secondary" onClick={() => insert(value)}><FormulaPreview latex={value} /></Button>)}
     </div>}
     {template && <div className="listok-formula-composer">
-      <div className="listok-formula-composer-title"><strong>{template.name}</strong><Button label="Закрыть редактор формулы" variant="ghost" isIconOnly icon={<span aria-hidden="true">×</span>} size="sm" onClick={() => setTemplateId(null)} /></div>
+      <div className="listok-formula-composer-title"><strong>{template.name}</strong><Button label="Закрыть редактор формулы" variant="ghost" isIconOnly icon={<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" /></svg>} size="sm" onClick={() => setTemplateId(null)} /></div>
       <div className={`listok-formula-fields ${template.fields.length === 1 ? "is-single" : ""}`}>
         {template.fields.map(([label], index) => <TextInput key={`${template.id}-${index}`} label={label} value={values[index] || ""} onChange={value => setValues(current => current.map((v, i) => i === index ? value.slice(0, 500) : v))} onEnter={() => { if (valid && values.every(value => value.trim())) insert(latex); }} autoComplete="off" autoCapitalize="off" hasAutoCorrect={false} hasSpellCheck={false} enterKeyHint="done" size="md" />)}
       </div>

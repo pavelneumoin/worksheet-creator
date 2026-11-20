@@ -3,10 +3,12 @@ let feedbackStarsValue = 0;
 function feedbackStars(value, interactive = false) {
   const wrap = node("span", undefined, interactive ? "feedback-stars" : "feedback-stars-readonly");
   for (let i = 1; i <= 5; i++) {
-    const star = interactive ? node("button", "★", "feedback-star") : node("span", "★", "feedback-star");
+    const star = node(interactive ? "button" : "span", undefined, "feedback-star");
+    star.append(listokIcon("star"));
     star.classList.toggle("selected", i <= value);
     if (interactive) {
       star.type = "button"; star.setAttribute("role", "radio"); star.setAttribute("aria-label", `${i} из 5 звёзд`);
+      star.setAttribute("aria-checked", String(i === value));
       star.addEventListener("click", () => { feedbackStarsValue = i; document.querySelectorAll("#feedbackStars .feedback-star").forEach((s, index) => { s.classList.toggle("selected", index < i); s.setAttribute("aria-checked", String(index + 1 === i)); }); });
     }
     wrap.append(star);
