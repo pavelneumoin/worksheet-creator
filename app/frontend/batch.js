@@ -7,6 +7,8 @@ function batchHeading(title,sub) {const div=node("div",undefined,"section-title"
 async function openBatchHome(assignmentId = null, classId = null) {
   if(!state.auth?.authenticated){notice("Сначала войдите через MAX.",true);return;}
   showView("batch",false);batchView.replaceChildren(batchHeading("Проверка работ"));
+  if (assignmentId && !classId)
+    classId = (await request("/api/v2/assignments/" + assignmentId)).assignment.class_id;
   const classes=(await request("/api/v2/classes")).classes.filter(c=>!c.archived||c.id===classId);
   if(!classes.length){batchView.append(node("p","Сначала создайте класс и назначьте готовый лист.","empty-state"),classButton("Перейти к классам",()=>showView("classes"),"primary"));return;}
   const form=node("form",undefined,"panel batch-upload"),grid=node("div",undefined,"form-grid");
@@ -19,8 +21,14 @@ async function openBatchHome(assignmentId = null, classId = null) {
   fileName.style.overflowWrap="anywhere";fileName.setAttribute("aria-live","polite");
   file.setAttribute("aria-label","Выбрать PDF со сканами работ");
   file.addEventListener("change",()=>{const chosen=file.files[0];fileName.textContent=chosen?chosen.name:"PDF со сканами работ";fileHint.textContent=chosen?`${(chosen.size/1024/1024).toLocaleString("ru-RU",{maximumFractionDigits:2})} МБ · нажмите, чтобы заменить`:"До 40 страниц · до 15 МБ";});
-  label.append(node("span","▤","upload-icon"),fileName,fileHint,file);
+  const uploadIcon = node("span", undefined, "upload-icon");
+  uploadIcon.append(listokIcon("upload"));
+  label.append(uploadIcon,fileName,fileHint,file);
   const submit=node("button","Распознать пачку","button primary");submit.type="submit";
+  const syncSubmit = () => {
+    submit.disabled = !workSelect.value || !file.files.length;
+  };
+  file.addEventListener("change", syncSubmit);
   const recent=node("div",undefined,"batch-recent");form.append(grid,label,node("p","Код ученика на каждом листе помогает собрать страницы. Без кода вы сможете выбрать ученика сами. Сканы доступны 7 дней.","quiet"),submit);batchView.append(form,recent);
   const loadRecent=async()=>{
     recent.replaceChildren();batchState.assignment=workSelect.value;
@@ -33,8 +41,8 @@ async function openBatchHome(assignmentId = null, classId = null) {
     workSelect.replaceChildren();const c=(await request("/api/v2/classes/"+classSelect.value)).classroom;
     for(const a of c.assignments.filter(a=>a.status==="active" || a.id===assignmentId)){const o=node("option",a.title);o.value=a.id;workSelect.append(o);}
     if(assignmentId && [...workSelect.options].some(o=>o.value===assignmentId))workSelect.value=assignmentId;
-    submit.disabled=!workSelect.options.length;
     if(!workSelect.options.length){const o=node("option","Сначала назначьте лист этому классу");o.value="";workSelect.append(o);}
+    syncSubmit();
     await loadRecent();
   };
   classSelect.addEventListener("change",()=>{assignmentId=null;busy("Выбираем работу",loadWorks);});workSelect.addEventListener("change",()=>busy("Открываем пачки",loadRecent));
@@ -46,12 +54,14 @@ async function openBatchHome(assignmentId = null, classId = null) {
 async function openBatch(id) {
   await flushReviewDraft();reviewState.queueContext=null;
   const b=(await request("/api/v2/batches/"+id)).batch;batchState.current=b;
-  showView("batch",false);batchView.replaceChildren(batchHeading(b.title,b.class_name+" · сопоставление страниц"),classButton("← Все пачки",()=>busy("Открываем пачки",openBatchHome),"ghost"));
+  showView("batch",false);batchView.replaceChildren(batchHeading(b.title,b.class_name+" · сопоставление страниц"),classButton("← К пачкам работы",()=>busy("Открываем пачки",()=>openBatchHome(b.assignment_id)),"ghost"));
   if(!b.pages.length){batchView.append(node("p",b.expired?"Срок хранения сканов истёк.":b.error||"Страницы обрабатываются. Готовый результат появится в карточке обработки.","empty-state"));return;}
   const used=b.pages.filter(p=>p.review_id).length;
   batchView.append(node("p",`Сопоставлено ${used} из ${b.pages.length} страниц. Баллы учитываются после подтверждения.`,"batch-progress"));
-  batchView.append(classButton("Очередь сомнительных ответов",()=>busy("Открываем очередь",()=>openBatchQueue(id)),"primary"));
-  batchView.append(classButton("Результаты класса",()=>busy("Открываем отчёт",()=>openClassReport(b.assignment_id)),"secondary"));
+  const actions = node("div", undefined, "actions batch-actions");
+  actions.append(classButton("Очередь сомнительных ответов",()=>busy("Открываем очередь",()=>openBatchQueue(id)),"primary"));
+  actions.append(classButton("Результаты класса",()=>busy("Открываем отчёт",()=>openClassReport(b.assignment_id)),"secondary"));
+  batchView.append(actions);
   const form=node("form",undefined,"panel batch-mapping"),label=node("label","Код ученика"),select=node("select");select.id="batchStudent";
   const empty=node("option","Выберите ученика");empty.value="";select.append(empty);
   for(const student of b.students){const option=node("option",student.code);option.value=student.id;select.append(option);}label.append(select);

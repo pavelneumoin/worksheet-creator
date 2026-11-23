@@ -37,9 +37,14 @@ export function isInsideMath(text, position) {
 
 export function prepareInsertion(text, start, end, latex) {
   const raw = stripMathDelimiters(latex);
-  if (isInsideMath(text, start)) return raw;
   const before = text.slice(0, start);
   const after = text.slice(end);
+  if (isInsideMath(text, start)) {
+    // TeX reads an uninterrupted sequence of letters after a backslash as one name.
+    const leading = /\\[a-zA-Z]+$/.test(before) && /^[a-zA-Z]/.test(raw) ? " " : "";
+    const trailing = /\\[a-zA-Z]+$/.test(raw) && /^[a-zA-Z]/.test(after) ? " " : "";
+    return leading + raw + trailing;
+  }
   const leading = before && !/[\s([{]$/.test(before) ? " " : "";
   const trailing = after && !/^[\s.,;:!?)}\]]/.test(after) ? " " : "";
   return `${leading}$${raw}$${trailing}`;

@@ -1,15 +1,27 @@
 "use strict";
 let feedbackStarsValue = 0;
 function feedbackStars(value, interactive = false) {
-  const wrap = node("span", undefined, interactive ? "feedback-stars" : "feedback-stars-readonly");
+  const wrap = node("span", undefined, interactive ? "feedback-rating-options" : "feedback-stars-readonly");
+  if (!interactive) {
+    wrap.setAttribute("role", "img");
+    wrap.setAttribute("aria-label", `Оценка ${value} из 5`);
+  }
   for (let i = 1; i <= 5; i++) {
-    const star = node(interactive ? "button" : "span", undefined, "feedback-star");
+    const star = node(interactive ? "label" : "span", undefined, "feedback-star");
     star.append(listokIcon("star"));
     star.classList.toggle("selected", i <= value);
     if (interactive) {
-      star.type = "button"; star.setAttribute("role", "radio"); star.setAttribute("aria-label", `${i} из 5 звёзд`);
-      star.setAttribute("aria-checked", String(i === value));
-      star.addEventListener("click", () => { feedbackStarsValue = i; document.querySelectorAll("#feedbackStars .feedback-star").forEach((s, index) => { s.classList.toggle("selected", index < i); s.setAttribute("aria-checked", String(index + 1 === i)); }); });
+      const input = node("input");
+      input.type = "radio";
+      input.name = "feedback-rating";
+      input.value = String(i);
+      input.checked = i === value;
+      input.setAttribute("aria-label", `${i} из 5 звёзд`);
+      input.addEventListener("change", () => {
+        feedbackStarsValue = i;
+        [...wrap.children].forEach((label, index) => label.classList.toggle("selected", index < i));
+      });
+      star.prepend(input);
     }
     wrap.append(star);
   }
@@ -18,7 +30,9 @@ function feedbackStars(value, interactive = false) {
 function renderFeedback(data) {
   const summary = data.summary || {};
   $("feedbackAverage").textContent = summary.average ? `${summary.average.toFixed(1)} / 5` : "—";
-  $("feedbackCount").textContent = summary.count ? `${summary.count} ${summary.count === 1 ? "отзыв" : "отзывов"}` : "Пока нет отзывов";
+  const count = summary.count || 0;
+  const form = new Intl.PluralRules("ru").select(count);
+  $("feedbackCount").textContent = count ? `${count} ${({one:"отзыв",few:"отзыва"})[form] || "отзывов"}` : "Пока нет отзывов";
   $("feedbackRecommendSummary").textContent = summary.recommend_count ? `★ ${summary.recommend_count} рекомендуют коллегам` : "";
   const list = $("feedbackList"); list.replaceChildren();
   if (!data.feedback?.length) { list.append(node("p", "Здесь появятся первые впечатления учителей.", "quiet feedback-empty")); return; }

@@ -6,6 +6,15 @@ function reviewNeedsAttention(answer) {
   return answer.state !== "readable" || answer.comparison !== "matches" ||
     answer.score !== 1 || answer.teacher_edited === true;
 }
+function reviewAttentionIndices(answers, openIndex = -1) {
+  const indices = [];
+  answers.forEach((answer, index) => {
+    if (reviewNeedsAttention(answer) || (index === openIndex && !answer.checked)) {
+      indices.push(index);
+    }
+  });
+  return indices;
+}
 function reviewBox(box) {
   return Array.isArray(box) && box.length === 4 &&
     box.every(v => Number.isFinite(v) && v >= 0 && v <= 1000) &&
@@ -118,8 +127,8 @@ function openReviewScan(review, answer, number) {
 
 function mountReviewFocus(form, fields, controls, review, refreshTotal) {
   const liveAnswer = f => ({...f.answer, checked:f.checked, score:f.score.value === "" ? null : Number(f.score.value), teacher_edited:f.edited || f.answer.teacher_edited});
-  let mode = "attention", current = 0;
-  const attention = () => fields.map((f, i) => reviewNeedsAttention(liveAnswer(f)) ? i : -1).filter(i => i >= 0);
+  let mode = "attention", current = -1;
+  const attention = () => reviewAttentionIndices(fields.map(liveAnswer), mode === "attention" ? current : -1);
   if (!attention().length) mode = "all";
   const indices = () => mode === "attention" ? attention() : fields.map((f, i) => i);
   const toolbar = node("section", undefined, "review-focus-toolbar");
@@ -141,7 +150,12 @@ function mountReviewFocus(form, fields, controls, review, refreshTotal) {
     const list = indices();
     show(mode === "attention" ? (list.find(i => i > current) ?? list[0] ?? -1) : Math.min(current + 1, fields.length - 1), true);
   }, "primary");
-  const chooseMode = value => { mode = value; show(indices()[0] ?? -1, true); };
+  const chooseMode = value => {
+    if (mode === value) return;
+    mode = value;
+    current = -1;
+    show(indices()[0] ?? -1, true);
+  };
   const uncertain = classButton("Нужно внимание", () => chooseMode("attention"));
   const all = classButton("Все ответы", () => chooseMode("all"));
   const finish = classButton("К итогам работы", () => { controls.scrollIntoView({block:"start", behavior:"smooth"}); controls.querySelector("textarea")?.focus({preventScroll:true}); }, "primary");
@@ -173,4 +187,4 @@ function mountReviewFocus(form, fields, controls, review, refreshTotal) {
   show(indices()[0] ?? -1);
 }
 
-if (typeof module !== "undefined") module.exports = {reviewNeedsAttention, reviewBox, reviewScoreLabel};
+if (typeof module !== "undefined") module.exports = {reviewNeedsAttention, reviewAttentionIndices, reviewBox, reviewScoreLabel};

@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="/vendor/astryx/listok-ui.css" />
     <link rel="stylesheet" href="/controls.css" />
     <link rel="stylesheet" href="/creation_controls.css" />
+    <link rel="stylesheet" href="/teaching_mobile.css" />
     <script defer src="/vendor/katex/katex.min.js"></script>
     <script defer src="/icons.js"></script>
     <script defer src="/jobs.js"></script>
@@ -83,7 +84,7 @@
     <main class="page">
       <section id="demoBar" class="demo-bar" hidden aria-label="Демонстрационный кабинет">
         <div class="demo-bar-heading"><div class="demo-heading-copy"><span class="demo-badge">ДЕМО</span><span><strong>Учебный кабинет</strong><small>Готовый сценарий для знакомства с сервисом</small></span></div><button id="demoExit" class="button ghost"><span aria-hidden="true">←</span><span>В мой кабинет</span></button></div>
-        <details id="demoGuide"><summary><span>Маршрут проверки</span><span>8 готовых экранов</span></summary><div id="demoSteps" class="demo-steps"></div>
+        <details id="demoGuide"><summary><span class="demo-desktop-label">Маршрут проверки</span><span class="demo-screen-count">8 готовых экранов</span><span class="demo-mobile-label">Демо-кабинет</span></summary><div id="demoSteps" class="demo-steps"></div>
           <div class="demo-files"><strong>Материалы для пробного сценария</strong><a class="button secondary" href="/api/v2/demo-space/files/fractions.png" download>Фото заданий</a><a class="button secondary" href="/api/v2/demo-space/files/roster.png" download>Список учеников</a><a id="demoScanDownload" class="button secondary">PDF с ответами</a></div>
           <p class="demo-note">Все данные учебные и уже подготовлены. Нажимайте на карточки по порядку — так проще увидеть весь путь учителя.</p>
         </details>
@@ -912,12 +913,12 @@
       <section id="feedbackView" hidden aria-label="Отзывы учителей">
         <div class="feedback-heading">
           <div><h1>Отзывы о ЛистОК</h1><p class="lead">Оценки, замечания и предложения учителей.</p></div>
-          <div class="feedback-summary-card"><strong id="feedbackAverage">—</strong><span class="feedback-stars-static" aria-hidden="true">★★★★★</span><span id="feedbackCount">Пока нет отзывов</span></div>
+          <div class="feedback-summary-card"><strong id="feedbackAverage">—</strong><span id="feedbackCount">Пока нет отзывов</span></div>
         </div>
         <div class="feedback-layout">
           <form id="feedbackForm" class="panel feedback-form">
             <h2 id="feedbackFormTitle">Оставить отзыв</h2>
-            <label>Как оцените сервис?<span id="feedbackStars" class="feedback-stars" role="radiogroup" aria-label="Оценка от одного до пяти"></span></label>
+            <fieldset class="feedback-rating"><legend>Как оцените сервис?</legend><span id="feedbackStars" class="feedback-stars"></span></fieldset>
             <label>Имя в отзыве<input id="feedbackDisplayName" maxlength="80" placeholder="Например, Анна К." autocomplete="nickname" /></label>
             <label>Что понравилось?<textarea id="feedbackLiked" rows="3" maxlength="1200" placeholder="Например: быстро получить PDF и бланк ответов"></textarea></label>
             <label>Что было неудобно?<textarea id="feedbackInconvenient" rows="3" maxlength="1200" placeholder="Например: не сразу нашла очередь проверки"></textarea></label>
@@ -993,7 +994,6 @@
       <div class="busy-card">
         <span class="spinner"></span>
         <h2 id="busyTitle">Готовим лист</h2>
-        <p>Сохраняем данные. Это займёт несколько секунд.</p>
       </div>
     </div>
   </body>

@@ -252,7 +252,7 @@ async function busy(title, action) {
   state.busy = true;
   notice("");
   $("busyTitle").textContent = title;
-  $("busyOverlay").hidden = false;
+  const showProgress = setTimeout(() => { $("busyOverlay").hidden = false; }, 200);
   document.querySelector("main").inert = true;
   document.querySelector("header").inert = true;
   try {
@@ -261,6 +261,7 @@ async function busy(title, action) {
     notice(e.message || "Не удалось выполнить действие.", true);
     $("notice").scrollIntoView({ behavior: "smooth", block: "center" });
   } finally {
+    clearTimeout(showProgress);
     state.busy = false;
     $("busyOverlay").hidden = true;
     document.querySelector("main").inert = false;
@@ -932,28 +933,16 @@ function renderLibrary() {
   }
   for (const item of state.library) {
     const card = node("article", undefined, "saved-card library-card");
-    card.append(
-      node(
-        "p",
-        subjectLabel(item.subject, true) +
-          (item.grade ? " · " + item.grade : ""),
-        "eyebrow",
-      ),
-      node("h2", item.title),
-      node("p", "Автор: " + item.author, "library-author"),
-      node(
-        "p",
-        item.description || "Рабочий лист для подготовки к уроку.",
-        "library-description",
-      ),
-      node(
-        "p",
-        taskCount(item.task_count) + " · взяли за основу: " + item.copies,
-      ),
-      node("div", ratingText(item), "rating-summary"),
-    );
-    if (item.is_owner)
-      card.append(node("span", "Ваша публикация", "material-badge"));
+    const top = node("div", undefined, "material-topline");
+    const subject = subjectLabel(item.subject, true);
+    top.append(node("span", item.grade ? subject + " · " + item.grade : subject, "material-subject"));
+    if (item.is_owner) top.append(node("span", "Ваша публикация", "material-badge"));
+    card.append(top, node("h2", item.title), node("p", "Автор: " + item.author, "library-author"));
+    if (item.description) card.append(node("p", item.description, "library-description"));
+    const stats = node("div", undefined, "library-card-stats");
+    stats.append(node("span", taskCount(item.task_count)), node("span", "Взяли за основу: " + item.copies));
+    stats.append(node("span", ratingText(item), "rating-summary"));
+    card.append(stats);
     const open = node("button", "Посмотреть задания", "button secondary");
     open.addEventListener("click", () =>
       busy("Открываем публикацию", () => openPublication(item.id)),

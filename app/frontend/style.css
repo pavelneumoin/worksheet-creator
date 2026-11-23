@@ -340,7 +340,7 @@ legend,
   position: absolute;
   opacity: 0;
 }
-.segmented span {
+.segmented > label > span {
   display: block;
   text-align: center;
   padding: 12px;
@@ -1168,14 +1168,14 @@ select {
   .upload-zone {
     overflow-wrap: anywhere;
   }
-  .segmented span {
+  .segmented > label > span {
     font-size: 12px;
   }
   .segmented {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
-  .segmented span {
+  .segmented > label > span {
     min-height: 44px;
     padding: 9px 6px;
   }

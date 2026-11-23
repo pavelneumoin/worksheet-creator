@@ -30,6 +30,17 @@ test("selected math can be reused as a numerator without double dollars", () => 
   assert.equal(stripMathDelimiters("$$x+1$$"), "x+1");
   assert.equal(stripMathDelimiters("x+1"), "x+1");
 });
+test("inserting symbols next to a variable keeps TeX commands separate", () => {
+  for (const [text, caret, value, result] of [
+    ["$x$", 1, "\\pi", "\\pi x"],
+    ["$\\alpha$", 7, "b", "\\alpha b"],
+  ]) {
+    const addition = prepareInsertion(text, caret, caret, value);
+    const equation = (text.slice(0, caret) + addition + text.slice(caret)).slice(1, -1);
+    assert.equal(equation, result);
+    assert.doesNotThrow(() => katex.renderToString(equation, {throwOnError: true}));
+  }
+});
 test("legacy insertion preserves selection, input notification, and maxlength", () => {
   const context = {module: {exports: {}}, Event};
   vm.runInNewContext(fs.readFileSync(new URL("../app/frontend/latex_keyboard.js", import.meta.url), "utf8"), context);

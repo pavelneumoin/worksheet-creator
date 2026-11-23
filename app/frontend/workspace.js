@@ -54,7 +54,8 @@
     videoFrame.src = videoSource;
     videoDialog.showModal();
   }, 'ghost');
-  videoButton.prepend(listokIcon('play'));
+  videoButton.replaceChildren(listokIcon('play'), node('span', 'Видеоинструкция', 'guide-label'));
+  videoButton.title = 'Видеоинструкция';
   document.querySelector('.workspace-heading').append(videoButton);
   videoDialog.addEventListener('click', event => { if (event.target === videoDialog) videoDialog.close(); });
   videoDialog.addEventListener('close', () => { videoFrame.src = 'about:blank'; });
@@ -114,6 +115,31 @@
   document.querySelector('#step1 .panel-heading').append(example);
   document.querySelector('.demo-strip').remove();
   document.querySelector('.setup-settings').append(document.querySelector('.teacher-instructions'));
+  // The desktop preview lives in a sidebar that disappears at tablet widths.
+  // Reuse the live sheet for both mobile entry points so its settings stay in sync.
+  const sheetPreview = document.querySelector('.studio-preview');
+  const previewSidebar = sheetPreview.parentElement;
+  const sheetDialog = node('dialog', undefined, 'sheet-preview-dialog');
+  const previewHeading = sheetPreview.querySelector('h3');
+  previewHeading.id = 'sheetPreviewTitle';
+  sheetDialog.setAttribute('aria-labelledby', previewHeading.id);
+  const closeSheet = classButton('Закрыть', () => sheetDialog.close(), 'secondary');
+  sheetDialog.append(closeSheet);
+  document.body.append(sheetDialog);
+  sheetDialog.addEventListener('close', () => previewSidebar.prepend(sheetPreview));
+  sheetDialog.addEventListener('click', event => {
+    if (event.target === sheetDialog) sheetDialog.close();
+  });
+  for (const anchor of [document.querySelector('.teacher-instructions'), document.querySelector('#step3 .print-summary')]) {
+    const showSheet = classButton('Посмотреть макет A4', () => {
+      sheetDialog.prepend(sheetPreview);
+      sheetDialog.showModal();
+    }, 'secondary');
+    showSheet.classList.add('show-sheet-preview');
+    showSheet.setAttribute('aria-haspopup', 'dialog');
+    showSheet.prepend(listokIcon('layout'));
+    anchor.before(showSheet);
+  }
   const creationFooter = node('div', undefined, 'creation-footer');
   const variantLabel = $('setupVariants').closest('label');
   variantLabel.before(creationFooter);

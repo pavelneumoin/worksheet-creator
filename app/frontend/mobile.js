@@ -3,6 +3,7 @@
 const mobileMore = node("button", "Ещё", "nav-button mobile-more-nav");
 mobileMore.id = "mobileMoreNav";
 mobileMore.setAttribute("aria-haspopup", "dialog");
+mobileMore.setAttribute("aria-expanded", "false");
 mobileMore.setAttribute("aria-label", "Ещё");
 for(const [id,label] of [["createNav","Создать лист"],["savedNav","Моя библиотека"],["batchNav","Проверка работ"],["classesNav","Классы"]])$(id).setAttribute("aria-label",label);
 mobileMore.prepend(listokIcon("ellipsis"));
@@ -20,6 +21,7 @@ mobileMenuHead.append(mobileMenuTitle, mobileMenuClose); mobileMenu.append(mobil
 for (const [id, title, hint, icon] of [["studentInboxNav", "От учеников", "Присланные работы и исправления", "inbox"], ["studentNav", "Кабинет ученика", "Мои задания и результаты", "graduationCap"], ["scheduleNav", "Расписание", "Работы и печать к уроку", "calendar"], ["analyticsNav", "Статистика", "Результаты и темы", "chart"], ["schoolNav", "Моя школа", "Учителя и отчёт завуча", "school"], ["libraryNav", "Обмен материалами", "Листы других учителей", "sharedLibrary"], ["feedbackNav", "Отзывы", "Оценка и предложения коллег", "message"]]) {
   const button = node("button", undefined, "mobile-menu-item");
   button.type = "button";
+  button.dataset.navigationTarget = id;
   const copy = node("span", undefined, "mobile-menu-copy");
   copy.append(node("strong", title), node("span", hint));
   button.append(listokIcon(icon, {className: "mobile-menu-icon"}), copy, listokIcon("chevronRight", {size: 16, className: "mobile-menu-chevron"}));
@@ -28,4 +30,13 @@ for (const [id, title, hint, icon] of [["studentInboxNav", "От ученико�
 }
 mobileMenu.addEventListener("click", e => { if (e.target === mobileMenu) mobileMenu.close(); });
 document.body.append(mobileMenu);
-mobileMore.addEventListener("click", () => mobileMenu.showModal());
+mobileMore.addEventListener("click", () => {
+  for (const item of mobileMenu.querySelectorAll("[data-navigation-target]")) {
+    if ($(item.dataset.navigationTarget).classList.contains("active")) item.setAttribute("aria-current", "page");
+    else item.removeAttribute("aria-current");
+  }
+  mobileMore.setAttribute("aria-expanded", "true");
+  mobileMenu.showModal();
+  mobileMenu.scrollTop = 0;
+});
+mobileMenu.addEventListener("close", () => mobileMore.setAttribute("aria-expanded", "false"));

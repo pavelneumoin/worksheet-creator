@@ -190,13 +190,13 @@
   #analyticsView .metric-card > small { font-size: 12px; }
   #analyticsView .analytics-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   #analyticsView .analytics-actions > .button { min-width: 0; width: 100%; padding: 10px; font-size: 13px; }
-  #analyticsView .analytics-actions > a { grid-column: 1 / -1; }
-  #analyticsView .analytics-actions > .analytics-ready-download { grid-row: 1; }
+  #analyticsView .analytics-actions .analytics-recommendations { grid-column: 1 / -1; }
+  #analyticsView .analytics-actions > .analytics-ready-download { grid-column: 1 / -1; }
   #analyticsView .analytics-filter-drawer > summary { gap: 10px; padding: 12px 14px; }
   #analyticsView .analytics-filter-hint { max-width: 150px; font-size: 12px; }
   #analyticsView .analytics-filter-form { grid-template-columns: minmax(0, 1fr); padding: 16px; }
   #analyticsView .analytics-date-fields { gap: 10px; }
-  #analyticsView .analytics-date-fields input { padding: 10px 7px; font-size: 14px; }
+  #analyticsView .analytics-date-fields input { padding: 10px 7px; }
   #analyticsView .analytics-filter-footer > .button { flex: 1; }
   #analyticsView .analytics-breakdown, #analyticsView .insight-panel { padding: 18px; }
   #analyticsView .analytics-blocks { padding-left: 18px; padding-right: 18px; }
@@ -207,4 +207,17 @@
   #schoolView .school-setup .school-form { padding: 20px; }
   #schoolView .school-form > .button { align-self: stretch; width: 100%; }
   #schoolView .school-invite-code { flex-direction: column; }
+}
+
+@media (max-width: 400px) {
+  #analyticsView .analytics-date-fields { grid-template-columns: minmax(0, 1fr); }
+  #analyticsView .analytics-filter-footer { flex-wrap: wrap; }
+  #analyticsView .analytics-topic-edit input { min-width: 0; }
+  #analyticsView .analytics-table td:has(.analytics-work-topic) { grid-template-columns:minmax(0, 1fr); gap:4px; }
+}
+
+@media (max-width: 760px) {
+  :is(#analyticsView, #schoolView) h1 { overflow-wrap:anywhere; }
+  #schoolView .school-setup, #schoolView .school-form { min-width:0; }
+  #schoolView .analytics-table .button { max-width:100%; }
 }

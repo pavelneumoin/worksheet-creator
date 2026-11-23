@@ -35,14 +35,7 @@ function renderClassOverview(target, c) {
   const heading = node("h2", "Работы и результаты");
   heading.id = "classOverviewHeading";
   const panel = node("section", undefined, "panel class-overview-filters");
-  panel.append(
-    heading,
-    node(
-      "p",
-      "Каждая работа — со своим составом и максимумом баллов. В результатах учитываются только подтверждённые проверки.",
-      "quiet",
-    ),
-  );
+  panel.append(heading);
   const form = node("form"),
     searchLabel = node("label", "Тема или название работы"),
     search = node("input");
@@ -138,6 +131,9 @@ function renderClassOverview(target, c) {
   const error = node("p", "", "review-warning");
   error.hidden = true;
   error.setAttribute("role", "alert");
+  for (const field of [inputs.from_date, inputs.to_date]) {
+    field.addEventListener("input", () => { error.hidden = true; });
+  }
   form.append(options, actions, error);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -148,7 +144,10 @@ function renderClassOverview(target, c) {
     ) {
       error.hidden = false;
       error.textContent = "Начало периода не может быть позже конца.";
-      error.scrollIntoView({ block: "nearest" });
+      options.open = true;
+      inputs.to_date.setCustomValidity(error.textContent);
+      inputs.to_date.reportValidity();
+      inputs.to_date.setCustomValidity("");
       return;
     }
     apply(
@@ -166,23 +165,16 @@ function renderClassOverview(target, c) {
     `Работы: ${totals.works} из ${data.available_work_count}`,
   );
   resultsHeading.id = "classOverviewResults";
-  summary.append(
-    resultsHeading,
-    node(
-      "p",
-      `Подтверждено проверок: ${totals.confirmed} из ${totals.total} назначений ученикам. Ожидаются: ${totals.not_submitted}.`,
-    ),
-    node(
-      "p",
-      `Нужен учитель: ${totals.needs_review} · Распознаются: ${totals.processing} · С ошибкой: ${totals.failed} · Черновики исправлений: ${totals.pending_corrections}.`,
-      "quiet",
-    ),
-    node(
-      "p",
-      "Один ученик может иметь несколько назначений. Средние баллы разных листов не объединяются: задания и сложность могут отличаться.",
-      "quiet",
-    ),
-  );
+  summary.append(resultsHeading, node("p", `Проверено ${totals.confirmed} из ${totals.total} назначений ученикам. Ещё не сдано: ${totals.not_submitted}.`));
+  const pending = [
+    ["Нужна проверка", totals.needs_review],
+    ["Распознаются", totals.processing],
+    ["С ошибкой", totals.failed],
+    ["Черновики исправлений", totals.pending_corrections],
+  ].filter(([, count]) => count > 0);
+  if (pending.length) {
+    summary.append(node("p", pending.map(([label, count]) => label + ": " + count).join(" · "), "quiet"));
+  }
   if (totals.undated)
     summary.append(
       node(
@@ -256,11 +248,6 @@ function renderClassOverview(target, c) {
           ? "Подтверждённых результатов пока нет."
           : `Средний балл: ${s.average.toLocaleString("ru-RU")} из ${s.maximum} · Выполнение: ${s.percent.toLocaleString("ru-RU")}%`,
         "class-overview-score",
-      ),
-      node(
-        "p",
-        `В расчёте: ${s.confirmed} из ${s.total} назначенных учеников.`,
-        "quiet",
       ),
     );
     if (s.needs_review || s.failed || s.processing)

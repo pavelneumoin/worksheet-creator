@@ -73,6 +73,29 @@ test("upload retries keep the same idempotency key after a lost response",async(
   await assert.rejects(fixture.submit(),/offline/);await fixture.submit();
   assert.equal(fixture.calls.length,2);assert.equal(fixture.calls[0].headers["Idempotency-Key"],fixture.calls[1].headers["Idempotency-Key"]);
 });
+test("choosing another gallery photo preserves previous pages and their print order", () => {
+  const {form, file} = uploadFixture(async () => ({}));
+  const list = form.children.find(element => element.tagName === "ol");
+  const camera = form.children.find(element => element.tagName === "input" && !element.multiple);
+  for (const [input, name] of [[camera, "camera.jpg"], [file, "2.jpg"], [file, "3.png"]]) {
+    input.files = [{name, size: 1024}];
+    input.events.change();
+  }
+  const names = () => list.children.map(row => row.children[0].textContent);
+  assert.deepEqual(names(), ["camera.jpg", "2.jpg", "3.png"]);
+  file.files = [{name:"unexpected.pdf", size:1024}];
+  file.events.change();
+  assert.deepEqual(names(), ["camera.jpg", "2.jpg", "3.png"]);
+});
+test("a selected PDF can be replaced as a single document", () => {
+  const {form, file} = uploadFixture(async () => ({}));
+  for (const name of ["draft.pdf", "final.pdf"]) {
+    file.files = [{name, size: 1024}];
+    file.events.change();
+  }
+  const list = form.children.find(element => element.tagName === "ol");
+  assert.deepEqual(list.children.map(row => row.children[0].textContent), ["final.pdf"]);
+});
 test("an in-flight upload and a delivered upload cannot be submitted twice",async()=>{
   let release;const fixture=uploadFixture(()=>new Promise(resolve=>{release=resolve;}));fixture.choose();const pending=fixture.submit();fixture.submit();
   assert.equal(fixture.calls.length,1);release({});await pending;await fixture.submit();assert.equal(fixture.calls.length,1);

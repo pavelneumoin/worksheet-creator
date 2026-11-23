@@ -36,6 +36,7 @@ function FormulaKeyboard({textarea}) {
   const [values, setValues] = useState([]);
   const [valid, setValid] = useState(true);
   const [message, setMessage] = useState("");
+  const formulaInputs = useRef([]);
   const selection = useRef({start: textarea.selectionStart || 0, end: textarea.selectionEnd || 0});
   const template = FORMULAS.find(item => item.id === templateId);
   const latex = useMemo(() => template ? template.build(values.map(value => value.trim())) : "", [template, values]);
@@ -87,7 +88,23 @@ function FormulaKeyboard({textarea}) {
     {template && <div className="listok-formula-composer">
       <div className="listok-formula-composer-title"><strong>{template.name}</strong><Button label="Закрыть редактор формулы" variant="ghost" isIconOnly icon={<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" /></svg>} size="sm" onClick={() => setTemplateId(null)} /></div>
       <div className={`listok-formula-fields ${template.fields.length === 1 ? "is-single" : ""}`}>
-        {template.fields.map(([label], index) => <TextInput key={`${template.id}-${index}`} label={label} value={values[index] || ""} onChange={value => setValues(current => current.map((v, i) => i === index ? value.slice(0, 500) : v))} onEnter={() => { if (valid && values.every(value => value.trim())) insert(latex); }} autoComplete="off" autoCapitalize="off" hasAutoCorrect={false} hasSpellCheck={false} enterKeyHint="done" size="md" />)}
+        {template.fields.map(([label], index) => {
+          const last = index === template.fields.length - 1;
+          return <TextInput key={`${template.id}-${index}`} label={label}
+            ref={input => { formulaInputs.current[index] = input; }}
+            value={values[index] || ""}
+            onChange={value => setValues(current => current.map((v, i) => i === index ? value.slice(0, 500) : v))}
+            onEnter={() => {
+              if (!last) {
+                formulaInputs.current[index + 1]?.focus();
+                formulaInputs.current[index + 1]?.select();
+              } else if (valid && values.every(value => value.trim())) {
+                insert(latex);
+              }
+            }}
+            autoComplete="off" autoCapitalize="off" hasAutoCorrect={false} hasSpellCheck={false}
+            enterKeyHint={last ? "done" : "next"} size="md" />;
+        })}
       </div>
       <div className="listok-formula-composer-footer"><div className={`listok-formula-result ${!valid ? "has-error" : ""}`} aria-label="Предпросмотр формулы"><FormulaPreview latex={latex} onValidity={setValid} /></div><Button label="Вставить" variant="primary" onClick={() => insert(latex)} isDisabled={!valid || values.some(value => !value.trim())} /></div>
     </div>}
@@ -95,7 +112,7 @@ function FormulaKeyboard({textarea}) {
   </section>;
 }
 
-function VariantPicker({select, onReady}) {
+function VariantPicker({select, onReady, label, includesOriginal}) {
   const [value, setValue] = useState(select.value || "1");
   useEffect(() => {
     onReady();
@@ -111,9 +128,30 @@ function VariantPicker({select, onReady}) {
     select.dispatchEvent(new Event("change", {bubbles: true}));
     setValue(next);
   }
-  return <div className="listok-variants"><SegmentedControl label="Количество вариантов" value={value} onChange={change} layout="fill" size="md">
-    {["1", "2", "3", "4"].map(number => <SegmentedControlItem key={number} value={number} label={number} />)}
-  </SegmentedControl><span className="listok-variants-description">{value === "1" ? "По исходному материалу" : `Исходный + ${Number(value) - 1} ${value === "2" ? "аналогичный" : "аналогичных"}`}</span></div>;
+  return (
+    <div className="listok-variants">
+      <SegmentedControl label={label} value={value} onChange={change} layout="fill" size="md">
+        {Array.from(select.options, option => (
+          <SegmentedControlItem key={option.value} value={option.value} label={option.value} />
+        ))}
+      </SegmentedControl>
+      {includesOriginal && <span className="listok-variants-description">
+        {value === "1" ? "По исходному материалу" : `Исходный + ${Number(value) - 1} ${value === "2" ? "аналогичный" : "аналогичных"}`}
+      </span>}
+    </div>
+  );
+}
+
+function FeedbackSwitcher({view, form, list}) {
+  const [page, setPage] = useState("write");
+  useEffect(() => {
+    view.dataset.feedbackPage = page;
+    return () => { delete view.dataset.feedbackPage; };
+  }, [view, page]);
+  return <SegmentedControl label="Раздел отзывов" value={page} onChange={setPage} layout="fill">
+    <SegmentedControlItem value="write" label="Оставить отзыв" aria-controls={form.id} />
+    <SegmentedControlItem value="read" label="Читать отзывы" aria-controls={list.id} />
+  </SegmentedControl>;
 }
 
 class IslandBoundary extends Component {
@@ -124,6 +162,26 @@ class IslandBoundary extends Component {
 }
 
 function mountIslands() {
+  const feedback = document.getElementById("feedbackView");
+  const form = feedback?.querySelector("#feedbackForm");
+  const list = feedback?.querySelector(".feedback-list-panel");
+  const heading = feedback?.querySelector(".feedback-heading");
+  if (form && list && heading && !document.getElementById("feedbackSwitcher")) {
+    const mount = document.createElement("div");
+    mount.id = "feedbackSwitcher";
+    mount.dataset.listokAstryx = "feedback";
+    if (!list.id) list.id = "feedbackListPanel";
+    heading.after(mount);
+    const root = createRoot(mount);
+    const restore = () => {
+      root.unmount();
+      mount.remove();
+      delete feedback.dataset.feedbackPage;
+    };
+    root.render(<IslandBoundary restore={restore}><IslandTheme>
+      <FeedbackSwitcher view={feedback} form={form} list={list} />
+    </IslandTheme></IslandBoundary>);
+  }
   const keyboard = document.getElementById("latexKeyboard");
   const textarea = document.getElementById("sourceText");
   if (keyboard && textarea && !keyboard.dataset.listokAstryx) {
@@ -140,18 +198,30 @@ function mountIslands() {
     };
     root.render(<IslandBoundary restore={restore}><IslandTheme><FormulaKeyboard textarea={textarea} /></IslandTheme></IslandBoundary>);
   }
-  const select = document.getElementById("setupVariants");
-  if (select && !document.getElementById("listokVariantPicker")) {
+  const pickers = [
+    ["setupVariants", "listokVariantPicker", "Количество вариантов"],
+    ["resultVariantCount", "resultVariantPicker", "Новых вариантов"],
+  ];
+  for (const [selectId, mountId, groupLabel] of pickers) {
+    const select = document.getElementById(selectId);
+    if (!select || document.getElementById(mountId)) continue;
     const mount = document.createElement("div");
-    mount.id = "listokVariantPicker";
+    mount.id = mountId;
     mount.dataset.listokAstryx = "variants";
     // Keep interactive controls outside the select's wrapping label.
     const label = select.closest("label");
     (label || select).insertAdjacentElement("afterend", mount);
     const root = createRoot(mount);
     const restore = () => { root.unmount(); mount.remove(); select.hidden = false; };
-    const ready = () => { select.hidden = true; if (label) { label.classList.add("listok-variant-label"); label.htmlFor = "setupVariants"; } };
-    root.render(<IslandBoundary restore={restore}><IslandTheme><VariantPicker select={select} onReady={ready} /></IslandTheme></IslandBoundary>);
+    const ready = () => {
+      select.hidden = true;
+      label?.classList.add("listok-variant-label");
+    };
+    root.render(
+      <IslandBoundary restore={restore}><IslandTheme>
+        <VariantPicker select={select} onReady={ready} label={groupLabel} includesOriginal={selectId === "setupVariants"} />
+      </IslandTheme></IslandBoundary>
+    );
   }
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountIslands, {once: true});

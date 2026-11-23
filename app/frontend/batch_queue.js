@@ -113,8 +113,11 @@ function mountBatchQueueFocus(form,fields,controls,r,refreshTotal) {
     if(next)await openQueueAnswer(next);else await openBatchQueue(q.id);
   };
   const previous=classButton("←",()=>busy("Предыдущий ответ",()=>go(-1)));previous.setAttribute("aria-label","Предыдущий ответ в пачке");
+  previous.disabled = q.items.length < 2;
   const done=queueAction("Проверено, дальше",()=>go(1,true),"primary");
   const skip=queueAction("Пропустить",()=>go(1));
+  skip.disabled = !q.items.some(item => !item.resolved &&
+    (item.review_id !== current.review_id || item.task_id !== current.task_id));
   const update=()=>done.disabled=field.score.value==="";field.score.addEventListener("change",update);field.text.addEventListener("input",update);update();
   nav.append(previous,done,skip);field.card.after(nav);
   const more=node("details",undefined,"queue-work-details");more.append(node("summary","Итог работы и восстановление правок"));controls.before(more);more.append(controls);

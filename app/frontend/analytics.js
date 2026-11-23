@@ -210,7 +210,7 @@ async function openAnalytics(filters = {scope: "teacher"}) {
   summary.append(kpis);
   const actions = node("div", undefined, "analytics-actions");
   const pdf = classButton("Отчёт PDF", () => busy("Готовим отчёт", () => enqueueJob("analytics_pdf", {filters: data.filters, insight_id: analyticsState.insight?.insight_id})), "primary");
-  const ai = classButton("Рекомендации", () => busy("Готовим рекомендации", () => enqueueJob("analytics_insight", {filters: data.filters})), "secondary");
+  const ai = classButton("Рекомендации", () => busy("Готовим рекомендации", () => enqueueJob("analytics_insight", {filters: data.filters})), "secondary analytics-recommendations");
   pdf.prepend(studioIcon("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"));
   ai.prepend(studioIcon("M12 3a7 7 0 0 0-4 12.7V18h8v-2.3A7 7 0 0 0 12 3zM9 22h6"));
   pdf.disabled = ai.disabled = !totals.confirmed;
@@ -218,7 +218,7 @@ async function openAnalytics(filters = {scope: "teacher"}) {
   const csv = node("a", "Таблица CSV", "button secondary");
   csv.href = "/api/v2/analytics.csv?" + new URLSearchParams(data.filters);
   csv.download = "ЛистОК статистика.csv";
-  actions.append(pdf, ai, csv);
+  actions.append(pdf, csv, ai);
   summary.append(actions);
   if (!totals.confirmed && data.works.length) summary.append(node("p", "Подтвердите результаты проверки, чтобы получить отчёт и рекомендации.", "analytics-helper"));
   view.append(summary, analyticsFilters(data, filters));

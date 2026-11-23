@@ -128,7 +128,8 @@
 .pupil-marking-progress{padding:14px 0 18px}
 .pupil-draft-bar{position:sticky;top:8px;z-index:2;background:#fff;border:1px solid var(--pupil-line);border-radius:14px;padding:14px;box-shadow:0 4px 20px #20263509}
 .pupil-save-status{margin:0 0 6px;font-size:14px}
-.pupil-draft-bar .actions{display:flex;flex-wrap:wrap;gap:6px}
+.pupil-draft-bar .actions{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+.pupil-draft-actions summary{color:var(--pupil-accent)}
 .pupil-view .pupil-draft-bar .button{padding:10px}
 .pupil-dialog{width:min(560px,calc(100% - 32px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #e4e7ec;border-radius:20px;padding:28px;color:#202635;box-shadow:0 20px 100px #20263525;font-size:14px;line-height:1.55}
 .pupil-dialog::backdrop{background:#20263566}
@@ -140,7 +141,7 @@
 @media(max-width:900px){
 .pupil-view .pupil-overview{grid-template-columns:minmax(0,1fr);gap:8px}
 }
-@media(max-width:700px){.pupil-view>h1{margin-bottom:18px;font-size:28px}
+@media(max-width:760px){.pupil-view>h1{margin-bottom:18px;font-size:28px}
 .pupil-view .panel{padding:18px;border-radius:15px}
 .pupil-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .pupil-stat{padding:15px;border-radius:13px}
@@ -165,13 +166,32 @@
 .pupil-inbox-stats .pupil-stat:last-child{grid-column:1/-1;flex-direction:row;align-items:baseline;gap:10px}
 .pupil-view .pupil-inbox-controls{grid-template-columns:minmax(0,1fr) auto;gap:12px}
 .pupil-inbox-controls label:first-child{grid-column:1/-1}
-.pupil-view .pupil-scans{position:static}
+.pupil-view .pupil-scans{position:static;min-width:0}
 .pupil-scan-preview img{max-height:50vh}
-.pupil-draft-bar{top:4px;padding:12px}
+.pupil-draft-bar{position:static;padding:12px;box-shadow:none}
 .pupil-draft-bar .actions{gap:4px}
 .pupil-view .pupil-draft-bar .button{padding:10px 8px}
 .pupil-marks>.button{width:100%;margin-right:0}
-.pupil-dialog{padding:20px}
+
+  .pupil-view h1, .pupil-detail-meta, .pupil-history-row, .pupil-result p {
+    overflow-wrap: anywhere;
+  }
+  .pupil-file-actions > .button {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .pupil-task-question, .pupil-task-question ~ div, .pupil-mark-card details > div {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-wrap: anywhere;
+  }
+  .pupil-dialog { padding:20px; }
+}
+@media (max-width: 480px) {
+  .pupil-view .pupil-inbox-controls { grid-template-columns:minmax(0,1fr); }
+  .pupil-inbox-controls label { margin:0; }
+  .pupil-review-actions > .button { flex:1 1 160px; }
+  .pupil-dialog .button { width:100%; margin:6px 0 0; }
 }
 @media(prefers-reduced-motion:reduce){.pupil-view *{scroll-behavior:auto!important;transition:none!important}
 }

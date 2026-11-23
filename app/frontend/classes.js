@@ -8,6 +8,7 @@ const classState = {
   recipientClass: null,
   attempt: null,
   origin: "classes",
+  assignmentOrigin: "classes",
 };
 const classJson = (method, body) => ({
   method,
@@ -46,7 +47,10 @@ function classFocus(container) {
   const heading = container.querySelector("h1");
   if (heading) {
     heading.tabIndex = -1;
-    heading.focus({ preventScroll: true });
+    requestAnimationFrame(() => {
+      if (heading.isConnected && heading.getClientRects().length)
+        heading.focus({ preventScroll: true });
+    });
   }
 }
 async function refreshClasses() {
@@ -195,6 +199,7 @@ function renderClass() {
   settings.append(form);
   target.append(settings);
   const tabs = node("div", undefined, "class-tabs");
+  tabs.setAttribute("role", "group");
   tabs.setAttribute("aria-label", "Раздел класса");
   for (const [key, title] of [
     ["students", "Ученики"],
@@ -310,7 +315,7 @@ function renderRoster(target, c) {
       const row = node("div", undefined, "student-row");
       row.append(node("span", s.code, "student-name"));
       if(!c.archived&&!s.archived){
-        row.append(classButton(s.connected?"Доступ подключён":"Пригласить",()=>busy("Доступ ученика",async()=>{
+        row.append(classButton(s.connected?"Отозвать доступ":"Пригласить",()=>busy("Доступ ученика",async()=>{
           if(s.connected){if(!window.confirm("Отозвать доступ к этому ученику? Результаты останутся у учителя."))return;await request(`/api/v2/students/${s.id}/access`,{method:"DELETE"});await openClass(c.id,"students");}
           else await showPupilInvite(c,s);
         }),"ghost"));
@@ -430,15 +435,16 @@ function editionDownload(editionId, code, links, key, title) {
   bindArtifactDownload(a, editionId, key, title + " " + code + ".pdf");
   return a;
 }
-async function openAssignment(id, loaded = null) {
+async function openAssignment(id, loaded = null, origin = "classes") {
   const a = loaded || (await request("/api/v2/assignments/" + id)).assignment;
   classState.assignment = a;
+  classState.assignmentOrigin = origin;
   classScreen("assignmentView");
   const target = $("assignmentView");
   target.replaceChildren(
     classButton(
-      "← К работам класса",
-      () => busy("Открываем класс", () => openClass(a.class_id, "assignments")),
+      origin === "schedule" ? "← К расписанию" : "← К работам класса",
+      backFromClass,
       "ghost back-link",
     ),
   );
@@ -538,7 +544,7 @@ async function openAssignment(id, loaded = null) {
             revision: a.revision,
           }),
         );
-        await openAssignment(a.id);
+        await openAssignment(a.id, null, origin);
         notice("Статус обновлён. Лист и состав сохранены.");
       }),
     "ghost",
@@ -551,6 +557,7 @@ async function openAssignmentForm(
   classId = null,
   materialId = null,
   editionId = null,
+  origin = classId ? "classes" : "saved",
 ) {
   if (classState.attempt) {
     classScreen("assignmentCreate");
@@ -559,7 +566,7 @@ async function openAssignmentForm(
     );
     return;
   }
-  classState.origin = classId ? "classes" : "saved";
+  classState.origin = origin;
   classState.list = (await request("/api/v2/classes")).classes;
   const active = classState.list.filter((c) => !c.archived);
   if (!active.length) {
@@ -567,7 +574,8 @@ async function openAssignmentForm(
     notice(
       "Сначала создайте класс и добавьте учеников. Затем сможете назначить лист.",
     );
-    $("newClassName").focus();
+    $("newClassName").closest("details").open = true;
+    requestAnimationFrame(() => $("newClassName").focus());
     return;
   }
   const materials = (await request("/api/v2/materials")).materials.filter(
@@ -582,6 +590,8 @@ async function openAssignmentForm(
     return;
   }
   $("assignmentForm").reset();
+  if (origin === "schedule" && scheduleSelectedDate)
+    $("assignScheduled").value = scheduleSelectedDate;
   $("assignmentFields").disabled = false;
   $("assignmentRetryHint").hidden = true;
   $("assignSubmit").textContent = "Назначить работу";
@@ -691,6 +701,14 @@ function renderAssignmentPreview() {
 }
 function backFromClass() {
   if (!$("reviewView").hidden) {
+    if (reviewState.queueContext?.reviewId === reviewState.current.id) {
+      busy("Открываем очередь", () => openBatchQueue(reviewState.queueContext.id));
+      return;
+    }
+    if (reviewState.batchContext?.assignmentId === reviewState.current.assignment_id) {
+      busy("Открываем пачку", () => openBatch(reviewState.batchContext.id));
+      return;
+    }
     busy("Открываем отчёт", () =>
       openClassReport(reviewState.current.assignment_id),
     );
@@ -712,15 +730,15 @@ function backFromClass() {
       );
       return;
     }
-    if (classState.origin === "saved") {
-      showView("saved");
+    if (classState.origin === "saved" || classState.origin === "schedule") {
+      showView(classState.origin);
       return;
     }
     busy("Открываем класс", () => openClass(classState.recipientClass.id));
-  } else if (!$("assignmentView").hidden)
-    busy("Открываем класс", () =>
-      openClass(classState.assignment.class_id, "assignments"),
-    );
+  } else if (!$("assignmentView").hidden) {
+    if (classState.assignmentOrigin === "schedule") showView("schedule");
+    else busy("Открываем класс", () => openClass(classState.assignment.class_id, "assignments"));
+  }
   else if (!$("classDetail").hidden) busy("Загружаем классы", refreshClasses);
   else showView("workspace");
 }
@@ -772,7 +790,7 @@ $("assignmentForm").addEventListener("submit", (e) => {
           classJson("POST", classState.attempt.body),
         )
       ).assignment;
-      await openAssignment(a.id, a);
+      await openAssignment(a.id, a, classState.origin === "schedule" ? "schedule" : "classes");
       classState.attempt = null;
       notice("Работа назначена и сохранена в кабинете.");
     } catch (error) {

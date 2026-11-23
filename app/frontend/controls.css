@@ -115,3 +115,44 @@
   .page .saved-card .material-actions > .button { padding:10px 8px; }
 }
 @media(prefers-reduced-motion:reduce) { .page .button, .topbar .button, dialog .button { transition:none; } }
+@media (max-width: 360px) {
+  .segmented > label > .subject-choice {
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 7px 4px !important;
+  }
+}
+
+.demo-mobile-label { display: none; }
+.feedback-rating { min-width: 0; margin: 0; padding: 0; border: 0; }
+.feedback-rating legend { margin-bottom: 6px; }
+.feedback-rating-options { display: flex; gap: 2px; }
+.feedback-rating-options .feedback-star { position: relative; margin: 0; }
+.feedback-rating-options input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.feedback-rating-options label:has(input:focus-visible) { outline: 2px solid var(--control-accent); }
+.feedback-stars-readonly .feedback-star { min-width: 0; cursor: default; transform: none; }
+.feedback-stars-readonly .feedback-star:not(.selected) { color: #abb3bf; }
+.feedback-recommend-badge:empty { display: none; }
+.feedback-card-head { flex-wrap: wrap; }
+.feedback-card-head strong, .feedback-quote p, .feedback-recommend-badge { overflow-wrap: anywhere; }
+
+@media (max-width:760px) {
+  /* Keep the demo route and the exit available in one row on every screen. */
+  #demoBar { position: relative; padding: 0 12px; margin-bottom: 16px; }
+  #demoBar .demo-bar-heading { position: absolute; inset: 4px 8px auto auto; margin: 0; }
+  #demoBar .demo-heading-copy, #demoGuide > summary .demo-desktop-label, #demoGuide > summary .demo-screen-count { display: none; }
+  #demoGuide > summary { min-height: 50px; max-width: calc(100% - 116px); margin: 0; gap: 6px; }
+  #demoBar #demoGuide > summary .demo-mobile-label { display: inline; color: #54458c; font-size: 13px; }
+  #demoGuide[open] { padding-bottom: 12px; }
+  #demoGuide[open] > summary::before { transform: rotate(90deg); }
+  .mobile-menu { overscroll-behavior: contain; }
+  .mobile-menu .mobile-menu-heading { position: sticky; top: -1px; z-index: 1; padding: 4px 0; background: white; }
+  .mobile-menu-item[aria-current=page] { border-color: #c8bee8; background: #f5f2ff; }
+  .mobile-menu .mobile-menu-item[aria-current=page] .mobile-menu-icon { background: var(--control-accent); color: white; }
+  #feedbackView .feedback-summary-card { display: flex; flex-flow: row wrap; gap: 12px; align-items: center; }
+  #feedbackView .feedback-summary-card strong { font-size: 24px; }
+  #feedbackView .feedback-list-heading { flex-wrap: wrap; }
+  #feedbackView .feedback-recommend-badge { white-space: normal; }
+  #feedbackView :is(textarea, input[type=text], #feedbackDisplayName) { font-size: 16px; }
+}

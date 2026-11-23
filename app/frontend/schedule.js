@@ -1,16 +1,19 @@
 "use strict";
 let scheduleData = [], scheduleSelectedDate = null;
-$("scheduleMonth").value = new Intl.DateTimeFormat("sv-SE", {
+const scheduleMonthFormatter = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Europe/Moscow",
   year: "numeric",
   month: "2-digit",
-}).format(new Date());
+});
+$("scheduleMonth").value = scheduleMonthFormatter.format(new Date());
 
 async function refreshSchedule() {
-  const month = $("scheduleMonth").value;
+  const month = $("scheduleMonth").value || scheduleMonthFormatter.format(new Date());
+  $("scheduleMonth").value = month;
   if (!/^\d{4}-\d{2}$/.test(month))
     throw new Error("Выберите месяц расписания.");
   const data = await request("/api/v2/schedule?month=" + month);
+  if ($("scheduleMonth").value !== month) return;
   scheduleData = data.assignments;
   if (scheduleSelectedDate && !scheduleSelectedDate.startsWith(month)) scheduleSelectedDate = null;
   const [year, number] = month.split("-").map(Number);
@@ -38,7 +41,16 @@ async function refreshSchedule() {
     cell.dataset.date = date;
     cell.setAttribute("aria-pressed", String(date === scheduleSelectedDate));
     if(date === today) cell.setAttribute("aria-current", "date");
-    cell.addEventListener("click", () => {scheduleSelectedDate = date; renderScheduleAgenda();});
+    cell.addEventListener("click", () => {
+      scheduleSelectedDate = date;
+      renderScheduleAgenda();
+      if (window.matchMedia("(max-width: 760px)").matches) {
+        const title = $("scheduleDayTitle");
+        title.tabIndex = -1;
+        title.focus({preventScroll: true});
+        title.scrollIntoView({block: "start"});
+      }
+    });
     if (date === today) cell.classList.add("today");
     if (assignments.length) cell.classList.add("has-work");
     cell.setAttribute(
@@ -73,7 +85,7 @@ function renderScheduleAgenda() {
         "quiet",
       ),
       classButton("Открыть работу", () =>
-        busy("Открываем работу", () => openAssignment(a.id)),
+        busy("Открываем работу", () => openAssignment(a.id, null, "schedule")),
       ),
     );
     list.append(card);
@@ -89,12 +101,15 @@ function renderScheduleAgenda() {
 }
 $("scheduleAllDays").addEventListener("click", () => {scheduleSelectedDate=null;renderScheduleAgenda();});
 $("scheduleNav").addEventListener("click", () => showView("schedule"));
-$("scheduleClasses").addEventListener("click", () => showView("classes"));
+$("scheduleClasses").addEventListener("click", () =>
+  busy("Выбираем класс и лист", () => openAssignmentForm(null, null, null, "schedule")),
+);
 $("scheduleMonth").addEventListener("change", () =>
   busy("Обновляем расписание", refreshSchedule),
 );
 function changeMonth(delta) {
-  const [year, month] = $("scheduleMonth").value.split("-").map(Number);
+  const current = $("scheduleMonth").value || scheduleMonthFormatter.format(new Date());
+  const [year, month] = current.split("-").map(Number);
   const date = new Date(year, month - 1 + delta, 1);
   $("scheduleMonth").value =
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;

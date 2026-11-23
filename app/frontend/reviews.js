@@ -127,6 +127,8 @@ async function openClassReport(id) {
       "Сначала повторите отправку фото в предыдущей работе, чтобы узнать результат.",
     );
   const data = (await request(`/api/v2/assignments/${id}/report`)).report;
+  reviewState.queueContext = null;
+  reviewState.batchContext = null;
   if (reviewState.assignmentId !== id) clearReviewFiles();
   reviewState.assignmentId = id;
   reviewState.report = data;
@@ -492,7 +494,9 @@ async function openReview(id, ready = null) {
     $("classesNav")?.classList.remove("active");
   }
   const target = $("reviewView");
-  target.classList.toggle("queue-review-screen",!!reviewState.queueContext?.item);
+  target.classList.toggle("queue-review-screen", !!reviewState.queueContext?.item &&
+    ["needs_review", "confirmed"].includes(r.status) &&
+    r.tasks.some(task => task.id === reviewState.queueContext.item.task_id));
   target.replaceChildren(
     reviewButton(
       "← К отчёту класса",
@@ -703,7 +707,8 @@ function renderReviewForm(target, r) {
     scoreButtons.setAttribute("role", "group"); scoreButtons.setAttribute("aria-label", "Баллы · задание " + (i + 1));
     for (const points of [0, 0.25, 0.5, 0.75, 1]) {
       const button = classButton(reviewScoreLabel(points), () => { score.value = String(points); score.dispatchEvent(new Event("change")); });
-      button.dataset.score = String(points); button.setAttribute("aria-label", reviewScoreLabel(points) + " балла · задание " + (i + 1));
+      button.dataset.score = String(points);
+      button.setAttribute("aria-label", "Задание " + (i + 1) + ", баллы: " + reviewScoreLabel(points));
       scoreButtons.append(button);
     }
     const syncScore = () => { for (const b of scoreButtons.children) { b.classList.toggle("active", b.dataset.score === score.value); b.setAttribute("aria-pressed", String(b.dataset.score === score.value)); } };

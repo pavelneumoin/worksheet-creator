@@ -1,0 +1,127 @@
+/* Class management, paper submissions and marking on a phone. */
+.batch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-block: 16px 24px;
+}
+
+#reviewView .review-focus-filters .button[aria-pressed="true"] {
+  color: var(--control-accent);
+  border-color: #cfc6ef;
+  background: #fff;
+  box-shadow: 0 1px 4px #44316016;
+}
+
+#reviewView .review-score-buttons .button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--control-accent);
+  border-color: var(--control-accent);
+}
+
+@media (max-width: 760px) {
+  :is(#classesView, #batchView, #scheduleView) :is(h1, h2, h3, .quiet) {
+    overflow-wrap: anywhere;
+  }
+
+  #classesView .class-card .actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 124px), 1fr));
+    gap: 8px;
+  }
+
+  #classesView .class-card .actions > .button {
+    white-space: normal;
+    padding-inline: 8px;
+  }
+
+  #classesView .student-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #classesView .student-name {
+    min-width: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #classesView .student-row .button {
+    padding-inline: 8px;
+    font-size: 13px;
+  }
+
+  #batchView .batch-upload .form-grid,
+  #batchView .batch-actions,
+  #batchView .batch-recent {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  #batchView .batch-recent h2 {
+    margin: 4px 0;
+  }
+
+  #batchView :is(.batch-recent, .batch-actions) > .button {
+    text-align: start;
+    justify-content: flex-start;
+  }
+
+  #batchView .batch-page { min-width: 0; }
+  #batchView .batch-page .button { padding-inline: 6px; width: 100%; }
+  #batchView .queue-answer-bar > strong,
+  #reviewView .queue-answer-bar > strong { min-width: 0; overflow-wrap: anywhere; }
+  #reviewView .queue-answer-bar > .button { width: auto; flex: none; }
+
+  #reviewView .review-answer-top { flex-wrap: wrap; gap: 8px; }
+  #reviewView .review-answer :is(.review-key, .review-question p) {
+    overflow-x: auto;
+    overflow-wrap: anywhere;
+  }
+
+  #reviewView .review-focus-nav {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    padding: 6px;
+    gap: 5px;
+  }
+
+  #reviewView .review-focus-nav .button { padding-inline: 4px; }
+  #reviewView .queue-focus-nav { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  #reviewView .queue-focus-nav .button { font-size: 13px; }
+
+  #reviewView .review-score-buttons {
+    grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+    gap: 5px;
+  }
+
+  #reviewView .review-score-buttons .button {
+    padding-inline: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #scheduleView .schedule-layout { grid-template-columns: minmax(0, 1fr); }
+  #scheduleView .schedule-panel { padding: 14px; }
+  #scheduleView .month-controls {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 6px;
+  }
+  #scheduleView .calendar-day { min-height: 44px; }
+  #scheduleView .calendar-day[aria-pressed="true"] {
+    color: white;
+    background: var(--control-accent);
+  }
+}
+
+@media (max-width: 380px) {
+  #classesView .student-row { grid-template-columns: minmax(0, 1fr) auto; }
+  #classesView .student-row:has(> :nth-child(3)) .student-name { grid-column: 1 / -1; }
+  #classesView .student-row .button { justify-self: start; }
+  #classesView .student-row .button:last-child { justify-self: end; }
+}
+
+@media (max-width: 760px) and (max-height: 560px) {
+  /* Make the full answer readable while typing or holding the phone sideways. */
+  #reviewView .review-focus-nav { position: static; }
+}
